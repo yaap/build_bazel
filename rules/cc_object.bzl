@@ -40,6 +40,9 @@ def _cc_object_impl(ctx):
     for dep in ctx.attr.include_deps:
         compilation_contexts.append(dep[CcInfo].compilation_context)
 
+    product_variables = ctx.attr._android_product_variables[platform_common.TemplateVariableInfo]
+    asflags = [flag.format(**product_variables.variables) for flag in ctx.attr.asflags]
+
     (compilation_context, compilation_outputs) = cc_common.compile(
         name = ctx.label.name,
         actions = ctx.actions,
@@ -49,7 +52,7 @@ def _cc_object_impl(ctx):
         includes = ctx.attr.includes,
         public_hdrs = ctx.files.hdrs,
         private_hdrs = ctx.files.private_hdrs,
-        user_compile_flags = ctx.attr.copts,
+        user_compile_flags = ctx.attr.copts + asflags,
         compilation_contexts = compilation_contexts,
     )
 
@@ -83,11 +86,16 @@ _cc_object = rule(
         "private_hdrs": attr.label_list(allow_files = [".h"]),
         "includes": attr.string_list(),
         "copts": attr.string_list(),
+        "asflags": attr.string_list(),
         "deps": attr.label_list(providers=[CcInfo, CcObjectInfo]),
         "include_deps": attr.label_list(providers=[CcInfo]),
         "_cc_toolchain": attr.label(
             default = Label("@local_config_cc//:toolchain"),
             providers = [cc_common.CcToolchainInfo],
+        ),
+        "_android_product_variables": attr.label(
+            default = Label("//build/bazel/product_variables:android_product_variables"),
+            providers = [platform_common.TemplateVariableInfo],
         ),
     },
     toolchains = ["@bazel_tools//tools/cpp:toolchain_type"],
@@ -97,6 +105,7 @@ _cc_object = rule(
 def cc_object(
         name,
         copts = [],
+        asflags = [],
         local_include_dirs = [],
         srcs = [],
         deps = [],
@@ -138,6 +147,7 @@ def cc_object(
     _cc_object(
         name = name,
         hdrs = hdrs,
+        asflags = asflags,
         copts = _CC_OBJECT_COPTS + copts,
         srcs = srcs,
         include_deps = include_deps,
