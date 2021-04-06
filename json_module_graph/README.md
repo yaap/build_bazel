@@ -9,16 +9,22 @@ Usage:
 
 ```
 SOONG_DUMP_MODULE_GRAPH_JSON=<some file> m nothing
-query.sh <command> <some file> [argument]
+query.sh [-C] <command> <some file> [argument]
 ```
 
 The following commands are available:
 * `printModule` prints all variations of a given module
 * `filterSubtree` dumps only those modules that are in the given subtree of the
   source tree
-* `transitiveDeps` prints the transitive dependencies of the given module
+* `directDeps` prints the names of the direct dependencies of the given module
+* `transitiveDeps` prints the names of the transitive dependencies of the given
+  module
+* `fullTransitiveDeps` returns the full transitive dependencies of the given
+   module
 * `distanceFromLeaves` prints the longest distance each module has from a leaf
   in the module graph within the transitive closure of given module
+* `usedVariations` returns a map that shows which variations are used in the
+  input and what values they take
 * `variantTransitions`  summarizes the variant transitions in the transitive
   closure of the given module
 
