@@ -63,8 +63,8 @@ def cc_library(
         rtti = rtti,
         whole_archive_deps = whole_archive_deps + whole_archive_deps_for_static,
         implementation_deps = implementation_deps + static_deps_for_static,
+        dynamic_deps = dynamic_deps + dynamic_deps_for_static,
         deps = deps,
-        # TODO(b/187746106): Handle dynamic_deps_for_static.
     )
 
     # The static library at the root of the shared library.
@@ -85,6 +85,7 @@ def cc_library(
         rtti = rtti,
         whole_archive_deps = whole_archive_deps + whole_archive_deps_for_shared,
         implementation_deps = implementation_deps + static_deps_for_shared,
+        dynamic_deps = dynamic_deps + dynamic_deps_for_shared,
         deps = deps,
     )
 
