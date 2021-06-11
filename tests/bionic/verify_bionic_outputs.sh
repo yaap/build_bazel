@@ -133,27 +133,23 @@ function test_libc() {
         pidfd_open
         pidfd_send_signal
         process_madvise
-        # TODO(b/190703122): identify why symbols are missing from libc
-        # __deregister_frame  # apex llndk arm64 x86 x86_64
-        # __register_frame  # apex llndk arm64 x86 x86_64
-        # _Unwind_Backtrace  # apex llndk
-        # _Unwind_DeleteException  # apex llndk
-        # _Unwind_Find_FDE  # apex llndk
-        # _Unwind_FindEnclosingFunction  # apex llndk
-        # _Unwind_ForcedUnwind  # apex llndk arm64 x86 x86_64
-        # _Unwind_GetCFA  # apex llndk
-        # _Unwind_GetDataRelBase  # apex llndk
-        # _Unwind_GetGR  # apex llndk
-        # _Unwind_GetIP  # apex llndk
-        # _Unwind_GetIPInfo  # apex llndk
-        # _Unwind_GetLanguageSpecificData  # apex llndk
-        # _Unwind_GetRegionStart  # apex llndk
-        # _Unwind_GetTextRelBase  # apex llndk
-        # _Unwind_RaiseException  # apex llndk
-        # _Unwind_Resume  # apex llndk
-        # _Unwind_Resume_or_Rethrow  # apex llndk
-        # _Unwind_SetGR  # apex llndk
-        # _Unwind_SetIP  # apex llndk
+        _Unwind_Backtrace  # apex llndk
+        _Unwind_DeleteException  # apex llndk
+        _Unwind_Find_FDE  # apex llndk
+        _Unwind_FindEnclosingFunction  # apex llndk
+        _Unwind_GetCFA  # apex llndk
+        _Unwind_GetDataRelBase  # apex llndk
+        _Unwind_GetGR  # apex llndk
+        _Unwind_GetIP  # apex llndk
+        _Unwind_GetIPInfo  # apex llndk
+        _Unwind_GetLanguageSpecificData  # apex llndk
+        _Unwind_GetRegionStart  # apex llndk
+        _Unwind_GetTextRelBase  # apex llndk
+        _Unwind_RaiseException  # apex llndk
+        _Unwind_Resume  # apex llndk
+        _Unwind_Resume_or_Rethrow  # apex llndk
+        _Unwind_SetGR  # apex llndk
+        _Unwind_SetIP  # apex llndk
     )
 
     test_shared_library_symbols "${shared_library}" "${symbols[@]}"
