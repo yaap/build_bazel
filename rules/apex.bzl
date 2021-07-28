@@ -107,6 +107,7 @@ _apex = rule(
         "installable": attr.bool(default = True),
         "native_shared_libs": attr.label_list(),
         "binaries": attr.label_list(),
+        "prebuilts": attr.label_list(),
         "_apexer": attr.label(
             allow_single_file = True,
             cfg = "host",
@@ -140,6 +141,7 @@ def apex(
     installable = True,
     native_shared_libs = [],
     binaries = [],
+    prebuilts = [],
     **kwargs):
     "Bazel macro to correspond with the APEX bundle Soong module."
 
@@ -155,5 +157,6 @@ def apex(
         installable = installable,
         native_shared_libs = native_shared_libs,
         binaries = binaries,
+        prebuilts = prebuilts,
         **kwargs,
     )
