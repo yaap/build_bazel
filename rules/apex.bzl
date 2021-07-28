@@ -1,3 +1,5 @@
+load(":apex_key.bzl", "ApexKeyInfo")
+
 def _apex_rule_impl(ctx):
     # Create an empty target for now.
     pass
@@ -8,7 +10,7 @@ _apex = rule(
         "manifest": attr.label(allow_single_file = [".json"]),
         "android_manifest": attr.label(allow_single_file = [".xml"]),
         "file_contexts": attr.label(allow_single_file = True),
-        "key": attr.label(allow_single_file = True),
+        "key": attr.label(providers = [ApexKeyInfo]),
         "certificate": attr.label(allow_single_file = True),
         "min_sdk_version": attr.string(),
         "updatable": attr.bool(default = True),
