@@ -24,6 +24,7 @@ BUILD_FLAGS_LIST=(
   --curses=no
   --show_progress_rate_limit=5
   --config=bp2build
+  --//build/bazel/rules:enable_apex=True
 )
 BUILD_FLAGS="${BUILD_FLAGS_LIST[@]}"
 
