@@ -2,6 +2,7 @@ toplevel_output_directories(paths = ["out"])
 
 load("//build/bazel/rules:lunch.bzl", "lunch")
 load("//build/bazel/rules:soong_injection.bzl", "soong_injection_repository")
+load("//build/bazel/rules:make_injection.bzl", "make_injection_repository")
 
 lunch()
 
@@ -10,6 +11,19 @@ register_toolchains(
 )
 
 soong_injection_repository(name="soong_injection")
+make_injection_repository(
+    name = "make_injection",
+    modules = [
+        "aapt2",
+        "apexer",
+        "avbtool",
+        "conv_apex_manifest",
+        "e2fsdroid",
+        "mke2fs",
+        "resize2fs",
+        "sefcontext_compile",
+    ],
+)
 
 local_repository(
     name = "rules_cc",
