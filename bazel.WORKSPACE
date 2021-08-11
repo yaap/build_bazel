@@ -23,6 +23,15 @@ make_injection_repository(
         "mke2fs",
         "resize2fs",
         "sefcontext_compile",
+        "signapk",
+
+        "deapexer",
+        "debugfs",
+
+        # APEX comparisons
+        "com.android.tzdata",
+        "com.android.runtime",
+        "com.android.adbd",
     ],
 )
 
