@@ -1,4 +1,8 @@
 load("//build/bazel/rules/apex:toolchain.bzl", "apex_toolchain")
+load("@bazel_skylib//rules:common_settings.bzl", "string_setting")
+
+string_setting(name = "apex_name", build_setting_default = "")
+string_setting(name = "min_sdk_version", build_setting_default = "")
 
 toolchain_type(name = "apex_toolchain_type")
 
