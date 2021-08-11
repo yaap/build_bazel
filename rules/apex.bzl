@@ -1,5 +1,4 @@
 load(":apex_key.bzl", "ApexKeyInfo")
-load(":apex_settings.bzl", "ApexEnabledInfo")
 load(":prebuilt_etc.bzl", "PrebuiltEtcInfo")
 load(":android_app_certificate.bzl", "AndroidAppCertificateInfo")
 
@@ -155,10 +154,6 @@ def _run_apexer(ctx, apex_toolchain, input_dir, apex_manifest_pb, canned_fs_conf
 
 # See the APEX section in the README on how to use this rule.
 def _apex_rule_impl(ctx):
-    if not ctx.attr._enable_apex[ApexEnabledInfo].enabled:
-        print("Skipping " + ctx.label.name + ". Pass --//build/bazel/rules:enable_apex=True to build APEXes.")
-        return
-
     apex_toolchain = ctx.toolchains["//build/bazel/rules/apex:apex_toolchain_type"].toolchain_info
 
     input_dir, subdirs, filepaths = _prepare_input_dir(ctx)
@@ -184,7 +179,6 @@ _apex = rule(
         "native_shared_libs": attr.label_list(),
         "binaries": attr.label_list(),
         "prebuilts": attr.label_list(providers = [PrebuiltEtcInfo]),
-        "_enable_apex": attr.label(default = "//build/bazel/rules:enable_apex")
     },
     toolchains = ["//build/bazel/rules/apex:apex_toolchain_type"],
 )
