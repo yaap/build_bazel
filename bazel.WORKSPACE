@@ -14,6 +14,7 @@ soong_injection_repository(name="soong_injection")
 make_injection_repository(
     name = "make_injection",
     modules = [
+        # APEX tools
         "aapt2",
         "apexer",
         "avbtool",
@@ -50,6 +51,9 @@ register_toolchains(
 
   # Local AOSP JDK
   "//prebuilts/jdk/jdk11/linux-x86:jdk11_toolchain",
+
+  # For APEX rules
+  "//build/bazel/rules/apex:all"
 )
 
 bind(
