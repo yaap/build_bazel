@@ -33,7 +33,7 @@ local_repository(
 
 local_repository(
     name = "bazel_skylib",
-    path = "build/bazel/bazel_skylib",
+    path = "external/bazel-skylib",
 )
 
 local_repository(

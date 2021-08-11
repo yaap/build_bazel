@@ -1,6 +1,7 @@
 load(":apex_key.bzl", "ApexKeyInfo")
 load(":prebuilt_etc.bzl", "PrebuiltEtcInfo")
 load(":android_app_certificate.bzl", "AndroidAppCertificateInfo")
+load("//build/bazel/rules/apex:transition.bzl", "apex_transition")
 
 # Create prebuilts dir for the APEX filesystem image as a tree artifact.
 def _prepare_input_dir(ctx):
@@ -176,9 +177,11 @@ _apex = rule(
         "min_sdk_version": attr.string(),
         "updatable": attr.bool(default = True),
         "installable": attr.bool(default = True),
-        "native_shared_libs": attr.label_list(),
-        "binaries": attr.label_list(),
-        "prebuilts": attr.label_list(providers = [PrebuiltEtcInfo]),
+        "native_shared_libs": attr.label_list(cfg = apex_transition),
+        "binaries": attr.label_list(cfg = apex_transition),
+        "prebuilts": attr.label_list(providers = [PrebuiltEtcInfo], cfg = apex_transition),
+        # Required to use apex_transition. This is an acknowledgement to the risks of memory bloat when using transitions.
+        "_allowlist_function_transition": attr.label(default = "@bazel_tools//tools/allowlists/function_transition_allowlist"),
     },
     toolchains = ["//build/bazel/rules/apex:apex_toolchain_type"],
 )
