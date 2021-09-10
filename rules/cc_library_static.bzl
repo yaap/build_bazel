@@ -17,6 +17,8 @@ def cc_library_static(
         deps = [],
         export_includes = [],
         export_system_includes = [],
+        local_includes = [],
+        absolute_includes = [],
         hdrs = [],
         native_bridge_supported = False,  # TODO: not supported yet.
         whole_archive_deps = [],
@@ -35,7 +37,8 @@ def cc_library_static(
         asflags = [],
         **kwargs):
     "Bazel macro to correspond with the cc_library_static Soong module."
-    includes_name = "%s_includes" % name
+    export_includes_name = "%s_export_includes" % name
+    local_includes_name = "%s_local_includes" % name
     cpp_name = "%s_cpp" % name
     c_name = "%s_c" % name
     asm_name = "%s_asm" % name
@@ -53,9 +56,15 @@ def cc_library_static(
         system_dynamic_deps = _system_dynamic_deps_defaults
 
     _cc_includes(
-        name = includes_name,
-        export_includes = export_includes,
-        export_system_includes = export_system_includes,
+        name = export_includes_name,
+        includes = export_includes,
+        system_includes = export_system_includes,
+    )
+
+    _cc_includes(
+        name = local_includes_name,
+        includes = local_includes,
+        absolute_includes = absolute_includes,
     )
 
     # Silently drop these attributes for now:
@@ -65,8 +74,8 @@ def cc_library_static(
             ("hdrs", hdrs),
             # Add dynamic_deps to implementation_deps, as the include paths from the
             # dynamic_deps are also needed.
-            ("implementation_deps", implementation_deps + dynamic_deps + system_dynamic_deps),
-            ("deps", [includes_name] + deps + whole_archive_deps),
+            ("implementation_deps", [local_includes_name] + implementation_deps + dynamic_deps + system_dynamic_deps),
+            ("deps", [export_includes_name] + deps + whole_archive_deps),
             ("features", features),
             ("toolchains", ["//build/bazel/platforms:android_target_product_vars"]),
         ] + sorted(kwargs.items()),
@@ -231,24 +240,36 @@ _cc_library_combiner = rule(
     fragments = ["cpp"],
 )
 
-# _get_includes_paths expects a rule context and a list of package-relative directories
-# and returns a list of exec root-relative paths. This handles the need to
-# search for files both in the source tree and generated files.
-def _get_includes_paths(ctx, package_relative_dirs):
+# get_includes_paths expects a rule context, a list of directories, and
+# whether the directories are package-relative and returns a list of exec
+# root-relative paths. This handles the need to search for files both in the
+# source tree and generated files.
+def get_includes_paths(ctx, dirs, package_relative = True):
     execution_relative_dirs = []
-    for rel_dir in package_relative_dirs:
-        execution_rel_dir = ctx.label.package + "/" + rel_dir
+    for rel_dir in dirs:
+        if rel_dir == ".":
+          rel_dir = ""
+        execution_rel_dir = rel_dir
+        if package_relative:
+            execution_rel_dir = ctx.label.package
+            if len(rel_dir) > 0:
+                execution_rel_dir = execution_rel_dir + "/" + rel_dir
         execution_relative_dirs.append(execution_rel_dir)
+
         # to support generated files, we also need to export includes relatives to the bin directory
-        execution_relative_dirs.append(ctx.bin_dir.path + "/" + execution_rel_dir)
+        if not execution_rel_dir.startswith("/"):
+          execution_relative_dirs.append(ctx.bin_dir.path + "/" + execution_rel_dir)
     return execution_relative_dirs
 
 def _cc_includes_impl(ctx):
     cc_toolchain = find_cpp_toolchain(ctx)
 
     compilation_context = cc_common.create_compilation_context(
-        includes = depset(_get_includes_paths(ctx, ctx.attr.export_includes)),
-        system_includes = depset(_get_includes_paths(ctx, ctx.attr.export_system_includes)),
+        includes = depset(
+            get_includes_paths(ctx, ctx.attr.includes) +
+            get_includes_paths(ctx, ctx.attr.absolute_includes, package_relative = False),
+        ),
+        system_includes = depset(get_includes_paths(ctx, ctx.attr.system_includes)),
     )
 
     return [CcInfo(compilation_context = compilation_context)]
@@ -265,8 +286,9 @@ def _cc_includes_impl(ctx):
 _cc_includes = rule(
     implementation = _cc_includes_impl,
     attrs = {
-        "export_includes": attr.string_list(doc = "Package-relative list of search paths for headers, usually passed with -I" ),
-        "export_system_includes": attr.string_list(doc = "Package-relative list of search paths for headers, usually passed with -isystem"),
+        "absolute_includes": attr.string_list(doc = "List of exec-root relative or absolute search paths for headers, usually passed with -I"),
+        "includes": attr.string_list(doc = "Package-relative list of search paths for headers, usually passed with -I"),
+        "system_includes": attr.string_list(doc = "Package-relative list of search paths for headers, usually passed with -isystem"),
     },
     toolchains = ["@bazel_tools//tools/cpp:toolchain_type"],
     fragments = ["cpp"],
