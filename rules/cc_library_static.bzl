@@ -6,7 +6,8 @@ _bionic_targets = ["//bionic/libc", "//bionic/libdl", "//bionic/libm"]
 _system_dynamic_deps_defaults = select({
     constants.ArchVariantToConstraints["linux_bionic"]: _bionic_targets,
     constants.ArchVariantToConstraints["android"]: _bionic_targets,
-    "//conditions:default": []})
+    "//conditions:default": [],
+})
 
 def cc_library_static(
         name,
@@ -14,8 +15,9 @@ def cc_library_static(
         dynamic_deps = [],
         system_dynamic_deps = None,
         deps = [],
+        export_includes = [],
+        export_system_includes = [],
         hdrs = [],
-        includes = [],
         native_bridge_supported = False,  # TODO: not supported yet.
         whole_archive_deps = [],
         use_libcrt = True,
@@ -33,6 +35,7 @@ def cc_library_static(
         asflags = [],
         **kwargs):
     "Bazel macro to correspond with the cc_library_static Soong module."
+    includes_name = "%s_includes" % name
     cpp_name = "%s_cpp" % name
     c_name = "%s_c" % name
     asm_name = "%s_asm" % name
@@ -49,6 +52,12 @@ def cc_library_static(
     if system_dynamic_deps == None:
         system_dynamic_deps = _system_dynamic_deps_defaults
 
+    _cc_includes(
+        name = includes_name,
+        export_includes = export_includes,
+        export_system_includes = export_system_includes,
+    )
+
     # Silently drop these attributes for now:
     # - native_bridge_supported
     common_attrs = dict(
@@ -57,8 +66,7 @@ def cc_library_static(
             # Add dynamic_deps to implementation_deps, as the include paths from the
             # dynamic_deps are also needed.
             ("implementation_deps", implementation_deps + dynamic_deps + system_dynamic_deps),
-            ("deps", deps + whole_archive_deps),
-            ("includes", includes),
+            ("deps", [includes_name] + deps + whole_archive_deps),
             ("features", features),
             ("toolchains", ["//build/bazel/platforms:android_target_product_vars"]),
         ] + sorted(kwargs.items()),
@@ -97,9 +105,10 @@ def cc_library_static(
 # may expect they are depending directly on a target which generates linker inputs,
 # as opposed to a proxy target which is a level of indirection to such a target.
 def _combine_and_own(ctx, old_owner_labels, cc_infos):
-    combined_info = cc_common.merge_cc_infos(cc_infos=cc_infos)
+    combined_info = cc_common.merge_cc_infos(cc_infos = cc_infos)
 
     objects_to_link = []
+
     # This is not ideal, as it flattens a depset.
     for old_linker_input in combined_info.linking_context.linker_inputs.to_list():
         if old_linker_input.owner in old_owner_labels:
@@ -107,6 +116,7 @@ def _combine_and_own(ctx, old_owner_labels, cc_infos):
             # The objects will be recombined into a single linker input.
             for lib in old_linker_input.libraries:
                 objects_to_link.extend(lib.objects)
+
     # whole archive deps are unlike regular deps: The objects in their linker inputs are used
     # for the archive output of this rule.
     for whole_dep in ctx.attr.whole_archive_deps:
@@ -149,6 +159,7 @@ def _link_archive(ctx, objects):
         ]),
     )
     compilation_context = cc_common.create_compilation_context()
+
     linking_context = cc_common.create_linking_context(linker_inputs = depset(direct = [linker_input]))
 
     archiver_path = cc_common.get_tool_for_action(
@@ -170,7 +181,6 @@ def _link_archive(ctx, objects):
     args.add_all(command_line)
     args.add_all(objects)
 
-
     ctx.actions.run(
         executable = archiver_path,
         arguments = [args],
@@ -183,8 +193,13 @@ def _link_archive(ctx, objects):
         outputs = [output_file],
     )
 
-    cc_info = cc_common.merge_cc_infos(cc_infos = [dep[CcInfo] for dep in ctx.attr.deps]  +
-        [CcInfo(compilation_context = compilation_context, linking_context = linking_context)])
+    cc_info = cc_common.merge_cc_infos(cc_infos = [
+        dep[CcInfo]
+        for dep in ctx.attr.deps
+    ] + [
+        CcInfo(compilation_context = compilation_context, linking_context = linking_context),
+    ])
+
     return [
         DefaultInfo(files = depset([output_file])),
         cc_info,
@@ -211,6 +226,47 @@ _cc_library_combiner = rule(
             default = Label("@local_config_cc//:toolchain"),
             providers = [cc_common.CcToolchainInfo],
         ),
+    },
+    toolchains = ["@bazel_tools//tools/cpp:toolchain_type"],
+    fragments = ["cpp"],
+)
+
+# _get_includes_paths expects a rule context and a list of package-relative directories
+# and returns a list of exec root-relative paths. This handles the need to
+# search for files both in the source tree and generated files.
+def _get_includes_paths(ctx, package_relative_dirs):
+    execution_relative_dirs = []
+    for rel_dir in package_relative_dirs:
+        execution_rel_dir = ctx.label.package + "/" + rel_dir
+        execution_relative_dirs.append(execution_rel_dir)
+        # to support generated files, we also need to export includes relatives to the bin directory
+        execution_relative_dirs.append(ctx.bin_dir.path + "/" + execution_rel_dir)
+    return execution_relative_dirs
+
+def _cc_includes_impl(ctx):
+    cc_toolchain = find_cpp_toolchain(ctx)
+
+    compilation_context = cc_common.create_compilation_context(
+        includes = depset(_get_includes_paths(ctx, ctx.attr.export_includes)),
+        system_includes = depset(_get_includes_paths(ctx, ctx.attr.export_system_includes)),
+    )
+
+    return [CcInfo(compilation_context = compilation_context)]
+
+# Bazel's native cc_library rule supports specifying include paths two ways:
+# 1. non-exported includes can be specified via copts attribute
+# 2. exported -isystem includes can be specified via includes attribute
+#
+# In order to guarantee a correct inclusion search order, we need to export
+# includes paths for both -I and -isystem; however, there is no native Bazel
+# support to export both of these, this rule provides a CcInfo to propagate the
+# given package-relative include/system include paths as exec root relative
+# include/system include paths.
+_cc_includes = rule(
+    implementation = _cc_includes_impl,
+    attrs = {
+        "export_includes": attr.string_list(doc = "Package-relative list of search paths for headers, usually passed with -I" ),
+        "export_system_includes": attr.string_list(doc = "Package-relative list of search paths for headers, usually passed with -isystem"),
     },
     toolchains = ["@bazel_tools//tools/cpp:toolchain_type"],
     fragments = ["cpp"],
