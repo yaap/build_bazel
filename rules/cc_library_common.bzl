@@ -21,3 +21,7 @@ def add_lists_defaulting_to_none(*args):
           combined += arg
 
     return combined
+
+# By default, crtbegin/crtend linking is enabled for shared libraries and cc_binary.
+def disable_crt_link(features):
+    return features + ["-link_crt"]
