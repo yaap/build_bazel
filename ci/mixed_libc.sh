@@ -3,6 +3,9 @@
 # This verification script is designed to be used for continuous integration
 # tests, though may also be used for manual developer verification.
 
+# TODO: Remove after incremental CI is green again.
+rm -rf out
+
 if [[ -z ${DIST_DIR+x} ]]; then
   echo "DIST_DIR not set. Using out/dist. This should only be used for manual developer testing."
   DIST_DIR="out/dist"
