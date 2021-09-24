@@ -12,6 +12,7 @@ def cc_library_shared(
         # Common arguments between shared_root and the shared library
         features = [],
         dynamic_deps = [],
+        implementation_dynamic_deps = [],
 
         # Ultimately _static arguments for shared_root production
         srcs = [],
@@ -25,7 +26,6 @@ def cc_library_shared(
         implementation_deps = [],
         deps = [],
         whole_archive_deps = [],
-        root_dynamic_deps = [],
         system_dynamic_deps = None,
         export_includes = [],
         export_system_includes = [],
@@ -69,10 +69,12 @@ def cc_library_shared(
         absolute_includes = absolute_includes,
         linkopts = linkopts,
         rtti = rtti,
-        implementation_deps = implementation_deps,
+        # whole archive deps always re-export their includes, etc
+        deps = deps + whole_archive_deps,
         dynamic_deps = dynamic_deps,
+        implementation_deps = implementation_deps,
+        implementation_dynamic_deps = implementation_dynamic_deps,
         system_dynamic_deps = system_dynamic_deps,
-        deps = deps,
         features = features,
     )
 
@@ -98,7 +100,7 @@ def cc_library_shared(
         # if a shared library could declare a transitive exported static dep
         # instead of needing to declare each target transitively.
         static_deps = ["//:__subpackages__"] + [shared_root_name, imp_deps_stub, deps_stub],
-        dynamic_deps = add_lists_defaulting_to_none(dynamic_deps, system_dynamic_deps),
+        dynamic_deps = add_lists_defaulting_to_none(dynamic_deps, system_dynamic_deps, implementation_dynamic_deps),
         version_script = version_script,
         roots = [shared_root_name, imp_deps_stub, deps_stub] + whole_archive_deps,
         features = features,
