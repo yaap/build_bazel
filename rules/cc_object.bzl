@@ -14,7 +14,6 @@ _CC_OBJECT_LINKOPTS = [
     "-Wl,-r",
 ]
 
-
 CcObjectInfo = provider(fields = [
     # The merged compilation outputs for this cc_object and its transitive
     # dependencies.
@@ -30,7 +29,6 @@ def split_srcs_hdrs(files):
         else:
             non_headers += [f]
     return non_headers, headers
-
 
 def _cc_object_impl(ctx):
     cc_toolchain = find_cpp_toolchain(ctx)
@@ -49,7 +47,7 @@ def _cc_object_impl(ctx):
         deps_objects.append(obj[CcObjectInfo].objects)
 
     product_variables = ctx.attr._android_product_variables[platform_common.TemplateVariableInfo]
-    asflags = [ctx.expand_make_variables("asflags", flag,  product_variables.variables) for flag in ctx.attr.asflags]
+    asflags = [ctx.expand_make_variables("asflags", flag, product_variables.variables) for flag in ctx.attr.asflags]
 
     srcs, private_hdrs = split_srcs_hdrs(ctx.files.srcs)
 
@@ -59,7 +57,7 @@ def _cc_object_impl(ctx):
         feature_configuration = feature_configuration,
         cc_toolchain = cc_toolchain,
         srcs = srcs,
-        includes = get_includes_paths(ctx, ctx.attr.local_includes) + get_includes_paths(ctx, ctx.attr.absolute_includes, package_relative=False),
+        includes = get_includes_paths(ctx, ctx.attr.local_includes) + get_includes_paths(ctx, ctx.attr.absolute_includes, package_relative = False),
         public_hdrs = ctx.files.hdrs,
         private_hdrs = private_hdrs,
         user_compile_flags = ctx.attr.copts + asflags,
@@ -73,7 +71,7 @@ def _cc_object_impl(ctx):
         local_defines = compilation_context.local_defines,
     )
 
-    objects_to_link = cc_common.merge_compilation_outputs(compilation_outputs=deps_objects + [compilation_outputs])
+    objects_to_link = cc_common.merge_compilation_outputs(compilation_outputs = deps_objects + [compilation_outputs])
 
     # partially link if there are multiple object files
     if len(objects_to_link.objects) + len(objects_to_link.pic_objects) > 1:
@@ -104,7 +102,7 @@ _cc_object = rule(
         "local_includes": attr.string_list(),
         "copts": attr.string_list(),
         "asflags": attr.string_list(),
-        "deps": attr.label_list(providers=[CcInfo, CcObjectInfo]),
+        "deps": attr.label_list(providers = [CcInfo, CcObjectInfo]),
         "_cc_toolchain": attr.label(
             default = Label("@local_config_cc//:toolchain"),
             providers = [cc_common.CcToolchainInfo],
@@ -126,7 +124,7 @@ def cc_object(
         srcs = [],
         srcs_as = [],
         deps = [],
-        native_bridge_supported = False, # TODO: not supported yet.
+        native_bridge_supported = False,  # TODO: not supported yet.
         **kwargs):
     "Build macro to correspond with the cc_object Soong module."
 
