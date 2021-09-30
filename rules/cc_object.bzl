@@ -97,7 +97,7 @@ def _cc_object_impl(ctx):
     user_link_flags.extend(_CC_OBJECT_LINKOPTS)
     additional_inputs = []
 
-    if not ctx.attr.linker_script == None:
+    if ctx.attr.linker_script != None:
         linker_script = ctx.files.linker_script[0]
         user_link_flags.append("-Wl,-T," + linker_script.path)
         additional_inputs.append(linker_script)
