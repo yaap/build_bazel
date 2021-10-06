@@ -16,8 +16,7 @@ def add_lists_defaulting_to_none(*args):
     for arg in args:
       if arg != None:
         if combined == None:
-          combined = arg
-        else:
-          combined += arg
+          combined = []
+        combined += arg
 
     return combined
