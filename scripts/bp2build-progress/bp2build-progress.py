@@ -36,6 +36,7 @@ import json
 import subprocess
 import collections
 import datetime
+import xml.etree.ElementTree
 
 # This list of module types are omitted from the report and graph
 # for brevity and simplicity. Presence in this list doesn't mean
@@ -63,8 +64,10 @@ _ModuleInfo = collections.namedtuple("_ModuleInfo",[
     'dirname',
 ])
 
-def generate_module_info(module):
+def generate_module_info(module, use_queryview):
     src_root_dir = os.path.abspath(__file__ + "/../../../../..")
+
+    module_info_target = "queryview" if use_queryview else "json-module-graph"
 
     # Run soong to build json-module-graph and bp2build/soong_injection
     result = subprocess.run(
@@ -72,8 +75,8 @@ def generate_module_info(module):
             "build/soong/soong_ui.bash",
             "--make-mode",
             "--skip-soong-tests",
-            "json-module-graph",
             "bp2build",
+            module_info_target,
         ],
         capture_output=True,
         cwd = src_root_dir,
@@ -85,15 +88,28 @@ def generate_module_info(module):
     )
     result.check_returncode()
 
-    # Run query.sh on the module graph for the top level module
-    result = subprocess.run(
-        ["build/bazel/json_module_graph/query.sh", "fullTransitiveDeps", "out/soong/module-graph.json", module],
-        cwd = src_root_dir,
-        capture_output=True,
-        encoding = "utf-8",
-    )
-    result.check_returncode()
-    module_graph = json.loads(result.stdout)
+    module_info = None
+    if use_queryview:
+      result = subprocess.run(
+          ["tools/bazel", "query", "--config=queryview", "--output=xml", 'deps(attr("soong_module_name", "^{}$", //...))'.format(module)],
+          cwd = src_root_dir,
+          capture_output=True,
+          encoding = "utf-8",
+      )
+      result.check_returncode()
+      module_graph = xml.etree.ElementTree.fromstring(result.stdout)
+      module_info = module_graph
+    else:
+      # Run query.sh on the module graph for the top level module
+      result = subprocess.run(
+          ["build/bazel/json_module_graph/query.sh", "fullTransitiveDeps", "out/soong/module-graph.json", module],
+          cwd = src_root_dir,
+          capture_output=True,
+          encoding = "utf-8",
+      )
+      result.check_returncode()
+      module_graph = json.loads(result.stdout)
+      module_info = module_graph
 
     # Parse the list of converted module names from bp2build
     converted_modules = []
@@ -103,7 +119,7 @@ def generate_module_info(module):
         ret = [line.strip() for line in f.readlines() if not line.startswith("#")]
     converted_modules = set(ret)
 
-    return module_graph, converted_modules
+    return module_info, converted_modules
 
 def get_os_variation(module):
     dep_variations = module.get("Variations")
@@ -249,19 +265,91 @@ def adjacency_list_from_json(module_graph):
 
     return module_adjacency_list
 
+
+def bazel_target_to_dir(full_target):
+    dirname, _ = full_target.split(':')
+    return dirname[2:]
+
+
+def adjacency_list_from_queryview_xml(module_graph):
+    # The set of ignored modules. These modules are not shown in the graph or report.
+    ignored = set()
+
+    # A map of module name to ModuleInfo
+    name_to_info = dict()
+
+    # queryview embeds variant in long name, keep a map of the name with vaiarnt
+    # to just name
+    name_with_variant_to_name = dict()
+
+    for module in module_graph:
+        if module.tag != 'rule':
+            continue
+        kind = module.attrib['class']
+        name_with_variant = module.attrib['name']
+        for attr in module:
+            attr_name = attr.attrib['name']
+            if attr_name == 'soong_module_name':
+                name = attr.attrib['value']
+                if kind in IGNORED_KINDS:
+                    ignored.add(name_with_variant)
+                else:
+                    name_with_variant_to_name.setdefault(name_with_variant, name)
+                    name_to_info.setdefault(name, _ModuleInfo(
+                        name = name,
+                        kind = kind,
+                        dirname = bazel_target_to_dir(name_with_variant),
+                    ))
+            elif attr_name == "soong_module_variant":
+                variant = attr.attrib['value']
+                if variant.startswith('windows'):
+                    ignored.add(name_with_variant)
+
+    # An adjacency list for all modules in the transitive closure, excluding ignored modules.
+    module_adjacency_list = dict()
+
+    for module in module_graph:
+        if module.tag != 'rule':
+            continue
+        name_with_variant = module.attrib['name']
+        if name_with_variant in ignored:
+            continue
+
+        name = name_with_variant_to_name[name_with_variant]
+        module_info = name_to_info[name]
+        module_adjacency_list[module_info] = set()
+        for attr in module:
+            if attr.tag != 'rule-input':
+                continue
+            dep_name_with_variant = attr.attrib['name']
+            if dep_name_with_variant in ignored:
+                continue
+            dep_name = name_with_variant_to_name[dep_name_with_variant]
+            if name == dep_name:
+                continue
+            module_adjacency_list[module_info].add(dep_name)
+
+    return module_adjacency_list
+
 def main():
     parser = argparse.ArgumentParser(description="")
     parser.add_argument("mode", help = "mode: graph or report")
     parser.add_argument("module", help = "name of Soong module")
+    parser.add_argument("--use_queryview", type=bool, default=False, action=argparse.BooleanOptionalAction, required=False, help = "whether to use queryview or module_info")
     args = parser.parse_args()
 
     mode = args.mode
     top_level_module = args.module
+    use_queryview = args.use_queryview
 
     # The main module graph containing _all_ modules in the Soong build,
     # and the list of converted modules.
-    module_graph, converted = generate_module_info(top_level_module)
-    module_adjacency_list = adjacency_list_from_json(module_graph)
+    module_graph, converted = generate_module_info(top_level_module, use_queryview)
+    module_adjacency_list = None
+    if use_queryview:
+      module_adjacency_list = adjacency_list_from_queryview_xml(module_graph)
+    else:
+      module_adjacency_list = adjacency_list_from_json(module_graph)
 
     if mode == "graph":
         generate_dot_file(module_adjacency_list, converted, top_level_module)
