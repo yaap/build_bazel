@@ -31,6 +31,7 @@ Example:
 
 import argparse
 import os
+import os.path
 import json
 import subprocess
 import collections
@@ -54,6 +55,12 @@ IGNORED_KINDS = set([
 
     "ndk_prebuilt_static_stl",
     "ndk_library",
+])
+
+_ModuleInfo = collections.namedtuple("_ModuleInfo",[
+    'name',
+    "kind",
+    'dirname',
 ])
 
 def generate_module_info(module):
@@ -106,7 +113,7 @@ def get_os_variation(module):
     return dep_variation_os
 
 # Generate a dot file containing the transitive closure of the module.
-def generate_dot_file(modules, converted, name_to_kind, module):
+def generate_dot_file(modules, converted, module):
     DOT_TEMPLATE = """
 digraph mygraph {{
   node [shape=box];
@@ -116,9 +123,9 @@ digraph mygraph {{
 """
 
     make_node = lambda module, color: \
-        '"%s\\n%s" [color=black, style=filled, fillcolor=%s]' % (module, name_to_kind.get(module), color)
+        '"{name}" [label="{name}\\n{kind}" color=black, style=filled, fillcolor={color}]'.format(name=module.name, kind=module.kind, color=color)
     make_edge = lambda module, dep: \
-        '"%s\\n%s" -> "%s\\n%s"' % (module, name_to_kind.get(module), dep, name_to_kind.get(dep))
+        '"%s" -> "%s"' % (module.name, dep)
 
     # Check that all modules in the argument are in the list of converted modules
     all_converted = lambda modules: all(map(lambda m: m in converted, modules))
@@ -126,10 +133,10 @@ digraph mygraph {{
     dot_entries = []
 
     for module, deps in modules.items():
-        if module in converted:
+        if module.name in converted:
             # Skip converted modules (nodes)
             continue
-        elif module not in converted:
+        elif module.name not in converted:
             if all_converted(deps):
                 dot_entries.append(make_node(module, 'yellow'))
             else:
@@ -145,11 +152,11 @@ digraph mygraph {{
 
 
 # Generate a report for each module in the transitive closure, and the blockers for each module
-def generate_report(modules, converted, name_to_kind, module):
+def generate_report(modules, converted, input_module):
     report_lines = []
 
-    report_lines.append("# bp2build progress report for: %s\n" % module)
-    report_lines.append("Ignored module types: %s\n" % IGNORED_KINDS)
+    report_lines.append("# bp2build progress report for: %s\n" % input_module)
+    report_lines.append("Ignored module types: %s\n" % sorted(IGNORED_KINDS))
     report_lines.append("# Transitive dependency closure:")
 
     # Map of [number of unconverted deps] to list of entries,
@@ -160,15 +167,22 @@ def generate_report(modules, converted, name_to_kind, module):
     # (i.e. number of reverse deps)
     all_unconverted_modules = collections.defaultdict(int)
 
-    for module, deps in modules.items():
-        unconverted_deps = list(filter(lambda dep: dep not in converted, list(deps)))
+    dirs_with_unconverted_modules = set()
+
+    for module, deps in sorted(modules.items()):
+        unconverted_deps = set(dep for dep in deps if dep not in converted)
         for dep in unconverted_deps:
             all_unconverted_modules[dep] += 1
 
         unconverted_count = len(unconverted_deps)
-        if module not in converted:
-            report_entry = "%s [%s]: %s" % (module, name_to_kind.get(module), ", ".join(unconverted_deps))
+        if module.name not in converted:
+            report_entry = "{name} [{kind}] [{dirname}]: {unconverted_deps}".format(
+                name = module.name,
+                kind = module.kind,
+                dirname = module.dirname,
+                unconverted_deps = ", ".join(sorted(unconverted_deps)))
             blocked_modules[unconverted_count].append(report_entry)
+            dirs_with_unconverted_modules.add(module.dirname)
 
     for count, modules in sorted(blocked_modules.items()):
         report_lines.append("\n%d unconverted deps remaining:" % count)
@@ -176,9 +190,12 @@ def generate_report(modules, converted, name_to_kind, module):
             report_lines.append("  " + module_string)
 
     report_lines.append("\n")
-    report_lines.append("# Unconverted deps of adbd:\n")
+    report_lines.append("# Unconverted deps of {}:\n".format(input_module))
     for count, dep in sorted(((count, dep) for dep,count in all_unconverted_modules.items()), reverse=True):
         report_lines.append("%s: blocking %d modules" % (dep, count))
+
+    report_lines.append("\n")
+    report_lines.append("Dirs with unconverted modules:\n\n{}".format("\n".join(sorted(dirs_with_unconverted_modules))))
 
     report_lines.append("\n")
     report_lines.append("# Converted modules:\n\n%s" % "\n".join(sorted(converted)))
@@ -189,6 +206,48 @@ def generate_report(modules, converted, name_to_kind, module):
     report_lines.append(
         "Generated at: %s" % datetime.datetime.now().astimezone().strftime("%Y-%m-%dT%H:%M:%S %z"))
     print("\n".join(report_lines))
+
+
+def adjacency_list_from_json(module_graph):
+    # The set of ignored modules. These modules are not shown in the graph or report.
+    ignored = set()
+
+    # A map of module name to _ModuleInfo
+    name_to_info = dict()
+
+    # Do a single pass to find all top-level modules to be ignored
+    for module in module_graph:
+        name = module["Name"]
+        if module["Type"] in IGNORED_KINDS:
+            ignored.add(module["Name"])
+            continue
+        name_to_info[name] = _ModuleInfo(
+            name = name,
+            kind = module["Type"],
+            dirname = os.path.dirname(module["Blueprint"])
+        )
+
+    # An adjacency list for all modules in the transitive closure, excluding ignored modules.
+    module_adjacency_list = {}
+
+    # Create the adjacency list.
+    for module in module_graph:
+        module_name = module["Name"]
+        if module_name in ignored:
+            continue
+        if get_os_variation(module) == "windows":
+            # ignore the windows variations of modules
+            continue
+
+        module_info = name_to_info[module_name]
+        module_adjacency_list[module_info] = set()
+        for dep in module["Deps"]:
+            dep_name = dep["Name"]
+            if dep_name in ignored or dep_name == module_name:
+                continue
+            module_adjacency_list[module_info].add(dep_name)
+
+    return module_adjacency_list
 
 def main():
     parser = argparse.ArgumentParser(description="")
@@ -202,40 +261,12 @@ def main():
     # The main module graph containing _all_ modules in the Soong build,
     # and the list of converted modules.
     module_graph, converted = generate_module_info(top_level_module)
-
-    # The set of ignored modules. These modules are not shown in the graph or report.
-    ignored = set()
-
-    # A map of module name to its type/kind.
-    name_to_kind = dict()
-
-    # An adjacency list for all modules in the transitive closure, excluding ignored modules.
-    module_adjacency_list = collections.defaultdict(set)
-
-    # Do a single pass to find all top-level modules to be ignored
-    for module in module_graph:
-        if module["Type"] in IGNORED_KINDS:
-            ignored.add(module["Name"])
-
-        name_to_kind.setdefault(module["Name"], module["Type"])
-
-    # Create the adjacency list.
-    for module in module_graph:
-        module_name = module["Name"]
-        if module_name not in ignored:
-            if get_os_variation(module) == "windows":
-                # ignore the windows variations of modules
-                continue
-            # module_adjacency_list.setdefault(module_name, set())
-            for dep in module["Deps"]:
-                dep_name = dep["Name"]
-                if dep_name not in ignored and dep_name != module_name:
-                    module_adjacency_list[module_name].add(dep_name)
+    module_adjacency_list = adjacency_list_from_json(module_graph)
 
     if mode == "graph":
-        generate_dot_file(module_adjacency_list, converted, name_to_kind, top_level_module)
+        generate_dot_file(module_adjacency_list, converted, top_level_module)
     elif mode == "report":
-        generate_report(module_adjacency_list, converted, name_to_kind, top_level_module)
+        generate_report(module_adjacency_list, converted, top_level_module)
     else:
         raise RuntimeError("unknown mode: %s" % mode)
 
