@@ -87,6 +87,8 @@ def cc_library_shared(
         features = features,
     )
 
+    stl_static, stl_shared = shared_stl_deps(stl)
+
     # implementation_deps and deps are to be linked into the shared library via
     # --no-whole-archive. In order to do so, they need to be dependencies of
     # a "root" of the cc_shared_library, but may not be roots themselves.
@@ -96,7 +98,7 @@ def cc_library_shared(
     deps_stub = name + "_deps"
     native.cc_library(
         name = imp_deps_stub,
-        deps = implementation_deps,
+        deps = implementation_deps + stl_static,
     )
     native.cc_library(
         name = deps_stub,
@@ -107,7 +109,7 @@ def cc_library_shared(
         dynamic_deps,
         system_dynamic_deps,
         implementation_dynamic_deps,
-        shared_stl_deps(stl),
+        stl_shared,
     )
 
     cc_shared_library(
