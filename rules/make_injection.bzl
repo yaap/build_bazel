@@ -14,7 +14,6 @@ def _impl(rctx):
     all_modules = target_modules.keys() + binaries
     args += all_modules
 
-
     rctx.report_progress("Building modules with Soong: %s" % str(all_modules))
     out_dir = str(build_dir.dirname) + "/make_injection"
     exec_result = rctx.execute(

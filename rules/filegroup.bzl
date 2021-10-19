@@ -7,6 +7,7 @@ def group_files_by_ext(files):
     cpp = []
     c = []
     asm = []
+
     # This for-loop iterator works because filegroups in Android don't use
     # configurable selects.
     for f in files:
@@ -27,7 +28,7 @@ def filegroup(name, srcs = [], **kwargs):
     native.filegroup(
         name = name,
         srcs = srcs,
-        **kwargs,
+        **kwargs
     )
 
     # These genrule prevent empty filegroups being used as deps to cc libraries,

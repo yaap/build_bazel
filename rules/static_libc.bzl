@@ -5,6 +5,7 @@
 # Macro: static_libc
 #   Creates the libc_config target and filegroups needed by cc_toolchain.
 LibcConfigInfo = provider(fields = ["include_dirs", "system_libraries"])
+
 def _libc_config_impl(ctx):
     include_dirs = ctx.attr.include_dirs
     system_libraries = [file.path for file in ctx.files.system_libraries]
@@ -13,6 +14,7 @@ def _libc_config_impl(ctx):
         system_libraries = system_libraries,
     )
     return [provider]
+
 _libc_config = rule(
     implementation = _libc_config_impl,
     attrs = {
@@ -20,6 +22,7 @@ _libc_config = rule(
         "system_libraries": attr.label_list(default = [], allow_files = True),
     },
 )
+
 def static_libc(
         name,
         include_dirs = {},
@@ -42,6 +45,7 @@ def static_libc(
         name = "%s_system_libraries" % name,
         srcs = system_libraries,
     )
+
     # Create the libc config.
     include_paths = [path for path in include_dirs.keys()]
     _libc_config(
@@ -49,6 +53,7 @@ def static_libc(
         include_dirs = include_paths,
         system_libraries = system_libraries,
     )
+
     # Also create cc_library target for direct dependencies.
     native.cc_library(
         name = "%s_library" % name,

@@ -21,10 +21,10 @@ def add_lists_defaulting_to_none(*args):
     """Adds multiple lists, but is well behaved with a `None` default."""
     combined = None
     for arg in args:
-      if arg != None:
-        if combined == None:
-          combined = []
-        combined += arg
+        if arg != None:
+            if combined == None:
+                combined = []
+            combined += arg
 
     return combined
 

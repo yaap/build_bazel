@@ -14,8 +14,8 @@ def _impl(settings, attr):
     # Perform a transition to apply APEX specific build settings on the
     # destination target (i.e. an APEX dependency).
     return {
-        "//build/bazel/rules/apex:apex_name" : attr.name, # Name of the APEX
-        "//build/bazel/rules/apex:min_sdk_version" : attr.min_sdk_version, # Min SDK version of the APEX
+        "//build/bazel/rules/apex:apex_name": attr.name,  # Name of the APEX
+        "//build/bazel/rules/apex:min_sdk_version": attr.min_sdk_version,  # Min SDK version of the APEX
     }
 
 apex_transition = transition(
@@ -24,5 +24,5 @@ apex_transition = transition(
     outputs = [
         "//build/bazel/rules/apex:apex_name",
         "//build/bazel/rules/apex:min_sdk_version",
-    ]
+    ],
 )

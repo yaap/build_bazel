@@ -1,13 +1,14 @@
 ApexKeyInfo = provider(
     "Info needed to sign APEX bundles",
-    fields={
+    fields = {
         "public_key": "File containing the public_key",
         "private_key": "File containing the private key",
-    })
+    },
+)
 
 def _apex_key_rule_impl(ctx):
     return [
-        ApexKeyInfo(public_key = ctx.file.public_key, private_key = ctx.file.private_key)
+        ApexKeyInfo(public_key = ctx.file.public_key, private_key = ctx.file.private_key),
     ]
 
 apex_key = rule(

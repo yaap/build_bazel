@@ -1,4 +1,4 @@
-load(":cc_library_common.bzl", "add_lists_defaulting_to_none", "system_dynamic_deps_defaults", "disable_crt_link")
+load(":cc_library_common.bzl", "add_lists_defaulting_to_none", "disable_crt_link", "system_dynamic_deps_defaults")
 load(":cc_library_static.bzl", "cc_library_static")
 load(":stl.bzl", "shared_stl_deps")
 load("@rules_cc//examples:experimental_cc_shared_library.bzl", "cc_shared_library", _CcSharedLibraryInfo = "CcSharedLibraryInfo")
@@ -38,7 +38,6 @@ def cc_library_shared(
         stl = "",
         cpp_std = "",
         link_crt = True,
-
         additional_linker_inputs = None,
 
         # Purely _shared arguments
