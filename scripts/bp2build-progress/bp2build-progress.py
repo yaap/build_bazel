@@ -294,6 +294,7 @@ def adjacency_list_from_queryview_xml(module_graph):
   name_with_variant_to_name = dict()
 
   for module in module_graph:
+    ignore = False
     if module.tag != "rule":
       continue
     kind = module.attrib["class"]
@@ -308,8 +309,14 @@ def adjacency_list_from_queryview_xml(module_graph):
         variant = attr.attrib["value"]
       elif attr_name == "soong_module_type" and kind == "generic_soong_module":
         kind = attr.attrib["value"]
+      # special handling for filegroup srcs, if a source has the same name as
+      # the module, we don't convert it
+      elif kind == "filegroup" and attr_name == "srcs":
+        for item in attr:
+          if item.attrib["value"] == name:
+            ignore = True
 
-    if ignore_kind(kind) or variant.startswith("windows"):
+    if ignore_kind(kind) or variant.startswith("windows") or ignore:
       ignored.add(name_with_variant)
     else:
       name_with_variant_to_name.setdefault(name_with_variant, name)
