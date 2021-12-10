@@ -187,6 +187,7 @@ def generate_report(modules, converted, input_module):
   all_unconverted_modules = collections.defaultdict(int)
 
   dirs_with_unconverted_modules = set()
+  kind_of_unconverted_modules = set()
 
   for module, deps in sorted(modules.items()):
     unconverted_deps = set(dep for dep in deps if dep not in converted)
@@ -202,6 +203,7 @@ def generate_report(modules, converted, input_module):
           unconverted_deps=", ".join(sorted(unconverted_deps)))
       blocked_modules[unconverted_count].append(report_entry)
       dirs_with_unconverted_modules.add(module.dirname)
+      kind_of_unconverted_modules.add(module.kind)
 
   for count, modules in sorted(blocked_modules.items()):
     report_lines.append("\n%d unconverted deps remaining:" % count)
@@ -218,6 +220,10 @@ def generate_report(modules, converted, input_module):
   report_lines.append("\n")
   report_lines.append("Dirs with unconverted modules:\n\n{}".format("\n".join(
       sorted(dirs_with_unconverted_modules))))
+
+  report_lines.append("\n")
+  report_lines.append("Kinds with unconverted modules:\n\n{}".format("\n".join(
+      sorted(kind_of_unconverted_modules))))
 
   report_lines.append("\n")
   report_lines.append("# Converted modules:\n\n%s" %
