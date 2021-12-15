@@ -18,6 +18,11 @@ fi
 AOSP_ROOT="$(dirname $0)/../../.."
 "${AOSP_ROOT}/build/soong/soong_ui.bash" --make-mode BP2BUILD_VERBOSE=1 nothing --skip-soong-tests bp2build
 
+# Dist the entire workspace of generated BUILD files, rooted from
+# out/soong/bp2build. This is done early so it's available even if builds/tests
+# fail.
+tar -czf "${DIST_DIR}/bp2build_generated_workspace.tar.gz" -C out/soong/bp2build .
+
 # Remove the ninja_build output marker file to communicate to buildbot that this is not a regular Ninja build, and its
 # output should not be parsed as such.
 rm -f out/ninja_build
@@ -92,6 +97,3 @@ for m in "${BP2BUILD_PROGRESS_MODULES[@]}"; do
 done
 
 "${bp2build_progress_script}" report ${report_args} --use_queryview=true > "${bp2build_progress_output_dir}/progress_report.txt"
-
-# Dist the entire workspace of generated BUILD files, rooted from out/soong/bp2build.
-tar -czf "${DIST_DIR}/bp2build_generated_workspace.tar.gz" -C out/soong/bp2build .
