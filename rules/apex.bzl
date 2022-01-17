@@ -111,7 +111,7 @@ def _add_libs_64_target(ctx, key_32, key_64, apex_manifest):
 def _add_lib_file(dir, libs, apex_manifest):
     for dep in libs:
         apex_cc_info = dep[ApexCcInfo]
-        for lib_file in apex_cc_info.lib_files.to_list():
+        for lib_file in apex_cc_info.transitive_shared_libs.to_list():
             apex_manifest[(dir, lib_file.basename)] = lib_file
 
 # conv_apex_manifest - Convert the JSON APEX manifest to protobuf, which is needed by apexer.
