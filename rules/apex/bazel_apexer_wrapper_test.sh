@@ -38,6 +38,7 @@ trap cleanup ERR
 # 3. a one-level symlink
 # 4. a two-level symlink with "execroot/__main__" in the path
 # 5. a two-level sumlink without "execroot/__main__" in the path
+# 6. a three-level symlink with "execroot/__main__" in the path
 echo "test file1" > "${input_dir}/file1"
 echo "test file2" > "${input_dir}/file2"
 mkdir -p "${input_dir}/execroot/__main__"
@@ -45,6 +46,7 @@ ln -s "${input_dir}/file1" "${input_dir}/one_level_sym"
 ln -s "${input_dir}/file2" "${input_dir}/execroot/__main__/middle_sym"
 ln -s "${input_dir}/execroot/__main__/middle_sym" "${input_dir}/two_level_sym_in_execroot"
 ln -s "${input_dir}/one_level_sym" "${input_dir}/two_level_sym_not_in_execroot"
+ln -s "${input_dir}/two_level_sym_in_execroot" "${input_dir}/three_level_sym_in_execroot"
 
 # Create the APEX manifest file
 manifest_dir=$(mktemp -d)
@@ -69,6 +71,7 @@ dir2/dir3,file2,"${input_dir}/file2"
 dir4,one_level_sym,"${input_dir}/one_level_sym"
 dir5,two_level_sym_in_execroot,"${input_dir}/two_level_sym_in_execroot"
 dir6,two_level_sym_not_in_execroot,"${input_dir}/two_level_sym_not_in_execroot"
+dir7,three_level_sym_in_execroot,"${input_dir}/three_level_sym_in_execroot"
 " > ${bazel_apexer_wrapper_manifest_file}
 
 #############################################
@@ -108,6 +111,9 @@ dir6,two_level_sym_not_in_execroot,"${input_dir}/two_level_sym_not_in_execroot"
 # │   ├── dir6
 # │   │   └── two_level_sym_not_in_execroot -> /tmp/tmp.evJh21oYGG/file1
 #             (two level symlink resolve only one level otherwise)
+# │   ├── dir7
+# │   │   └── three_level_sym_in_execroot
+#             (three level symlink resolve if the path contains execroot/__main__)
 # └── test.apex
 
 # b/215129834:
@@ -126,6 +132,7 @@ diff ${input_dir}/file2 ${output_dir}/dir2/dir3/file2
 diff ${input_dir}/file1 ${output_dir}/dir4/one_level_sym
 diff ${input_dir}/file2 ${output_dir}/dir5/two_level_sym_in_execroot
 [ `readlink ${output_dir}/dir6/two_level_sym_not_in_execroot` = "${input_dir}/file1" ]
+diff ${input_dir}/file2 ${output_dir}/dir7/three_level_sym_in_execroot
 
 cleanup
 
