@@ -110,9 +110,17 @@ dir6,two_level_sym_not_in_execroot,"${input_dir}/two_level_sym_not_in_execroot"
 #             (two level symlink resolve only one level otherwise)
 # └── test.apex
 
-# check the contents
-# TODO(b/215129834): Temporarily bypassed to unblock ART team. Resolve this ASAP.
-# diff ${manifest_file} ${output_dir}/apex_manifest.pb
+# b/215129834:
+# https://android-review.googlesource.com/c/platform/system/apex/+/1944264 made
+# it such that the hash of non-payload files in the APEX (like
+# AndroidManifest.xml) will be included as part of the apex_manifest.pb via the
+# apexContainerFilesHash string to ensure that changes to AndroidManifest.xml
+# results in changes in content hash for the apex_payload.img. Since this is
+# potentially fragile, we skip diffing the apex_manifest.pb, and just check that
+# it exists.
+test -f "${output_dir}/apex_manifest.pb" || echo "expected apex_manifest.pb to exist"
+
+# check the contents with diff for the rest of the files
 diff ${input_dir}/file1 ${output_dir}/dir1/file1
 diff ${input_dir}/file2 ${output_dir}/dir2/dir3/file2
 diff ${input_dir}/file1 ${output_dir}/dir4/one_level_sym
