@@ -17,31 +17,33 @@ limitations under the License.
 load(":apex_key.bzl", "ApexKeyInfo")
 load(":prebuilt_etc.bzl", "PrebuiltEtcInfo")
 load(":sh_binary.bzl", "ShBinaryInfo")
-load(":stripped_cc_common.bzl", "StrippedCcBinaryInfo")
+load("//build/bazel/rules/cc:stripped_cc_common.bzl", "StrippedCcBinaryInfo")
 load(":android_app_certificate.bzl", "AndroidAppCertificateInfo")
-load("//build/bazel/rules/apex:transition.bzl", "apex_transition")
+load("//build/bazel/rules/apex:transition.bzl", "apex_transition", "shared_lib_transition_32", "shared_lib_transition_64")
 load("//build/bazel/rules/apex:cc.bzl", "ApexCcInfo", "apex_cc_aspect")
+
+DIR_LIB = "lib"
+DIR_LIB64 = "lib64"
 
 # Prepare the input files info for bazel_apexer_wrapper to generate APEX filesystem image.
 def _prepare_apexer_wrapper_inputs(ctx):
+    # dictionary to return in the format:
     # apex_manifest[(image_file_dirname, image_file_basename)] = bazel_output_file
     apex_manifest = {}
 
-    # Handle native_shared_libs
-    for dep in ctx.attr.native_shared_libs:
-        apex_cc_info = dep[ApexCcInfo]
+    x86_constraint = ctx.attr._x86_constraint[platform_common.ConstraintValueInfo]
+    x86_64_constraint = ctx.attr._x86_64_constraint[platform_common.ConstraintValueInfo]
+    arm_constraint = ctx.attr._arm_constraint[platform_common.ConstraintValueInfo]
+    arm64_constraint = ctx.attr._arm64_constraint[platform_common.ConstraintValueInfo]
 
-        # TODO: Update apex_transition to split (1:4) the deps, one for each target platform
-        # Then ApexCcInfo would only return a single lib_files field
-
-        for lib_file in apex_cc_info.lib_files:
-            apex_manifest[("lib", lib_file.basename)] = lib_file
-
-        for lib64_file in apex_cc_info.lib64_files:
-            apex_manifest[("lib64", lib64_file.basename)] = lib64_file
-
-        for lib_arm_file in apex_cc_info.lib_arm_files:
-            apex_manifest[("lib/arm", lib_arm_file.basename)] = lib_arm_file
+    if ctx.target_platform_has_constraint(x86_constraint):
+        _add_libs_32_target(ctx, "x86", apex_manifest)
+    elif ctx.target_platform_has_constraint(x86_64_constraint):
+        _add_libs_64_target(ctx, "x86", "x86_64", apex_manifest)
+    elif ctx.target_platform_has_constraint(arm_constraint):
+        _add_libs_32_target(ctx, "arm", apex_manifest)
+    elif ctx.target_platform_has_constraint(arm64_constraint):
+        _add_libs_64_target(ctx, "arm", "arm64", apex_manifest)
 
     # Handle prebuilts
     for dep in ctx.attr.prebuilts:
@@ -82,7 +84,7 @@ def _prepare_apexer_wrapper_inputs(ctx):
 
     apex_content_inputs = []
 
-    bazel_apexer_wrapper_manifest = ctx.actions.declare_file("bazel_apexer_wrapper_manifest")
+    bazel_apexer_wrapper_manifest = ctx.actions.declare_file("%s_bazel_apexer_wrapper_manifest" % ctx.attr.name)
     file_lines = []
 
     # Store the apex file target directory, file name and the path in the source tree in a file.
@@ -96,6 +98,21 @@ def _prepare_apexer_wrapper_inputs(ctx):
     ctx.actions.write(bazel_apexer_wrapper_manifest, "\n".join(file_lines))
 
     return apex_content_inputs, bazel_apexer_wrapper_manifest
+
+def _add_libs_32_target(ctx, key, apex_manifest):
+    if len(ctx.split_attr.native_shared_libs_32.keys()) > 0:
+        _add_lib_file(DIR_LIB, ctx.split_attr.native_shared_libs_32[key], apex_manifest)
+
+def _add_libs_64_target(ctx, key_32, key_64, apex_manifest):
+    _add_libs_32_target(ctx, key_32, apex_manifest)
+    if len(ctx.split_attr.native_shared_libs_64.keys()) > 0:
+        _add_lib_file(DIR_LIB64, ctx.split_attr.native_shared_libs_64[key_64], apex_manifest)
+
+def _add_lib_file(dir, libs, apex_manifest):
+    for dep in libs:
+        apex_cc_info = dep[ApexCcInfo]
+        for lib_file in apex_cc_info.transitive_shared_libs.to_list():
+            apex_manifest[(dir, lib_file.basename)] = lib_file
 
 # conv_apex_manifest - Convert the JSON APEX manifest to protobuf, which is needed by apexer.
 def _convert_apex_manifest_json_to_pb(ctx, apex_toolchain):
@@ -128,7 +145,7 @@ def _run_apexer(ctx, apex_toolchain, apex_content_inputs, bazel_apexer_wrapper_m
     android_manifest = ctx.file.android_manifest
 
     # Outputs
-    apex_output_file = ctx.actions.declare_file(ctx.attr.name + ".apex")
+    apex_output_file = ctx.actions.declare_file(ctx.attr.name + ".apex.unsigned")
 
     # Arguments
     args = ctx.actions.args()
@@ -136,7 +153,14 @@ def _run_apexer(ctx, apex_toolchain, apex_content_inputs, bazel_apexer_wrapper_m
     args.add_all(["--file_contexts", file_contexts.path])
     args.add_all(["--key", privkey.path])
     args.add_all(["--pubkey", pubkey.path])
-    args.add_all(["--min_sdk_version", ctx.attr.min_sdk_version])
+    min_sdk_version = ctx.attr.min_sdk_version
+
+    # TODO(b/215339575): This is a super rudimentary way to convert "current" to a numerical number.
+    # Generalize this to API level handling logic in a separate Starlark utility, preferably using
+    # API level maps dumped from api_levels.go
+    if min_sdk_version == "current":
+        min_sdk_version = "10000"
+    args.add_all(["--min_sdk_version", min_sdk_version])
     args.add_all(["--bazel_apexer_wrapper_manifest", bazel_apexer_wrapper_manifest])
     args.add_all(["--apexer_tool_path", apex_toolchain.apexer.dirname])
     args.add_all(["--apex_output_file", apex_output_file])
@@ -173,6 +197,67 @@ def _run_apexer(ctx, apex_toolchain, apex_content_inputs, bazel_apexer_wrapper_m
 
     return apex_output_file
 
+# Sign a file with signapk.
+def _run_signapk(ctx, unsigned_file, output_file_name, private_key, public_key, mnemonic):
+    # Inputs
+    inputs = [
+        unsigned_file,
+        private_key,
+        public_key,
+        ctx.executable._signapk,
+    ]
+
+    # Outputs
+    signed_file = ctx.actions.declare_file(output_file_name)
+    outputs = [signed_file]
+
+    # Arguments
+    args = ctx.actions.args()
+    args.add_all(["-a", 4096])
+    args.add_all(["--align-file-size"])
+    args.add_all([public_key, private_key])
+    args.add_all([unsigned_file, signed_file])
+
+    ctx.actions.run(
+        inputs = inputs,
+        outputs = outputs,
+        executable = ctx.executable._signapk,
+        arguments = [args],
+        mnemonic = mnemonic,
+    )
+
+    return signed_file
+
+# Compress a file with apex_compression_tool.
+def _run_apex_compression_tool(ctx, apex_toolchain, input_file, output_file_name):
+    # Inputs
+    inputs = [
+        input_file,
+        apex_toolchain.apex_compression_tool,
+        apex_toolchain.avbtool,
+        apex_toolchain.soong_zip,
+    ]
+
+    # Outputs
+    compressed_file = ctx.actions.declare_file(output_file_name)
+    outputs = [compressed_file]
+
+    # Arguments
+    args = ctx.actions.args()
+    args.add_all(["compress"])
+    args.add_all(["--apex_compression_tool", apex_toolchain.soong_zip.dirname])
+    args.add_all(["--input", input_file])
+    args.add_all(["--output", compressed_file])
+
+    ctx.actions.run(
+        inputs = inputs,
+        outputs = outputs,
+        executable = apex_toolchain.apex_compression_tool,
+        arguments = [args],
+        mnemonic = "BazelApexCompressing",
+    )
+    return compressed_file
+
 # See the APEX section in the README on how to use this rule.
 def _apex_rule_impl(ctx):
     apex_toolchain = ctx.toolchains["//build/bazel/rules/apex:apex_toolchain_type"].toolchain_info
@@ -180,9 +265,19 @@ def _apex_rule_impl(ctx):
     apex_content_inputs, bazel_apexer_wrapper_manifest = _prepare_apexer_wrapper_inputs(ctx)
     apex_manifest_pb = _convert_apex_manifest_json_to_pb(ctx, apex_toolchain)
 
-    apex_output_file = _run_apexer(ctx, apex_toolchain, apex_content_inputs, bazel_apexer_wrapper_manifest, apex_manifest_pb)
+    unsigned_apex_output_file = _run_apexer(ctx, apex_toolchain, apex_content_inputs, bazel_apexer_wrapper_manifest, apex_manifest_pb)
 
-    files_to_build = depset([apex_output_file])
+    apex_cert_info = ctx.attr.certificate[AndroidAppCertificateInfo]
+    private_key = apex_cert_info.pk8
+    public_key = apex_cert_info.pem
+    signed_apex_output_file = _run_signapk(ctx, unsigned_apex_output_file, ctx.attr.name + ".apex", private_key, public_key, "BazelApexSigning")
+
+    output_file = signed_apex_output_file
+    if ctx.attr.compressible:
+        compressed_apex_output_file = _run_apex_compression_tool(ctx, apex_toolchain, signed_apex_output_file, ctx.attr.name + ".capex.unsigned")
+        output_file = _run_signapk(ctx, compressed_apex_output_file, ctx.attr.name + ".capex", private_key, public_key, "BazelCompressedApexSigning")
+
+    files_to_build = depset([output_file])
     return [DefaultInfo(files = files_to_build)]
 
 _apex = rule(
@@ -193,21 +288,29 @@ _apex = rule(
         "file_contexts": attr.label(allow_single_file = True, mandatory = True),
         "key": attr.label(providers = [ApexKeyInfo]),
         "certificate": attr.label(providers = [AndroidAppCertificateInfo]),
-        "min_sdk_version": attr.string(),
+        "min_sdk_version": attr.string(default = "current"),
         "updatable": attr.bool(default = True),
         "installable": attr.bool(default = True),
-        "native_shared_libs": attr.label_list(
+        "compressible": attr.bool(default = False),
+        "native_shared_libs_32": attr.label_list(
             providers = [ApexCcInfo],
             aspects = [apex_cc_aspect],
-            cfg = apex_transition
+            cfg = shared_lib_transition_32,
+            doc = "The libs compiled for 32-bit",
+        ),
+        "native_shared_libs_64": attr.label_list(
+            providers = [ApexCcInfo],
+            aspects = [apex_cc_aspect],
+            cfg = shared_lib_transition_64,
+            doc = "The libs compiled for 64-bit",
         ),
         "binaries": attr.label_list(
             providers = [
                 # The dependency must produce _all_ of the providers in _one_ of these lists.
-                [ShBinaryInfo], # sh_binary
-                [StrippedCcBinaryInfo, CcInfo], # cc_binary (stripped)
+                [ShBinaryInfo],  # sh_binary
+                [StrippedCcBinaryInfo, CcInfo],  # cc_binary (stripped)
             ],
-            cfg = apex_transition
+            cfg = apex_transition,
         ),
         "prebuilts": attr.label_list(providers = [PrebuiltEtcInfo], cfg = apex_transition),
         # Required to use apex_transition. This is an acknowledgement to the risks of memory bloat when using transitions.
@@ -218,8 +321,27 @@ _apex = rule(
             executable = True,
             default = "//build/bazel/rules/apex:bazel_apexer_wrapper",
         ),
+        "_signapk": attr.label(
+            cfg = "host",
+            doc = "The signapk tool.",
+            executable = True,
+            default = "//build/make/tools/signapk",
+        ),
+        "_x86_constraint": attr.label(
+            default = Label("//build/bazel/platforms/arch:x86"),
+        ),
+        "_x86_64_constraint": attr.label(
+            default = Label("//build/bazel/platforms/arch:x86_64"),
+        ),
+        "_arm_constraint": attr.label(
+            default = Label("//build/bazel/platforms/arch:arm"),
+        ),
+        "_arm64_constraint": attr.label(
+            default = Label("//build/bazel/platforms/arch:arm64"),
+        ),
     },
     toolchains = ["//build/bazel/rules/apex:apex_toolchain_type"],
+    fragments = ["platform"],
 )
 
 def apex(
@@ -232,7 +354,9 @@ def apex(
         min_sdk_version = None,
         updatable = True,
         installable = True,
-        native_shared_libs = [],
+        compressible = False,
+        native_shared_libs_32 = [],
+        native_shared_libs_64 = [],
         binaries = [],
         prebuilts = [],
         **kwargs):
@@ -253,7 +377,9 @@ def apex(
         min_sdk_version = min_sdk_version,
         updatable = updatable,
         installable = installable,
-        native_shared_libs = native_shared_libs,
+        compressible = compressible,
+        native_shared_libs_32 = native_shared_libs_32,
+        native_shared_libs_64 = native_shared_libs_64,
         binaries = binaries,
         prebuilts = prebuilts,
         **kwargs

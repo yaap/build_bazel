@@ -121,7 +121,11 @@ def generate_module_info(module, use_queryview):
   if use_queryview:
     result = subprocess.check_output(
         [
-            "tools/bazel", "query", "--config=queryview", "--output=xml",
+            "tools/bazel",
+            "query",
+            "--config=ci",
+            "--config=queryview",
+            "--output=xml",
             'deps(attr("soong_module_name", "^{}$", //...))'.format(module)
         ],
         cwd=src_root_dir,
@@ -252,7 +256,7 @@ def generate_report(report_data):
 
   for count, modules in sorted(report_data.blocked_modules.items()):
     report_lines.append("\n%d unconverted deps remaining:" % count)
-    for module_string in modules:
+    for module_string in sorted(modules):
       report_lines.append("  " + module_string)
 
   report_lines.append("\n")
@@ -265,11 +269,11 @@ def generate_report(report_data):
     report_lines.append("%s: blocking %d modules" % (dep, count))
 
   report_lines.append("\n")
-  report_lines.append("Dirs with unconverted modules:\n\n{}".format("\n".join(
+  report_lines.append("# Dirs with unconverted modules:\n\n{}".format("\n".join(
       sorted(report_data.dirs_with_unconverted_modules))))
 
   report_lines.append("\n")
-  report_lines.append("Kinds with unconverted modules:\n\n{}".format("\n".join(
+  report_lines.append("# Kinds with unconverted modules:\n\n{}".format("\n".join(
       sorted(report_data.kind_of_unconverted_modules))))
 
   report_lines.append("\n")
