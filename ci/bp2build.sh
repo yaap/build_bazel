@@ -5,6 +5,9 @@
 # This verification script is designed to be used for continuous integration
 # tests, though may also be used for manual developer verification.
 
+# TODO(b/225054132): Remove once incremental CI is green again.
+rm -rf out
+
 #######
 # Setup
 #######
