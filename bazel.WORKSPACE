@@ -22,7 +22,6 @@ make_injection_repository(
         "conv_apex_manifest",
         "deapexer",
         "debugfs",
-        "e2fsdroid",
         "merge_zips",
         "mke2fs",
         "resize2fs",
