@@ -5,9 +5,6 @@
 # This verification script is designed to be used for continuous integration
 # tests, though may also be used for manual developer verification.
 
-# TODO(b/225054132): Remove once incremental CI is green again.
-rm -rf out
-
 #######
 # Setup
 #######
@@ -20,6 +17,9 @@ fi
 # Generate BUILD files into out/soong/bp2build
 AOSP_ROOT="$(dirname $0)/../../.."
 "${AOSP_ROOT}/build/soong/soong_ui.bash" --make-mode BP2BUILD_VERBOSE=1 --skip-soong-tests bp2build dist
+
+# TODO(b/225054132): Remove once incremental CI is green again.
+tools/bazel clean --config=bp2build
 
 # Dist the entire workspace of generated BUILD files, rooted from
 # out/soong/bp2build. This is done early so it's available even if builds/tests
