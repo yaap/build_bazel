@@ -24,8 +24,6 @@ make_injection_repository(
         "debugfs",
         "merge_zips",
         "sefcontext_compile",
-        "soong_zip",
-        "zip2zip",
     ],
     target_module_files = {
         # For APEX comparisons
