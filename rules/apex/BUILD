@@ -33,7 +33,7 @@ apex_toolchain(
     conv_apex_manifest = "@make_injection//:host/linux-x86/bin/conv_apex_manifest",
     android_jar = "//prebuilts/sdk/current:public/android.jar",
     apex_compression_tool = "@make_injection//:host/linux-x86/bin/apex_compression_tool",
-    soong_zip = "@make_injection//:host/linux-x86/bin/soong_zip",
+    soong_zip = "//prebuilts/build-tools:linux-x86/bin/soong_zip",
 )
 
 toolchain(
@@ -66,6 +66,7 @@ sh_test(
         "//external/e2fsprogs/contrib/android:e2fsdroid",
         "//external/e2fsprogs/misc:mke2fs",
         "//external/e2fsprogs/resize:resize2fs",
+        "//prebuilts/build-tools:linux-x86/bin/soong_zip",
         "@make_injection//:host/linux-x86/bin/aapt2",
         "@make_injection//:host/linux-x86/bin/apex_compression_tool",
         "@make_injection//:host/linux-x86/bin/apexer",
@@ -73,7 +74,6 @@ sh_test(
         "@make_injection//:host/linux-x86/bin/deapexer",
         "@make_injection//:host/linux-x86/bin/debugfs",
         "@make_injection//:host/linux-x86/bin/sefcontext_compile",
-        "@make_injection//:host/linux-x86/bin/soong_zip",
         "//prebuilts/sdk/current:public/android.jar",
     ]
 )
