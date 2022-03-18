@@ -173,6 +173,8 @@ def _run_apexer(ctx, apex_toolchain, apex_content_inputs, bazel_apexer_wrapper_m
     # the creation of an apex
     avbtool_files = apex_toolchain.avbtool[DefaultInfo].files_to_run
     e2fsdroid_files = apex_toolchain.e2fsdroid[DefaultInfo].files_to_run
+    mke2fs_files = apex_toolchain.mke2fs[DefaultInfo].files_to_run
+    resize2fs_files = apex_toolchain.resize2fs[DefaultInfo].files_to_run
     apexer_tool_paths = [
         # These are built by make_injection
         apex_toolchain.apexer.dirname,
@@ -180,6 +182,8 @@ def _run_apexer(ctx, apex_toolchain, apex_content_inputs, bazel_apexer_wrapper_m
         # These are real Bazel targets
         avbtool_files.executable.dirname,
         e2fsdroid_files.executable.dirname,
+        mke2fs_files.executable.dirname,
+        resize2fs_files.executable.dirname,
     ]
 
     args.add_all(["--apexer_tool_path", ":".join(apexer_tool_paths)])
@@ -200,11 +204,11 @@ def _run_apexer(ctx, apex_toolchain, apex_content_inputs, bazel_apexer_wrapper_m
     tools = [
         avbtool_files,
         e2fsdroid_files,
+        mke2fs_files,
+        resize2fs_files,
 
         apex_toolchain.apexer,
-        apex_toolchain.mke2fs,
         apex_toolchain.sefcontext_compile,
-        apex_toolchain.resize2fs,
         apex_toolchain.aapt2,
     ]
 
