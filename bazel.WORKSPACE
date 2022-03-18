@@ -21,7 +21,6 @@ make_injection_repository(
         "apexer",
         "conv_apex_manifest",
         "deapexer",
-        "debugfs",
         "merge_zips",
         "sefcontext_compile",
     ],
