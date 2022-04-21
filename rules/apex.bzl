@@ -15,7 +15,7 @@ limitations under the License.
 """
 
 load(":apex_key.bzl", "ApexKeyInfo")
-load(":prebuilt_etc.bzl", "PrebuiltEtcInfo")
+load(":prebuilt_file.bzl", "PrebuiltFileInfo")
 load(":sh_binary.bzl", "ShBinaryInfo")
 load("//build/bazel/rules/cc:stripped_cc_common.bzl", "StrippedCcBinaryInfo")
 load("//build/bazel/rules/android:android_app_certificate.bzl", "AndroidAppCertificateInfo")
@@ -53,7 +53,7 @@ def _prepare_apexer_wrapper_inputs(ctx):
     # Handle prebuilts
     for dep in ctx.attr.prebuilts:
         # TODO: Support more prebuilts than just PrebuiltEtc
-        prebuilt_etc_info = dep[PrebuiltEtcInfo]
+        prebuilt_etc_info = dep[PrebuiltFileInfo]
 
         directory = "etc"
         if prebuilt_etc_info.sub_dir != None and prebuilt_etc_info.sub_dir != "":
