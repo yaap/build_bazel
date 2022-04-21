@@ -14,19 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-PrebuiltEtcInfo = provider(
-    "Info needed for prebuilt_etc modules",
+PrebuiltFileInfo = provider(
+    "Info needed for prebuilt_file modules",
     fields = {
         "src": "Source file of this prebuilt",
-        "sub_dir": "Optional subdirectory to install into",
+        "sub_dir": "Optional subdirectory into which to install",
         "filename": "Optional name for the installed file",
         "installable": "Whether this is directly installable into one of the partitions",
     },
 )
 
-def _prebuilt_etc_rule_impl(ctx):
+def _prebuilt_file_rule_impl(ctx):
     return [
-        PrebuiltEtcInfo(
+        PrebuiltFileInfo(
             src = ctx.file.src,
             sub_dir = ctx.attr.sub_dir,
             filename = ctx.attr.filename,
@@ -34,8 +34,8 @@ def _prebuilt_etc_rule_impl(ctx):
         ),
     ]
 
-_prebuilt_etc = rule(
-    implementation = _prebuilt_etc_rule_impl,
+_prebuilt_file = rule(
+    implementation = _prebuilt_file_rule_impl,
     attrs = {
         "src": attr.label(mandatory = True, allow_single_file = True),
         "sub_dir": attr.string(),
@@ -44,7 +44,7 @@ _prebuilt_etc = rule(
     },
 )
 
-def prebuilt_etc(
+def prebuilt_file(
         name,
         src,
         sub_dir = None,
@@ -55,7 +55,7 @@ def prebuilt_etc(
         **kwargs):
     "Bazel macro to correspond with the prebuilt_etc Soong module."
 
-    _prebuilt_etc(
+    _prebuilt_file(
         name = name,
         src = src,
         sub_dir = sub_dir,
