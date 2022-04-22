@@ -33,11 +33,14 @@ rm -f out/ninja_build
 FLAGS_LIST=(
   --config=bp2build
   --config=ci
+
+  # Ensure that a test command will also build non-test targets.
+  --build_tests_only=false
 )
 FLAGS="${FLAGS_LIST[@]}"
 
 ###############
-# Build targets
+# Build and test targets for device target platform.
 ###############
 BUILD_TARGETS_LIST=(
   //art/...
@@ -62,11 +65,31 @@ BUILD_TARGETS_LIST=(
   -//external/e2fsprogs/e2fsck:all
 )
 BUILD_TARGETS="${BUILD_TARGETS_LIST[@]}"
-# Iterate over various architectures supported in the platform build.
-tools/bazel --max_idle_secs=5 build ${FLAGS} --platforms //build/bazel/platforms:android_x86 -k -- ${BUILD_TARGETS}
-tools/bazel --max_idle_secs=5 build ${FLAGS} --platforms //build/bazel/platforms:android_x86_64 -k -- ${BUILD_TARGETS}
-tools/bazel --max_idle_secs=5 build ${FLAGS} --platforms //build/bazel/platforms:android_arm -k -- ${BUILD_TARGETS}
-tools/bazel --max_idle_secs=5 build ${FLAGS} --platforms //build/bazel/platforms:android_arm64 -k -- ${BUILD_TARGETS}
+
+TEST_TARGETS_LIST=(
+  //build/bazel/tests/...
+  //build/bazel/rules/apex/...
+  //build/bazel/scripts/...
+)
+TEST_TARGETS="${TEST_TARGETS_LIST[@]}"
+
+###########
+# Iterate over various architectures supported in the platform build and perform:
+# 1) builds for all build and test targets
+# 2) tests
+# 3) dist for mainline modules
+###########
+
+for platform in android_x86 android_x86_64 android_arm android_arm64; do
+  # Use a loop to prevent unnecessarily switching --platforms because that drops the Bazel analysis cache.
+  tools/bazel --max_idle_secs=5 test ${FLAGS} --platforms //build/bazel/platforms:${platform} -k -- ${BUILD_TARGETS} ${TEST_TARGETS}
+  tools/bazel --max_idle_secs=5 run //build/bazel/ci/dist:mainline_modules ${FLAGS} --platforms=//build/bazel/platforms:${platform} -- --dist_dir="${DIST_DIR}/mainline_modules_${platform}"
+done
+
+
+#########
+# Host-only builds and tests
+#########
 
 HOST_INCOMPATIBLE_TARGETS=(
   # TODO(b/217756861): Apex toolchain is incompatible with host arches but apex modules do
@@ -88,23 +111,10 @@ HOST_INCOMPATIBLE_TARGETS=(
   -//packages/modules/adb/pairing_connection:all
 )
 
-# build for host
-tools/bazel --max_idle_secs=5 build ${FLAGS} \
+# Host-only builds and tests, relying on incompatible target skipping.
+tools/bazel --max_idle_secs=5 test ${FLAGS} \
   --platforms //build/bazel/platforms:linux_x86_64 \
-  -- ${BUILD_TARGETS} "${HOST_INCOMPATIBLE_TARGETS[@]}"
-
-###########
-# Run tests
-###########
-tools/bazel --max_idle_secs=5 test ${FLAGS} //build/bazel/tests/... //build/bazel/rules/apex/... //build/bazel/scripts/...
-
-###########
-# Dist mainline modules
-###########
-tools/bazel --max_idle_secs=5 run //build/bazel/ci/dist:mainline_modules ${FLAGS} --platforms=//build/bazel/platforms:android_x86 -- --dist_dir="${DIST_DIR}/mainline_modules_x86"
-tools/bazel --max_idle_secs=5 run //build/bazel/ci/dist:mainline_modules ${FLAGS} --platforms=//build/bazel/platforms:android_x86_64 -- --dist_dir="${DIST_DIR}/mainline_modules_x86_64"
-tools/bazel --max_idle_secs=5 run //build/bazel/ci/dist:mainline_modules ${FLAGS} --platforms=//build/bazel/platforms:android_arm -- --dist_dir="${DIST_DIR}/mainline_modules_arm"
-tools/bazel --max_idle_secs=5 run //build/bazel/ci/dist:mainline_modules ${FLAGS} --platforms=//build/bazel/platforms:android_arm64 -- --dist_dir="${DIST_DIR}/mainline_modules_arm64"
+  -- ${BUILD_TARGETS} ${TEST_TARGETS} "${HOST_INCOMPATIBLE_TARGETS[@]}"
 
 ###################
 # bp2build-progress

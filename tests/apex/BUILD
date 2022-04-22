@@ -12,18 +12,33 @@ apex_diff_test(
     name = "build.bazel.examples.apex.minimal",
     apex1 = "//build/bazel/examples/apex/minimal:build.bazel.examples.apex.minimal.apex",
     apex2 = "@make_injection//:target/product/generic/system/product/apex/build.bazel.examples.apex.minimal.apex",
+    # arch dependent test
+    target_compatible_with = [
+        "//build/bazel/platforms/os:android",
+        "//build/bazel/platforms/arch:arm",
+    ],
 )
 
 apex_diff_test(
     name = "com.android.adbd_uncompressed",
     apex1 = "//packages/modules/adb/apex:com.android.adbd.apex",
     apex2 = "@make_injection//:target/product/generic/system/apex/com.android.adbd.capex",
+    # arch dependent test
+    target_compatible_with = [
+        "//build/bazel/platforms/os:android",
+        "//build/bazel/platforms/arch:arm",
+    ],
 )
 
 apex_diff_test(
     name = "com.android.adbd_compressed",
     apex1 = "//packages/modules/adb/apex:com.android.adbd.capex",
     apex2 = "@make_injection//:target/product/generic/system/apex/com.android.adbd.capex",
+    # arch dependent test
+    target_compatible_with = [
+        "//build/bazel/platforms/os:android",
+        "//build/bazel/platforms/arch:arm",
+    ],
 )
 
 apex_compression_test(
