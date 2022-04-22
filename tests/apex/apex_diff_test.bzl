@@ -1,6 +1,11 @@
 load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
 
-def apex_diff_test(name, apex1, apex2, expected_diff=None, **kwargs):
+def apex_diff_test(
+    name,
+    apex1,
+    apex2,
+    target_compatible_with = None,
+    expected_diff = None):
     """A test that compares the content list of two APEXes, determined by `deapexer`."""
 
     native.genrule(
@@ -30,6 +35,7 @@ def apex_diff_test(name, apex1, apex2, expected_diff=None, **kwargs):
             name = name + "_content_diff_test",
             file1 = name + ".apex1.txt",
             file2 = name + ".apex2.txt",
+            target_compatible_with = target_compatible_with,
         )
     else:
         # Make our own diff to compare against the expected one
@@ -47,4 +53,5 @@ def apex_diff_test(name, apex1, apex2, expected_diff=None, **kwargs):
             name = name + "_content_diff_test",
             file1 = name + ".apex1.apex2.diff.txt",
             file2 = expected_diff,
+            target_compatible_with = target_compatible_with,
         )

@@ -75,5 +75,10 @@ sh_test(
         "@make_injection//:host/linux-x86/bin/deapexer",
         "@make_injection//:host/linux-x86/bin/sefcontext_compile",
         "//prebuilts/sdk/current:public/android.jar",
-    ]
+    ],
+    # This is a host test.
+    target_compatible_with = select({
+        "//build/bazel/platforms/os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
 )
