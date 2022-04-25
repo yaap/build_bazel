@@ -82,8 +82,8 @@ TEST_TARGETS="${TEST_TARGETS_LIST[@]}"
 
 for platform in android_x86 android_x86_64 android_arm android_arm64; do
   # Use a loop to prevent unnecessarily switching --platforms because that drops the Bazel analysis cache.
-  tools/bazel --max_idle_secs=5 test ${FLAGS} --platforms //build/bazel/platforms:${platform} -k -- ${BUILD_TARGETS} ${TEST_TARGETS}
-  tools/bazel --max_idle_secs=5 run //build/bazel/ci/dist:mainline_modules ${FLAGS} --platforms=//build/bazel/platforms:${platform} -- --dist_dir="${DIST_DIR}/mainline_modules_${platform}"
+  tools/bazel --max_idle_secs=5 test ${FLAGS} --config=${platform} -k -- ${BUILD_TARGETS} ${TEST_TARGETS}
+  tools/bazel --max_idle_secs=5 run //build/bazel/ci/dist:mainline_modules ${FLAGS} --config=${platform} -- --dist_dir="${DIST_DIR}/mainline_modules_${platform}"
 done
 
 
@@ -112,8 +112,7 @@ HOST_INCOMPATIBLE_TARGETS=(
 )
 
 # Host-only builds and tests, relying on incompatible target skipping.
-tools/bazel --max_idle_secs=5 test ${FLAGS} \
-  --platforms //build/bazel/platforms:linux_x86_64 \
+tools/bazel --max_idle_secs=5 test ${FLAGS} --config=linux_x86_64 \
   -- ${BUILD_TARGETS} ${TEST_TARGETS} "${HOST_INCOMPATIBLE_TARGETS[@]}"
 
 ###################
