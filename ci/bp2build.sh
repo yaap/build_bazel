@@ -122,7 +122,6 @@ tools/bazel --max_idle_secs=5 test ${FLAGS} --config=linux_x86_64 \
 # Generate bp2build progress reports and graphs for these modules into the dist
 # dir so that they can be downloaded from the CI artifact list.
 BP2BUILD_PROGRESS_MODULES=(
-  com.android.runtime
   com.android.neuralnetworks
   com.android.media.swcodec
 )
