@@ -6,6 +6,7 @@ import argparse
 import asyncio
 import dataclasses
 import datetime
+import itertools
 import os
 import re
 import shutil
@@ -35,6 +36,7 @@ class Product:
 
 @dataclasses.dataclass(frozen=True)
 class ProductResult:
+  product: Product
   baseline_success: bool
   product_success: bool
   board_success: bool
@@ -166,7 +168,7 @@ async def has_diffs(success: bool, file_pairs: List[Tuple[str]], results_folder:
   return False
 
 
-def generate_html_row(num: int, product: Product, results: ProductResult):
+def generate_html_row(num: int, results: ProductResult):
   def generate_status_cell(success: bool, diffs: bool) -> str:
     message = 'Success'
     if diffs:
@@ -175,6 +177,7 @@ def generate_html_row(num: int, product: Product, results: ProductResult):
       message = 'Build failed'
     return f'<td style="background-color: {"lightgreen" if success and not diffs else "salmon"}">{message}</td>'
 
+  product = results.product
   return f'''
   <tr>
     <td>{num}</td>
@@ -205,6 +208,19 @@ def cleanup_empty_files(path):
       cleanup_empty_files(os.path.join(path, subfile))
     if not os.listdir(path):
       os.rmdir(path)
+
+
+def dump_files_to_stderr(path):
+  if os.path.isfile(path):
+    with open(path, 'r') as f:
+      print(f'{path}:', file=sys.stderr)
+      for line in itertools.islice(f, 200):
+        print(line.rstrip('\r\n'), file=sys.stderr)
+      if next(f, None) != None:
+        print('... Remaining lines skipped ...', file=sys.stderr)
+  elif os.path.isdir(path):
+    for subfile in os.listdir(path):
+      dump_files_to_stderr(os.path.join(path, subfile))
 
 
 async def test_one_product(product: Product, dirs: Directories) -> ProductResult:
@@ -260,7 +276,7 @@ async def test_one_product(product: Product, dirs: Directories) -> ProductResult
 
   cleanup_empty_files(product_dashboard_folder)
 
-  return ProductResult(baseline_success, product_success, board_success, product_has_diffs, board_has_diffs)
+  return ProductResult(product, baseline_success, product_success, board_success, product_has_diffs, board_has_diffs)
 
 
 async def test_one_product_quick(product: Product, dirs: Directories) -> ProductResult:
@@ -308,7 +324,7 @@ async def test_one_product_quick(product: Product, dirs: Directories) -> Product
 
   cleanup_empty_files(product_dashboard_folder)
 
-  return ProductResult(baseline_success, product_success, board_success, product_has_diffs, board_has_diffs)
+  return ProductResult(product, baseline_success, product_success, board_success, product_has_diffs, board_has_diffs)
 
 
 async def main():
@@ -328,6 +344,8 @@ async def main():
   parser.add_argument('--results-directory',
                       help='Directory to store results in. Defaults to $(OUT_DIR)/rbc_dashboard. '
                       + 'Warning: will be cleared!')
+  parser.add_argument('--contact',
+                      help='Contact name/email for problems.')
   args = parser.parse_args()
 
   if args.results_directory:
@@ -430,7 +448,7 @@ async def main():
       else:
         print('Failure')
 
-      f.write(generate_html_row(i+1, product, result))
+      f.write(generate_html_row(i+1, result))
       f.flush()
 
     baseline_successes = len([x for x in all_results if x.baseline_success])
@@ -459,8 +477,11 @@ async def main():
   print('file://'+os.path.abspath(os.path.join(dirs.results, 'index.html')))
 
   for result in all_results:
-    if result.baseline_success and not result.success():
-      print('There were one or more failing products. See the html report for details.')
+    if not result.success():
+      print('There were one or more failing products. First failure:', file=sys.stderr)
+      dump_files_to_stderr(os.path.join(dirs.results, str(result.product)))
+      if args.contact:
+        print(f'Contact {args.contact} with any questions.', file=sys.stderr)
       sys.exit(1)
 
 if __name__ == '__main__':
