@@ -26,14 +26,15 @@ make_injection_repository(
     target_module_files = {
         # For APEX comparisons
         "com.android.tzdata": ["system/apex/com.android.tzdata.apex"],
-        "com.android.runtime": ["system/apex/com.android.runtime.apex"],
         "com.android.adbd": ["system/apex/com.android.adbd.capex"],
         "build.bazel.examples.apex.minimal": ["system/product/apex/build.bazel.examples.apex.minimal.apex"],
     },
     watch_android_bp_files = [
         "//:build/bazel/examples/apex/minimal/Android.bp", # for build.bazel.examples.apex.minimal
         "//:packages/modules/adbd/apex/Android.bp", # for com.android.adbd
-        # TODO(b/210399979) - add the other .bp files to watch for the other modules built in these rule
+        "//:system/apex/apexer/Android.bp", # for apexer, conv_apex_manifest
+        "//:system/apex/tools/apex_compression_tool", # for apex_compression_tool, deapexer
+        "//:external/selinux/libselinux/Android.bp", # for sefcontext_compile
     ],
 )
 
