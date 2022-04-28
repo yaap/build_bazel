@@ -99,7 +99,8 @@ def _create_apex(args, work_dir):
 
     # Construct the main apexer command.
     cmd = [args.apexer_path]
-    cmd.append('--verbose')
+    if args.verbose:
+        cmd.append('--verbose')
     cmd.append('--force')
     cmd.append('--include_build_info')
     cmd.extend(['--file_contexts', args.file_contexts])
@@ -152,6 +153,9 @@ def _generate_canned_fs_config(work_dir, dirs, filepaths):
 def _parse_args(argv):
     parser = argparse.ArgumentParser(description='Build an APEX file')
 
+    parser.add_argument(
+        '--verbose',
+        help='if enabled, make apexer log verbosely')
     parser.add_argument(
         '--manifest',
         help='path to the APEX manifest file (.pb)')
