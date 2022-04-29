@@ -21,6 +21,7 @@ load("//build/bazel/rules/cc:stripped_cc_common.bzl", "StrippedCcBinaryInfo")
 load("//build/bazel/rules/android:android_app_certificate.bzl", "AndroidAppCertificateInfo")
 load("//build/bazel/rules/apex:transition.bzl", "apex_transition", "shared_lib_transition_32", "shared_lib_transition_64")
 load("//build/bazel/rules/apex:cc.bzl", "ApexCcInfo", "apex_cc_aspect")
+load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 
 DIR_LIB = "lib"
 DIR_LIB64 = "lib64"
@@ -147,6 +148,8 @@ def _run_apexer(ctx, apex_toolchain, apex_content_inputs, bazel_apexer_wrapper_m
 
     # Arguments
     args = ctx.actions.args()
+    if ctx.attr._apexer_verbose[BuildSettingInfo].value:
+        args.add_all(["--verbose", True])
     args.add_all(["--manifest", apex_manifest_pb.path])
     args.add_all(["--file_contexts", file_contexts.path])
     args.add_all(["--key", privkey.path])
@@ -372,6 +375,10 @@ _apex = rule(
         ),
         "_arm64_constraint": attr.label(
             default = Label("//build/bazel/platforms/arch:arm64"),
+        ),
+        "_apexer_verbose": attr.label(
+            default = "//build/bazel/rules/apex:apexer_verbose",
+            doc = "If enabled, make apexer log verbosely.",
         ),
     },
     toolchains = ["//build/bazel/rules/apex:apex_toolchain_type"],

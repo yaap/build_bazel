@@ -36,6 +36,9 @@ FLAGS_LIST=(
 
   # Ensure that a test command will also build non-test targets.
   --build_tests_only=false
+
+  # Make the apexer log verbosely on CI
+  --//build/bazel/rules/apex:apexer_verbose
 )
 FLAGS="${FLAGS_LIST[@]}"
 
