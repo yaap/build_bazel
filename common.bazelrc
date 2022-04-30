@@ -24,6 +24,12 @@ build --incompatible_enable_cc_toolchain_resolution
 build --tool_java_runtime_version=local_jdk
 build --java_runtime_version=local_jdk
 
+# Disable errorprone to continue making progress on java and android conversion
+# while we determine how errorprone will be handled in Bazel-only builds b/227504307.
+# TODO(b/227504307): Remove --javacopt="-XepDisableAllChecks" after implementing
+# the correct solution around errorprone.
+build --javacopt="-XepDisableAllChecks"
+
 # Lock down the PATH variable in actions to /usr/bin and /usr/local/bin.
 build --experimental_strict_action_env
 
