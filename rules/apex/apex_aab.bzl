@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-load("//build/bazel/rules:apex.bzl", "ApexInfo")
+load(":apex.bzl", "ApexInfo")
 
 def _arch_transition_impl(settings, attr):
     """Implementation of arch_transition.
