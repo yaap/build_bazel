@@ -15,8 +15,8 @@ limitations under the License.
 """
 
 load(":apex_key.bzl", "ApexKeyInfo")
-load(":prebuilt_file.bzl", "PrebuiltFileInfo")
-load(":sh_binary.bzl", "ShBinaryInfo")
+load("//build/bazel/rules:prebuilt_file.bzl", "PrebuiltFileInfo")
+load("//build/bazel/rules:sh_binary.bzl", "ShBinaryInfo")
 load("//build/bazel/rules/cc:stripped_cc_common.bzl", "StrippedCcBinaryInfo")
 load("//build/bazel/rules/android:android_app_certificate.bzl", "AndroidAppCertificateInfo")
 load("//build/bazel/rules/apex:transition.bzl", "apex_transition", "shared_lib_transition_32", "shared_lib_transition_64")
