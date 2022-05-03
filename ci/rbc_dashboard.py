@@ -39,14 +39,12 @@ class ProductResult:
   product: Product
   baseline_success: bool
   product_success: bool
-  board_success: bool
   product_has_diffs: bool
-  board_has_diffs: bool
 
   def success(self) -> bool:
     return not self.baseline_success or (
-        self.product_success and self.board_success
-        and not self.product_has_diffs and not self.board_has_diffs)
+        self.product_success
+        and not self.product_has_diffs)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -54,7 +52,6 @@ class Directories:
   out: str
   out_baseline: str
   out_product: str
-  out_board: str
   results: str
 
 
@@ -128,7 +125,7 @@ async def run_build(flags: List[str], out_dir: str) -> bool:
   ], out_dir)
 
 
-async def run_config(product: Product, rbc_product: bool, rbc_board: bool, out_dir: str) -> bool:
+async def run_config(product: Product, rbc_product: bool, out_dir: str) -> bool:
   """Runs config.mk and saves results to out/rbc_variable_dump.txt."""
   env = {
       'OUT_DIR': 'out',
@@ -138,7 +135,6 @@ async def run_config(product: Product, rbc_product: bool, rbc_board: bool, out_d
       'TARGET_PRODUCT': product.product,
       'TARGET_BUILD_VARIANT': product.variant,
       'RBC_PRODUCT_CONFIG': 'true' if rbc_product else '',
-      'RBC_BOARD_CONFIG': 'true' if rbc_board else '',
       'RBC_DUMP_CONFIG_FILE': 'out/rbc_variable_dump.txt',
   }
   return await run_jailed_command([
@@ -184,7 +180,6 @@ def generate_html_row(num: int, results: ProductResult):
     <td>{product if results.success() and results.baseline_success else f'<a href="{product}/">{product}</a>'}</td>
     {generate_status_cell(results.baseline_success, False)}
     {generate_status_cell(results.product_success, results.product_has_diffs)}
-    {generate_status_cell(results.board_success, results.board_has_diffs)}
   </tr>
   '''
 
@@ -195,7 +190,7 @@ def get_branch() -> str:
     default_tag = tree.getroot().find('default')
     return default_tag.get('remote') + '/' + default_tag.get('revision')
   except Exception as e:  # pylint: disable=broad-except
-    print(str(e), file=sys.stderr)
+    print(f"Couldn't detect branch name: {e}", file=sys.stderr)
     return 'Unknown'
 
 
@@ -225,7 +220,7 @@ def dump_files_to_stderr(path):
 
 async def test_one_product(product: Product, dirs: Directories) -> ProductResult:
   """Runs the builds and tests for differences for a single product."""
-  baseline_success, product_success, board_success = await asyncio.gather(
+  baseline_success, product_success = await asyncio.gather(
       run_build([
           f'TARGET_PRODUCT={product.product}',
           f'TARGET_BUILD_VARIANT={product.variant}',
@@ -235,18 +230,12 @@ async def test_one_product(product: Product, dirs: Directories) -> ProductResult
           f'TARGET_BUILD_VARIANT={product.variant}',
           'RBC_PRODUCT_CONFIG=1',
       ], dirs.out_product),
-      run_build([
-          f'TARGET_PRODUCT={product.product}',
-          f'TARGET_BUILD_VARIANT={product.variant}',
-          'RBC_BOARD_CONFIG=1',
-      ], dirs.out_board),
   )
 
   product_dashboard_folder = os.path.join(dirs.results, str(product))
   os.mkdir(product_dashboard_folder)
   os.mkdir(product_dashboard_folder+'/baseline')
   os.mkdir(product_dashboard_folder+'/product')
-  os.mkdir(product_dashboard_folder+'/board')
 
   if not baseline_success:
     shutil.copy2(os.path.join(dirs.out_baseline, 'build.log'),
@@ -254,20 +243,14 @@ async def test_one_product(product: Product, dirs: Directories) -> ProductResult
   if not product_success:
     shutil.copy2(os.path.join(dirs.out_product, 'build.log'),
                  f'{product_dashboard_folder}/product/build.log')
-  if not board_success:
-    shutil.copy2(os.path.join(dirs.out_board, 'build.log'),
-                 f'{product_dashboard_folder}/board/build.log')
 
   files = [f'build-{product.product}.ninja', f'build-{product.product}-package.ninja', 'soong/build.ninja']
   product_files = [(os.path.join(dirs.out_baseline, x), os.path.join(dirs.out_product, x)) for x in files]
-  board_files = [(os.path.join(dirs.out_baseline, x), os.path.join(dirs.out_board, x)) for x in files]
-  product_has_diffs, board_has_diffs = await asyncio.gather(
-      has_diffs(baseline_success and product_success, product_files, product_dashboard_folder+'/product'),
-      has_diffs(baseline_success and board_success, board_files, product_dashboard_folder+'/board'))
+  product_has_diffs = await has_diffs(baseline_success and product_success, product_files, product_dashboard_folder+'/product')
 
   # delete files that contain the product name in them to save space,
   # otherwise the ninja files end up filling up the whole harddrive
-  for out_folder in [dirs.out_baseline, dirs.out_product, dirs.out_board]:
+  for out_folder in [dirs.out_baseline, dirs.out_product]:
     for subfolder in ['', 'soong']:
       folder = os.path.join(out_folder, subfolder)
       for file in os.listdir(folder):
@@ -276,34 +259,26 @@ async def test_one_product(product: Product, dirs: Directories) -> ProductResult
 
   cleanup_empty_files(product_dashboard_folder)
 
-  return ProductResult(product, baseline_success, product_success, board_success, product_has_diffs, board_has_diffs)
+  return ProductResult(product, baseline_success, product_success, product_has_diffs)
 
 
 async def test_one_product_quick(product: Product, dirs: Directories) -> ProductResult:
   """Runs the builds and tests for differences for a single product."""
-  baseline_success, product_success, board_success = await asyncio.gather(
+  baseline_success, product_success = await asyncio.gather(
       run_config(
           product,
-          False,
           False,
           dirs.out_baseline),
       run_config(
           product,
           True,
-          False,
           dirs.out_product),
-      run_config(
-          product,
-          False,
-          True,
-          dirs.out_board),
   )
 
   product_dashboard_folder = os.path.join(dirs.results, str(product))
   os.mkdir(product_dashboard_folder)
   os.mkdir(product_dashboard_folder+'/baseline')
   os.mkdir(product_dashboard_folder+'/product')
-  os.mkdir(product_dashboard_folder+'/board')
 
   if not baseline_success:
     shutil.copy2(os.path.join(dirs.out_baseline, 'build.log'),
@@ -311,20 +286,14 @@ async def test_one_product_quick(product: Product, dirs: Directories) -> Product
   if not product_success:
     shutil.copy2(os.path.join(dirs.out_product, 'build.log'),
                  f'{product_dashboard_folder}/product/build.log')
-  if not board_success:
-    shutil.copy2(os.path.join(dirs.out_board, 'build.log'),
-                 f'{product_dashboard_folder}/board/build.log')
 
   files = ['rbc_variable_dump.txt']
   product_files = [(os.path.join(dirs.out_baseline, x), os.path.join(dirs.out_product, x)) for x in files]
-  board_files = [(os.path.join(dirs.out_baseline, x), os.path.join(dirs.out_board, x)) for x in files]
-  product_has_diffs, board_has_diffs = await asyncio.gather(
-      has_diffs(baseline_success and product_success, product_files, product_dashboard_folder+'/product'),
-      has_diffs(baseline_success and board_success, board_files, product_dashboard_folder+'/board'))
+  product_has_diffs = await has_diffs(baseline_success and product_success, product_files, product_dashboard_folder+'/product')
 
   cleanup_empty_files(product_dashboard_folder)
 
-  return ProductResult(product, baseline_success, product_success, board_success, product_has_diffs, board_has_diffs)
+  return ProductResult(product, baseline_success, product_success, product_has_diffs)
 
 
 async def main():
@@ -344,8 +313,8 @@ async def main():
   parser.add_argument('--results-directory',
                       help='Directory to store results in. Defaults to $(OUT_DIR)/rbc_dashboard. '
                       + 'Warning: will be cleared!')
-  parser.add_argument('--contact',
-                      help='Contact name/email for problems.')
+  parser.add_argument('--failure-message',
+                      help='Additional message to append to stderr on failure.')
   args = parser.parse_args()
 
   if args.results_directory:
@@ -379,10 +348,9 @@ async def main():
       out=out_dir,
       out_baseline=os.path.join(out_dir, 'rbc_out_baseline'),
       out_product=os.path.join(out_dir, 'rbc_out_product'),
-      out_board=os.path.join(out_dir, 'rbc_out_board'),
       results=args.results_directory if args.results_directory else os.path.join(out_dir, 'rbc_dashboard'))
 
-  for folder in [dirs.out_baseline, dirs.out_product, dirs.out_board, dirs.results]:
+  for folder in [dirs.out_baseline, dirs.out_product, dirs.results]:
     # delete and recreate the out directories. You can't reuse them for
     # a particular product, because after we delete some product-specific
     # files inside the out dir to save space, the build will fail if you
@@ -395,7 +363,7 @@ async def main():
   # that in each folder.
   if args.quick:
     commands = []
-    for folder in [dirs.out_baseline, dirs.out_product, dirs.out_board]:
+    for folder in [dirs.out_baseline, dirs.out_product]:
       commands.append(run_jailed_command([
           'build/soong/soong_ui.bash',
           '--dumpvar-mode',
@@ -416,7 +384,6 @@ async def main():
             <th>product</th>
             <th>baseline</th>
             <th>RBC product config</th>
-            <th>RBC board config</th>
           </tr>\n''')
     f.flush()
 
@@ -453,21 +420,18 @@ async def main():
 
     baseline_successes = len([x for x in all_results if x.baseline_success])
     product_successes = len([x for x in all_results if x.product_success and not x.product_has_diffs])
-    board_successes = len([x for x in all_results if x.board_success and not x.board_has_diffs])
     f.write(f'''
           <tr>
             <td></td>
             <td># Successful</td>
             <td>{baseline_successes}</td>
             <td>{product_successes}</td>
-            <td>{board_successes}</td>
           </tr>
           <tr>
             <td></td>
             <td># Failed</td>
             <td>N/A</td>
             <td>{baseline_successes - product_successes}</td>
-            <td>{baseline_successes - board_successes}</td>
           </tr>
         </table>
         Finished running successfully.
@@ -480,8 +444,8 @@ async def main():
     if not result.success():
       print('There were one or more failing products. First failure:', file=sys.stderr)
       dump_files_to_stderr(os.path.join(dirs.results, str(result.product)))
-      if args.contact:
-        print(f'Contact {args.contact} with any questions.', file=sys.stderr)
+      if args.failure_message:
+        print(args.failure_message, file=sys.stderr)
       sys.exit(1)
 
 if __name__ == '__main__':
