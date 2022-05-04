@@ -64,7 +64,11 @@ def get_includes_paths(ctx, dirs, package_relative = True):
             execution_rel_dir = ctx.label.package
             if len(rel_dir) > 0:
                 execution_rel_dir = execution_rel_dir + "/" + rel_dir
-        execution_relative_dirs.append(execution_rel_dir)
+        # To allow this repo to be used as an external one.
+        repo_prefix_dir = execution_rel_dir
+        if ctx.label.workspace_root != "":
+            repo_prefix_dir = ctx.label.workspace_root + "/" + execution_rel_dir
+        execution_relative_dirs.append(repo_prefix_dir)
 
         # to support generated files, we also need to export includes relatives to the bin directory
         if not execution_rel_dir.startswith("/"):
