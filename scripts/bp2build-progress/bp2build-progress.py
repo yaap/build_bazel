@@ -205,7 +205,9 @@ def adjacency_list_from_json(module_graph, ignore_by_name, top_level_module):
 
   # A map of module name to _ModuleInfo
   name_to_info = dict()
-  module_graph_map = dict()
+
+  # name to all module variants
+  module_graph_map = collections.defaultdict(list)
   q = queue.Queue()
 
   # Do a single pass to find all top-level modules to be ignored
@@ -216,37 +218,37 @@ def adjacency_list_from_json(module_graph, ignore_by_name, top_level_module):
     if ignore_kind(module["Type"]) or name in ignore_by_name:
       ignored.add(module["Name"])
       continue
+    if dependency_analysis.is_windows_variation(module):
+      # ignore the windows variations of modules
+      continue
     name_to_info[name] = _ModuleInfo(
         name=name,
         kind=module["Type"],
         dirname=os.path.dirname(module["Blueprint"]))
-    module_graph_map[module["Name"]] = module
-    if module["Name"] == top_level_module:
-      q.put(module["Name"])
+    module_graph_map[name].append(module)
+    if name == top_level_module:
+      q.put(name)
 
   # An adjacency list for all modules in the transitive closure, excluding ignored modules.
   module_adjacency_list = {}
   visited = set()
+
   # Create the adjacency list.
   while not q.empty():
     module_name = q.get()
-    module = module_graph_map[module_name]
+    if module_name in ignored or module_name in visited:
+      continue
     visited.add(module_name)
-    if module_name in ignored:
-      continue
-    if dependency_analysis.is_windows_variation(module):
-      # ignore the windows variations of modules
-      continue
-
     module_info = name_to_info[module_name]
     module_adjacency_list[module_info] = set()
-    for dep in module["Deps"]:
-      dep_name = dep["Name"]
-      if dep_name in ignored or dep_name == module_name:
-        continue
-      module_adjacency_list[module_info].add(dep_name)
-      if dep_name not in visited:
-        q.put(dep_name)
+    for module in module_graph_map[module_name]:
+      for dep in module["Deps"]:
+        dep_name = dep["Name"]
+        if dep_name in ignored or dep_name == module_name:
+          continue
+        module_adjacency_list[module_info].add(dep_name)
+        if dep_name not in visited:
+          q.put(dep_name)
 
   return module_adjacency_list
 
@@ -317,7 +319,7 @@ def adjacency_list_from_queryview_xml(module_graph, ignore_by_name,
       module_graph_map[name_with_variant] = module
 
   # An adjacency list for all modules in the transitive closure, excluding ignored modules.
-  module_adjacency_list = dict()
+  module_adjacency_list = {}
   visited = set()
   while not q.empty():
     name_with_variant = q.get()
@@ -330,7 +332,7 @@ def adjacency_list_from_queryview_xml(module_graph, ignore_by_name,
 
     name = name_with_variant_to_name[name_with_variant]
     module_info = name_to_info[name]
-    module_adjacency_list[module_info] = set()
+    module_adjacency_list.setdefault(module_info, set())
     for attr in module:
       if attr.tag != "rule-input":
         continue
@@ -338,11 +340,10 @@ def adjacency_list_from_queryview_xml(module_graph, ignore_by_name,
       if dep_name_with_variant in ignored:
         continue
       dep_name = name_with_variant_to_name[dep_name_with_variant]
-      if name == dep_name:
-        continue
       if dep_name_with_variant not in visited:
         q.put(dep_name_with_variant)
-      module_adjacency_list[module_info].add(dep_name)
+      if name != dep_name:
+        module_adjacency_list[module_info].add(dep_name)
 
   return module_adjacency_list
 
