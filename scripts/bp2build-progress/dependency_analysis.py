@@ -127,7 +127,9 @@ def is_windows_variation(module):
   dep_variations = module.get("Variations")
   dep_variation_os = ""
   if dep_variations != None:
-    dep_variation_os = dep_variations.get("os")
+    for v in dep_variations:
+      if v["Mutator"] == "os":
+        dep_variation_os = v["Variation"]
   return dep_variation_os == "windows"
 
 
