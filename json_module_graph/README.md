@@ -37,3 +37,17 @@ The following commands are available:
 
 It's best to filter the full module graph to the part you are interested in
 because `jq` isn't too fast on the full graph.
+
+To query about a module's inputs/outputs or actions:
+
+```
+m json-module-graph
+query.sh [-C] <command> <base-of-your-tree>/our/soong/module-actions.json [argument]
+```
+
+The following commands are available:
+* `findModulesCrossPkgBoundary` prints modules with inputs that cross package
+  boundaries
+* `findModulesWithNameSrcCollision` returns modules which have an input with the same
+  name as the module
+* `findModulesWithSrcType` returns modules with inputs with the specified extension
