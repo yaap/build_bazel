@@ -73,14 +73,32 @@ output_file="${output_dir}/test.apex"
 
 # Create the wrapper manifest file
 bazel_apexer_wrapper_manifest_file=$(mktemp)
-echo "
-dir1,file1,"${input_dir}/file1"
-dir2/dir3,file2,"${input_dir}/file2"
-dir4,one_level_sym,"${input_dir}/one_level_sym"
-dir5,two_level_sym_in_execroot,"${input_dir}/two_level_sym_in_execroot"
-dir6,two_level_sym_not_in_execroot,"${input_dir}/two_level_sym_not_in_execroot"
-dir7,three_level_sym_in_execroot,"${input_dir}/three_level_sym_in_execroot"
-" > ${bazel_apexer_wrapper_manifest_file}
+echo "{
+\"${input_dir}/file1\": \"dir1/file1\",
+\"${input_dir}/file2\": \"dir2/dir3/file2\",
+\"${input_dir}/one_level_sym\": \"dir4/one_level_sym\",
+\"${input_dir}/two_level_sym_in_execroot\": \"dir5/two_level_sym_in_execroot\",
+\"${input_dir}/two_level_sym_not_in_execroot\": \"dir6/two_level_sym_not_in_execroot\",
+\"${input_dir}/three_level_sym_in_execroot\": \"dir7/three_level_sym_in_execroot\"
+}" > ${bazel_apexer_wrapper_manifest_file}
+
+canned_fs_config=$(mktemp)
+echo "/ 0 2000 0755
+/apex_manifest.json 1000 1000 0644
+/apex_manifest.pb 1000 1000 0644
+/dir1 0 2000 0755
+/dir1/file1 1000 1000 0644
+/dir2 0 2000 0755
+/dir2/dir3 0 2000 0755
+/dir2/dir3/file2 1000 1000 0644
+/dir4 0 2000 0755
+/dir4/one_level_sym 1000 1000 0644
+/dir5 0 2000 0755
+/dir5/two_level_sym_in_execroot 1000 1000 0644
+/dir6 0 2000 0755
+/dir6/two_level_sym_not_in_execroot 1000 1000 0644
+/dir7 0 2000 0755
+/dir7/three_level_sym_in_execroot 1000 1000 0644" > ${canned_fs_config}
 
 apexer_tool_paths=${prebuilt_tool_path}:${avb_tool_path}:${avb_tool_path}:${e2fsdroid_path}:${mke2fs_path}:${resize2fs_path}:${debugfs_path}:${soong_zip_path}:${aapt2_path}
 
@@ -88,14 +106,16 @@ apexer_tool_paths=${prebuilt_tool_path}:${avb_tool_path}:${avb_tool_path}:${e2fs
 # run bazel_apexer_wrapper
 #############################################
 "${RUNFILES_DIR}/__main__/build/bazel/rules/apex/bazel_apexer_wrapper" \
+  ${bazel_apexer_wrapper_manifest_file} \
+  ${apexer_tool_path} \
   --manifest ${manifest_file} \
   --file_contexts ${file_contexts_file} \
   --key "${RUNFILES_DIR}/__main__/build/bazel/rules/apex/test.pem" \
-  --apexer_path ${apexer_tool_path} \
-  --apexer_tool_paths "${apexer_tool_paths}" \
-  --apex_output_file ${output_file} \
-  --bazel_apexer_wrapper_manifest ${bazel_apexer_wrapper_manifest_file} \
-  --android_jar_path ${android_jar}
+  --apexer_tool_path "${apexer_tool_paths}" \
+  --android_jar_path ${android_jar} \
+  --canned_fs_config ${canned_fs_config} \
+  STAGING_DIR_PLACEHOLDER \
+  ${output_file}
 
 #############################################
 # check the result
