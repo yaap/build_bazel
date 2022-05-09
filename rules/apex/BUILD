@@ -7,6 +7,13 @@ string_setting(
     visibility = ["//visibility:public"],
 )
 
+config_setting(
+    name = "non_apex",
+    flag_values = {
+      ":apex_name": "",
+    },
+)
+
 string_setting(
     name = "min_sdk_version",
     build_setting_default = "",
