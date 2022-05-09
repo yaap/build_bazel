@@ -144,6 +144,17 @@ def cc_library_static(
         ],
     )
 
+    # TODO(b/231574899): restructure this to handle other images
+    copts += select({
+      "//build/bazel/rules/apex:non_apex": [],
+      "//conditions:default": [
+          "-D__ANDROID_APEX__",
+          # TODO(b/231322772): sdk_version/min_sdk_version if not finalized
+          "-D__ANDROID_APEX_MIN_SDK_VERSION__=10000",
+      ],
+    })
+
+
     native.cc_library(
         name = cpp_name,
         srcs = srcs,
