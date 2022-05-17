@@ -48,6 +48,10 @@ local_repository(
     path = "external/bazel-skylib",
 )
 
+load("@bazel_skylib//:workspace.bzl", "bazel_skylib_workspace")
+
+bazel_skylib_workspace()
+
 local_repository(
     name = "rules_android",
     path = "external/bazelbuild-rules_android",
@@ -62,7 +66,7 @@ register_toolchains(
   "//prebuilts/sdk:android_sdk_tools_for_native_android_binary",
 
   # For APEX rules
-  "//build/bazel/rules/apex:all"
+  "//build/bazel/rules/apex:all",
 )
 
 bind(
