@@ -81,6 +81,10 @@ case $(uname -s) in
         ANDROID_BAZELRC_NAME="linux.bazelrc"
         ANDROID_BAZEL_JDK_PATH="${TOP}/prebuilts/jdk/jdk11/linux-x86"
         RESTRICTED_PATH="${TOP}/prebuilts/build-tools/path/linux-x86:${TOP}/out/.path"
+
+        # Used for --sandbox_tmpfs_path. Bazel doesn't create this
+        # directory automatically. See linux.bazelrc for more information.
+        mkdir -p /tmp/bazel/sandbox
         ;;
     *)
         >&2 echo "Bazel is supported on Linux and Darwin only. Your OS is not supported for Bazel usage, based on 'uname -s': $(uname -s)"
