@@ -26,6 +26,20 @@ import subprocess
 
 from typing import Dict
 
+
+def _get_proto_output_file():
+  """Returns the location of the proto file used for analyzing out/soong_build_metrics.pb.
+
+  This corresponds to soong/ui/metrics/metrics_proto/metrics.proto.
+  """
+  return os.getenv('ANDROID_BUILD_TOP') + '/build/soong/ui/metrics/metrics_proto/metrics.proto'
+
+
+def _get_default_output_file():
+  """Returns the filepath for the build output."""
+  return os.getenv('ANDROID_BUILD_TOP') + '/out/soong_build_metrics.pb'
+
+
 def _add_subdicts_to_output(runtime_dict, event):
   """Adds nested events to a dict as appropriate.
 
@@ -70,18 +84,23 @@ def _get_formatted_output(event, cumulative_output, indent_str, separator):
 def main():
   parser = argparse.ArgumentParser(description='')
   parser.add_argument('metrics_file', nargs='?',
-                      default='../../../out/soong_build_metrics.pb',
+                      default=_get_default_output_file(),
                       help='The soong_metrics file created as part of the last build. ' +
                       'Defaults to out/soong_build_metrics.pb')
   args = parser.parse_args()
 
   metrics_file = args.metrics_file
   if not os.path.exists(metrics_file):
-    raise Exception('out/soong_build_metrics.pb not found. Did you run a build?')
+    raise Exception('File ' + metrics_file + ' not found. Did you run a build?')
+
+  proto_file = _get_proto_output_file()
+
+  if not os.path.exists(proto_file):
+    raise Exception('$ANDROID_BUILD_TOP not found in environment. Have you run lunch?')
 
   json_out = subprocess.check_output([r"""printproto --proto2 --raw_protocol_buffer --json --json_accuracy_loss_reaction=ignore \
                                       --message=soong_build_metrics.SoongBuildMetrics --multiline \
-                                      --proto=../../soong/ui/metrics/metrics_proto/metrics.proto """+ metrics_file
+                                      --proto=""" + proto_file + ' ' + metrics_file
                                       ], shell=True)
   # output is a dict of dicts, containing nested events and eventually their real_time values
   # output["alpha"]["one"]["cat"] is the runtime (in seconds) of event alpha.one.cat.
@@ -97,7 +116,7 @@ def main():
 
   formatted_output = []
   _get_formatted_output(output, formatted_output, '', '')
-  for key, event_dict in output.items():
+  for _, event_dict in output.items():
     total += float(event_dict[''][0:-1])
   print(''.join(formatted_output))
   print('Total: ', total)
