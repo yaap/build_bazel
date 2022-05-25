@@ -1,1 +1,5 @@
+load(":gensrcs_test.bzl", "gensrcs_tests_suite")
+
 exports_files(["lunch.bzl"])
+
+gensrcs_tests_suite(name = "gensrcs_tests")
