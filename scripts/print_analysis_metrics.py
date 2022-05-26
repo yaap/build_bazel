@@ -73,11 +73,12 @@ def _get_formatted_output(event, cumulative_output, indent_str, separator):
   for key, item in event.items():
     if isinstance(item, Dict):
       # Recurse through the sub-level
-      event_time = item['']
-      cumulative_output.append(f'{separator}{indent_str}{key}: {event_time}')
+      event_time = '{:.2f}'.format(float(item[''][0:-1]))
+      cumulative_output.append(f'{separator}{indent_str}{key}: {event_time}s')
       _get_formatted_output(item, cumulative_output, indent_str+'\t', '\n')
     elif key != '':
-      cumulative_output.append(f'{separator}{indent_str}{key}: {item}\n')
+      event_time = '{:.2f}'.format(float(item[0:-1]))
+      cumulative_output.append(f'{separator}{indent_str}{key}: {event_time}s\n')
     separator = '\n'
 
 
@@ -119,7 +120,7 @@ def main():
   for _, event_dict in output.items():
     total += float(event_dict[''][0:-1])
   print(''.join(formatted_output))
-  print('Total: ', total)
+  print('Total: ', '{:.2f}'.format(total) + 's')
 
 
 if __name__ == '__main__':
