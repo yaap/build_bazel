@@ -28,12 +28,12 @@ def _gensrcs_impl(ctx):
 
     out_files = []
     for in_file in ctx.files.srcs:
-        # an action for each pair of input and output file
         out_file = ctx.actions.declare_file(
             paths.replace_extension(
                 in_file.basename,
                 "." + ctx.attr.output_extension,
             ),
+            sibling = in_file,
         )
         shell_command = command \
             .replace("$(SRC)", in_file.path) \
