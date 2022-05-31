@@ -208,6 +208,7 @@ def _run_apexer(ctx, apex_toolchain):
     e2fsdroid_files = apex_toolchain.e2fsdroid[DefaultInfo].files_to_run
     mke2fs_files = apex_toolchain.mke2fs[DefaultInfo].files_to_run
     resize2fs_files = apex_toolchain.resize2fs[DefaultInfo].files_to_run
+    sefcontext_compile_files = apex_toolchain.sefcontext_compile[DefaultInfo].files_to_run
     apexer_tool_paths = [
         # These are built by make_injection
         apex_toolchain.apexer.dirname,
@@ -218,6 +219,7 @@ def _run_apexer(ctx, apex_toolchain):
         e2fsdroid_files.executable.dirname,
         mke2fs_files.executable.dirname,
         resize2fs_files.executable.dirname,
+        sefcontext_compile_files.executable.dirname,
     ]
 
     args.add_all(["--apexer_tool_path", ":".join(apexer_tool_paths)])
@@ -246,9 +248,9 @@ def _run_apexer(ctx, apex_toolchain):
         e2fsdroid_files,
         mke2fs_files,
         resize2fs_files,
+        sefcontext_compile_files,
         apex_toolchain.aapt2,
         apex_toolchain.apexer,
-        apex_toolchain.sefcontext_compile,
     ]
 
     ctx.actions.run(
