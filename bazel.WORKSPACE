@@ -21,7 +21,6 @@ make_injection_repository(
         "apexer",
         "conv_apex_manifest",
         "deapexer",
-        "sefcontext_compile",
     ],
     target_module_files = {
         # For APEX comparisons
@@ -34,7 +33,6 @@ make_injection_repository(
         "//:packages/modules/adbd/apex/Android.bp", # for com.android.adbd
         "//:system/apex/apexer/Android.bp", # for apexer, conv_apex_manifest
         "//:system/apex/tools/apex_compression_tool", # for apex_compression_tool, deapexer
-        "//:external/selinux/libselinux/Android.bp", # for sefcontext_compile
     ],
 )
 
