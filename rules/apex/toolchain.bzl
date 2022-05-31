@@ -41,9 +41,9 @@ def _apex_toolchain_impl(ctx):
             resize2fs = ctx.attr.resize2fs,
             e2fsdroid = ctx.attr.e2fsdroid,
             sefcontext_compile = ctx.attr.sefcontext_compile,
-            conv_apex_manifest = ctx.file.conv_apex_manifest,
+            conv_apex_manifest = ctx.attr.conv_apex_manifest,
             android_jar = ctx.file.android_jar,
-            apex_compression_tool = ctx.file.apex_compression_tool,
+            apex_compression_tool = ctx.attr.apex_compression_tool,
             soong_zip = ctx.file.soong_zip,
         ),
     )
@@ -59,9 +59,9 @@ apex_toolchain = rule(
         "resize2fs": attr.label(cfg = "host", executable = True),
         "e2fsdroid": attr.label(cfg = "host", executable = True),
         "sefcontext_compile": attr.label(cfg = "host", executable = True),
-        "conv_apex_manifest": attr.label(allow_single_file = True, cfg = "host", executable = True),
+        "conv_apex_manifest": attr.label(cfg = "host", executable = True),
         "android_jar": attr.label(allow_single_file = True, cfg = "host"),
-        "apex_compression_tool": attr.label(allow_single_file = True, cfg = "host", executable = True),
+        "apex_compression_tool": attr.label(cfg = "host", executable = True),
         # soong_zip is added as a dependency of apex_compression_tool which uses
         # soong_zip to compress APEX files. avbtool is also used in apex_compression tool
         # and has been added to apex toolchain previously.
