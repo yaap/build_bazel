@@ -23,6 +23,7 @@ avb_tool_path="${RUNFILES_DIR}/__main__/external/avb"
 e2fsdroid_path="${RUNFILES_DIR}/__main__/external/e2fsprogs/contrib/android"
 mke2fs_path="${RUNFILES_DIR}/__main__/external/e2fsprogs/misc"
 resize2fs_path="${RUNFILES_DIR}/__main__/external/e2fsprogs/resize"
+sefcontext_compile_path="${RUNFILES_DIR}/__main__/external/selinux/libselinux"
 debugfs_path="${RUNFILES_DIR}/__main__/external/e2fsprogs/debugfs"
 soong_zip_path="${RUNFILES_DIR}/__main__/prebuilts/build-tools/linux-x86/bin"
 aapt2_path="${RUNFILES_DIR}/__main__/prebuilts/sdk/tools/linux/bin"
@@ -100,7 +101,7 @@ echo "/ 0 2000 0755
 /dir7 0 2000 0755
 /dir7/three_level_sym_in_execroot 1000 1000 0644" > ${canned_fs_config}
 
-apexer_tool_paths=${prebuilt_tool_path}:${avb_tool_path}:${avb_tool_path}:${e2fsdroid_path}:${mke2fs_path}:${resize2fs_path}:${debugfs_path}:${soong_zip_path}:${aapt2_path}
+apexer_tool_paths=${prebuilt_tool_path}:${avb_tool_path}:${avb_tool_path}:${e2fsdroid_path}:${mke2fs_path}:${resize2fs_path}:${debugfs_path}:${soong_zip_path}:${aapt2_path}:${sefcontext_compile_path}
 
 #############################################
 # run bazel_apexer_wrapper
