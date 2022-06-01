@@ -110,7 +110,7 @@ def _convert_apex_manifest_json_to_pb(ctx, apex_toolchain):
     ctx.actions.run(
         outputs = [apex_manifest_pb],
         inputs = [ctx.file.manifest],
-        executable = apex_toolchain.conv_apex_manifest,
+        executable = apex_toolchain.conv_apex_manifest[DefaultInfo].files_to_run,
         arguments = [
             "proto",
             apex_manifest_json.path,
@@ -291,6 +291,7 @@ def _run_signapk(ctx, unsigned_file, signed_file, private_key, public_key, mnemo
 # Compress a file with apex_compression_tool.
 def _run_apex_compression_tool(ctx, apex_toolchain, input_file, output_file_name):
     avbtool_files = apex_toolchain.avbtool[DefaultInfo].files_to_run
+    apex_compression_tool_files = apex_toolchain.apex_compression_tool[DefaultInfo].files_to_run
 
     # Outputs
     compressed_file = ctx.actions.declare_file(output_file_name)
@@ -307,11 +308,11 @@ def _run_apex_compression_tool(ctx, apex_toolchain, input_file, output_file_name
         inputs = [input_file],
         tools = [
             avbtool_files,
-            apex_toolchain.apex_compression_tool,
+            apex_compression_tool_files,
             apex_toolchain.soong_zip,
         ],
         outputs = [compressed_file],
-        executable = apex_toolchain.apex_compression_tool,
+        executable = apex_compression_tool_files,
         arguments = [args],
         mnemonic = "BazelApexCompressing",
     )
