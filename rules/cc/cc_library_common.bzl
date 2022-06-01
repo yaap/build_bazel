@@ -17,6 +17,7 @@ limitations under the License.
 load("//build/bazel/product_variables:constants.bzl", "constants")
 load("@rules_cc//cc:find_cc_toolchain.bzl", "find_cpp_toolchain")
 load("@soong_injection//api_levels:api_levels.bzl", "api_levels")
+load("@soong_injection//product_config:product_variables.bzl", "product_vars")
 
 _bionic_targets = ["//bionic/libc", "//bionic/libdl", "//bionic/libm"]
 _static_bionic_targets = ["//bionic/libc:libc_bp2build_cc_library_static", "//bionic/libdl:libdl_bp2build_cc_library_static", "//bionic/libm:libm_bp2build_cc_library_static"]
@@ -120,6 +121,8 @@ def is_external_directory(package_name):
     return secondary_path.contains("google")
   return False
 
+# TODO: Move this to a common rule dir, instead of a cc rule dir. Nothing here
+# should be cc specific, except that the current callers are (only) cc rules.
 def parse_sdk_version(version):
     future_version = "10000"
 
@@ -132,5 +135,20 @@ def parse_sdk_version(version):
     # We need to handle this case properly later
     elif version == "apex_inherit":
         return future_version
+    elif version.isdigit() and int(version) == product_vars["Platform_sdk_version"]:
+        # For internal branch states, support parsing a finalized version number
+        # that's also still in
+        # product_vars["Platform_version_active_codenames"], but not api_levels.
+        #
+        # This happens a few months each year on internal branches where the
+        # internal master branch has a finalized API, but is not released yet,
+        # therefore the Platform_sdk_version is usually latest AOSP dessert
+        # version + 1. The generated api_levels map sets these to 9000 + i,
+        # where i is the index of the current/future version, so version is not
+        # in the api_levels.values() list, but it is a valid sdk version.
+        #
+        # See also b/234321488#comment2
+        return version
     else:
-        fail("Unknown sdk version: %s" % (version))
+        fail("Unknown sdk version: %s, could not be parsed as " +
+             "an integer and/or is not a recognized codename" % (version))
