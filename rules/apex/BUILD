@@ -35,7 +35,7 @@ bool_flag(
 toolchain_type(name = "apex_toolchain_type")
 
 apex_toolchain(
-    name = "prebuilt_apex_toolchain",
+    name = "apex_toolchain",
     aapt2 = "//prebuilts/sdk/tools:linux/bin/aapt2",
     avbtool = "//external/avb:avbtool",
     apexer = "@make_injection//:host/linux-x86/bin/apexer",
@@ -43,14 +43,14 @@ apex_toolchain(
     resize2fs = "//external/e2fsprogs/resize:resize2fs",
     e2fsdroid = "//external/e2fsprogs/contrib/android:e2fsdroid",
     sefcontext_compile = "//external/selinux/libselinux:sefcontext_compile",
-    conv_apex_manifest = "@make_injection//:host/linux-x86/bin/conv_apex_manifest",
+    conv_apex_manifest = "//system/apex/apexer:conv_apex_manifest",
     android_jar = "//prebuilts/sdk/current:public/android.jar",
-    apex_compression_tool = "@make_injection//:host/linux-x86/bin/apex_compression_tool",
+    apex_compression_tool = "//system/apex/tools:apex_compression_tool",
     soong_zip = "//prebuilts/build-tools:linux-x86/bin/soong_zip",
 )
 
 toolchain(
-    name = "prebuilt_apex_toolchain_def",
+    name = "apex_toolchain_def",
     exec_compatible_with = [
         "//build/bazel/platforms/arch:x86_64",
         "//build/bazel/platforms/os:linux",
@@ -58,7 +58,7 @@ toolchain(
     target_compatible_with = [
         "//build/bazel/platforms/os:android",
     ],
-    toolchain = ":prebuilt_apex_toolchain",
+    toolchain = ":apex_toolchain",
     toolchain_type = "//build/bazel/rules/apex:apex_toolchain_type",
 )
 
@@ -84,10 +84,10 @@ sh_test(
         "//prebuilts/build-tools:linux-x86/bin/soong_zip",
         "//prebuilts/sdk/current:public/android.jar",
         "//prebuilts/sdk/tools:linux/bin/aapt2",
-        "@make_injection//:host/linux-x86/bin/apex_compression_tool",
+        "//system/apex/apexer:conv_apex_manifest",
+        "//system/apex/tools:apex_compression_tool",
+        "//system/apex/tools:deapexer",
         "@make_injection//:host/linux-x86/bin/apexer",
-        "@make_injection//:host/linux-x86/bin/conv_apex_manifest",
-        "@make_injection//:host/linux-x86/bin/deapexer",
     ],
     # This is a host test.
     target_compatible_with = select({
