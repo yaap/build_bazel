@@ -27,7 +27,7 @@ OUTPUT_EXTENSION = "out"
 
 # ==== Check the actions created by gensrcs ====
 
-def _actions_test(ctx):
+def _test_actions_impl(ctx):
     env = analysistest.begin(ctx)
 
     actions = analysistest.target_actions(env)
@@ -54,12 +54,14 @@ def _actions_test(ctx):
 
     return analysistest.end(env)
 
-actions_test = analysistest.make(_actions_test)
+actions_test = analysistest.make(_test_actions_impl)
 
-def _create_output_files():
+def _test_actions():
+    name = "actions"
+    test_name = name + "_test"
     # Rule under test
     gensrcs(
-        name = "copycat",
+        name = name,
         cmd = "cat $(SRC) > $(OUT)",
         srcs = INPUT_FILES,
         output_extension = OUTPUT_EXTENSION,
@@ -67,14 +69,14 @@ def _create_output_files():
     )
 
     actions_test(
-        name = "actions_test",
-        target_under_test = ":copycat",
+        name = test_name,
+        target_under_test = name,
     )
+    return test_name
 
 def gensrcs_tests_suite(name):
     """Creates test targets for gensrcs.bzl"""
-    _create_output_files()
     native.test_suite(
         name = name,
-        tests = [":actions_test"],
+        tests = [_test_actions()],
     )
