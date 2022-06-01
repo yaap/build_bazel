@@ -66,15 +66,18 @@ def _single_l_file_to_c_test_impl(ctx):
 single_l_file_to_c_test = analysistest.make(_single_l_file_to_c_test_impl)
 
 def _test_single_l_file_to_c():
+    name = "single_l_file_to_c"
+    test_name = name + "_test"
     genlex(
-        name = "single_l_file_to_c_subject",
+        name = name,
         srcs = ["foo.l"],
         tags = ["manual"],
     )
     single_l_file_to_c_test(
-        name = "single_l_file_to_c_test",
-        target_under_test = ":single_l_file_to_c_subject",
+        name = test_name,
+        target_under_test = name,
     )
+    return test_name
 
 def _single_ll_file_to_cc_test_impl(ctx):
     env = analysistest.begin(ctx)
@@ -107,15 +110,18 @@ def _single_ll_file_to_cc_test_impl(ctx):
 single_ll_file_to_cc_test = analysistest.make(_single_ll_file_to_cc_test_impl)
 
 def _test_single_ll_file_to_cc():
+    name = "single_ll_file_to_cc"
+    test_name = name + "_test"
     genlex(
-        name = "single_ll_file_to_cc_subject",
+        name = name,
         srcs = ["foo.ll"],
         tags = ["manual"],
     )
     single_ll_file_to_cc_test(
-        name = "single_ll_file_to_cc_test",
-        target_under_test = ":single_ll_file_to_cc_subject",
+        name = test_name,
+        target_under_test = name,
     )
+    return test_name
 
 def _multiple_files_correct_type_test_impl(ctx):
     env = analysistest.begin(ctx)
@@ -168,15 +174,18 @@ multiple_files_correct_type_test = analysistest.make(
 )
 
 def _test_multiple_files_correct_type():
+    name = "multiple_files_correct_type"
+    test_name = name + "_test"
     genlex(
-        name = "multiple_files_correct_type_subject",
+        name = name,
         srcs = ["foo.l", "bar.l"],
         tags = ["manual"],
     )
     multiple_files_correct_type_test(
-        name = "multiple_files_correct_type_test",
-        target_under_test = ":multiple_files_correct_type_subject",
+        name = test_name,
+        target_under_test = name,
     )
+    return test_name
 
 def _output_arg_test_impl(ctx):
     env = analysistest.begin(ctx)
@@ -211,15 +220,18 @@ def _output_arg_test_impl(ctx):
 output_arg_test = analysistest.make(_output_arg_test_impl)
 
 def _test_output_arg():
+    name = "output_arg"
+    test_name = name + "_test"
     genlex(
-        name = "output_arg_subject",
+        name = name,
         srcs = ["foo.l"],
         tags = ["manual"],
     )
     output_arg_test(
-        name = "output_arg_test",
-        target_under_test = ":output_arg_subject",
+        name = test_name,
+        target_under_test = name,
     )
+    return test_name
 
 def _input_arg_test_impl(ctx):
     env = analysistest.begin(ctx)
@@ -240,15 +252,18 @@ def _input_arg_test_impl(ctx):
 input_arg_test = analysistest.make(_input_arg_test_impl)
 
 def _test_input_arg():
+    name = "input_arg"
+    test_name = name + "_test"
     genlex(
-        name = "input_arg_subject",
+        name = name,
         srcs = ["foo.l"],
         tags = ["manual"],
     )
     input_arg_test(
-        name = "input_arg_test",
-        target_under_test = ":input_arg_subject",
+        name = test_name,
+        target_under_test = name,
     )
+    return test_name
 
 def _lexopts_test_impl(ctx):
     env = analysistest.begin(ctx)
@@ -273,17 +288,20 @@ def _lexopts_test_impl(ctx):
 lexopts_test = analysistest.make(_lexopts_test_impl)
 
 def _test_lexopts():
+    name = "lexopts"
+    test_name = name + "_test"
     genlex(
-        name = "lexopts_subject",
+        name = name,
         srcs = ["foo_lexopts.ll"],
         lexopts = ["foo_opt", "bar_opt"],
         tags = ["manual"],
     )
 
     lexopts_test(
-        name = "lexopts_test",
-        target_under_test = ":lexopts_subject",
+        name = test_name,
+        target_under_test = name,
     )
+    return test_name
 
 # TODO(b/190006308): When fixed, l and ll sources can coexist. Remove this test.
 def _l_and_ll_files_fails_test_impl(ctx):
@@ -302,34 +320,29 @@ l_and_ll_files_fails_test = analysistest.make(
 )
 
 def _test_l_and_ll_files_fails():
+    name = "l_and_ll_files_fails"
+    test_name = name + "_test"
     genlex(
-        name = "l_and_ll_files_fails_subject",
+        name = name,
         srcs = ["foo_fails.l", "bar_fails.ll"],
         tags = ["manual"],
     )
     l_and_ll_files_fails_test(
-        name = "l_and_ll_files_fails_test",
-        target_under_test = ":l_and_ll_files_fails_subject",
+        name = test_name,
+        target_under_test = name,
     )
+    return test_name
 
 def flex_test_suite(name):
-    _test_single_l_file_to_c()
-    _test_single_ll_file_to_cc()
-    _test_multiple_files_correct_type()
-    _test_output_arg()
-    _test_input_arg()
-    _test_lexopts()
-    _test_l_and_ll_files_fails()
-
     native.test_suite(
         name = name,
         tests = [
-            ":single_l_file_to_c_test",
-            ":single_ll_file_to_cc_test",
-            ":multiple_files_correct_type_test",
-            ":output_arg_test",
-            ":input_arg_test",
-            ":lexopts_test",
-            ":l_and_ll_files_fails_test",
+            _test_single_l_file_to_c(),
+            _test_single_ll_file_to_cc(),
+            _test_multiple_files_correct_type(),
+            _test_output_arg(),
+            _test_input_arg(),
+            _test_lexopts(),
+            _test_l_and_ll_files_fails(),
         ],
     )
