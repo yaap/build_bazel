@@ -74,9 +74,48 @@ def _test_actions():
     )
     return test_name
 
+# ==== Check the output file when out_extension is unset ====
+
+def _test_unset_output_extension_impl(ctx):
+    env = analysistest.begin(ctx)
+
+    actions = analysistest.target_actions(env)
+    asserts.equals(env, expected = 1, actual = len(actions))
+    print(actions)
+    action = actions[0]
+    asserts.equals(
+        env,
+        expected = "input.",
+        actual = action.outputs.to_list()[0].basename,
+    )
+
+    return analysistest.end(env)
+
+unset_output_extension_test = analysistest.make(_test_unset_output_extension_impl)
+
+def _test_unset_output_extension():
+    name = "unset_output_extension"
+    test_name = name + "_test"
+    # Rule under test
+    gensrcs(
+        name = "TSTSS",
+        cmd = "cat $(SRC) > $(OUT)",
+        srcs = ["input.txt"],
+        tags = ["manual"],  # make sure it's not built using `:all`
+    )
+
+    unset_output_extension_test(
+        name = test_name,
+        target_under_test = "TSTSS",
+    )
+    return test_name
+
 def gensrcs_tests_suite(name):
     """Creates test targets for gensrcs.bzl"""
     native.test_suite(
         name = name,
-        tests = [_test_actions()],
+        tests = [
+            _test_actions(),
+            _test_unset_output_extension(),
+        ],
     )
