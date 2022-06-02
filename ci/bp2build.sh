@@ -104,13 +104,7 @@ HOST_INCOMPATIBLE_TARGETS=(
   -//build/bazel/tests/apex/...
   -//build/bazel/ci/dist/...
 
-  # TODO(b/217927043): Determine how to address targets that are device only
-  -//system/core/libpackagelistparser:all
-  -//external/icu/libicu:all
-  //external/icu/libicu:libicu
-  -//external/icu/icu4c/source/tools/ctestfw:all
-
-  # TODO(b/217926427): determine why these host_supported modules do not build on host
+  # TODO(b/216626461): add support for host_ldlibs
   -//packages/modules/adb:all
   -//packages/modules/adb/pairing_connection:all
 )
