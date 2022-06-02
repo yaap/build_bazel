@@ -25,6 +25,10 @@ def _gensrcs_impl(ctx):
         tool[DefaultInfo].files_to_run
         for tool in ctx.attr.tools
     ]
+    command = command.replace(
+        "$(GENDIR)",
+        ctx.var["GENDIR"]
+    )
 
     out_files = []
     for in_file in ctx.files.srcs:
