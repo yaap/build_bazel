@@ -65,7 +65,6 @@ gensrcs = rule(
             doc = "A list of inputs such as source files to process",
         ),
         "output_extension": attr.string(
-            mandatory = True,
             doc = "The extension that will be substituted for output files",
         ),
         "cmd": attr.string(
