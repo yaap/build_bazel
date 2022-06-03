@@ -18,12 +18,19 @@ load("@bazel_skylib//lib:unittest.bzl", "analysistest", "asserts")
 load("@bazel_skylib//lib:paths.bzl", "paths")
 load("//build/bazel/rules:gensrcs.bzl", "gensrcs")
 
-INPUT_FILES = [
-    "src1.txt",
-    "src2.txt",
+SRCS = [
+    "texts/src1.txt",
+    "texts/src2.txt",
+    "src3.txt",
 ]
 
 OUTPUT_EXTENSION = "out"
+
+EXPECTED_OUTS = [
+    "texts/src1.out",
+    "texts/src2.out",
+    "src3.out",
+]
 
 # ==== Check the actions created by gensrcs ====
 
@@ -31,25 +38,25 @@ def _test_actions_impl(ctx):
     env = analysistest.begin(ctx)
 
     actions = analysistest.target_actions(env)
+    build_file_dirname = paths.dirname(ctx.build_file_path)
 
     # Expect an action for each pair of input/output file
-    asserts.equals(env, expected = 2, actual = len(actions))
-
+    asserts.equals(env, expected = len(SRCS), actual = len(actions))
     # Check name for input and output files for each action
     for i in range(len(actions)):
         action = actions[i]
-        input_file = action.inputs.to_list()[0]
-        expected_input_file = INPUT_FILES[i]
+        in_file = action.inputs.to_list()[0]
+        out_file = action.outputs.to_list()[0]
 
         asserts.equals(
             env,
-            expected = expected_input_file,
-            actual = input_file.basename,
+            expected = SRCS[i],
+            actual = in_file.short_path[len(build_file_dirname) + 1:],
         )
         asserts.equals(
             env,
-            expected = expected_input_file.rstrip(".txt") + "." + OUTPUT_EXTENSION,
-            actual = action.outputs.to_list()[0].basename,
+            expected = EXPECTED_OUTS[i],
+            actual = out_file.short_path[len(build_file_dirname) + 1:],
         )
 
     return analysistest.end(env)
@@ -63,7 +70,7 @@ def _test_actions():
     gensrcs(
         name = name,
         cmd = "cat $(SRC) > $(OUT)",
-        srcs = INPUT_FILES,
+        srcs = SRCS,
         output_extension = OUTPUT_EXTENSION,
         tags = ["manual"],  # make sure it's not built using `:all`
     )
@@ -74,9 +81,48 @@ def _test_actions():
     )
     return test_name
 
+# ==== Check the output file when out_extension is unset ====
+
+def _test_unset_output_extension_impl(ctx):
+    env = analysistest.begin(ctx)
+
+    actions = analysistest.target_actions(env)
+    asserts.equals(env, expected = 1, actual = len(actions))
+    print(actions)
+    action = actions[0]
+    asserts.equals(
+        env,
+        expected = "input.",
+        actual = action.outputs.to_list()[0].basename,
+    )
+
+    return analysistest.end(env)
+
+unset_output_extension_test = analysistest.make(_test_unset_output_extension_impl)
+
+def _test_unset_output_extension():
+    name = "unset_output_extension"
+    test_name = name + "_test"
+    # Rule under test
+    gensrcs(
+        name = "TSTSS",
+        cmd = "cat $(SRC) > $(OUT)",
+        srcs = ["input.txt"],
+        tags = ["manual"],  # make sure it's not built using `:all`
+    )
+
+    unset_output_extension_test(
+        name = test_name,
+        target_under_test = "TSTSS",
+    )
+    return test_name
+
 def gensrcs_tests_suite(name):
     """Creates test targets for gensrcs.bzl"""
     native.test_suite(
         name = name,
-        tests = [_test_actions()],
+        tests = [
+            _test_actions(),
+            _test_unset_output_extension(),
+        ],
     )

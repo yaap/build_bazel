@@ -25,15 +25,19 @@ def _gensrcs_impl(ctx):
         tool[DefaultInfo].files_to_run
         for tool in ctx.attr.tools
     ]
+    command = command.replace(
+        "$(GENDIR)",
+        ctx.var["GENDIR"]
+    )
 
     out_files = []
     for in_file in ctx.files.srcs:
-        # an action for each pair of input and output file
         out_file = ctx.actions.declare_file(
             paths.replace_extension(
                 in_file.basename,
                 "." + ctx.attr.output_extension,
             ),
+            sibling = in_file,
         )
         shell_command = command \
             .replace("$(SRC)", in_file.path) \
@@ -65,7 +69,6 @@ gensrcs = rule(
             doc = "A list of inputs such as source files to process",
         ),
         "output_extension": attr.string(
-            mandatory = True,
             doc = "The extension that will be substituted for output files",
         ),
         "cmd": attr.string(
