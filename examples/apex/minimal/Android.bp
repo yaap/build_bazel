@@ -124,6 +124,12 @@ apex {
     ]
 }
 
+override_apex {
+    name: "build.bazel.examples.apex.override.minimal",
+    base: "build.bazel.examples.apex.minimal",
+    package_name: "build.bazel.examples.apex.override.minimal",
+}
+
 apex {
     name: "build.bazel.examples.apex.minimal_compressed",
     compressible: true,
