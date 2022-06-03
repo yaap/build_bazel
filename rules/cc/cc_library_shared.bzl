@@ -144,12 +144,12 @@ def cc_library_shared(
     deps_stub = name + "_deps"
     native.cc_library(
         name = imp_deps_stub,
-        deps = implementation_deps + stl_static,
+        deps = implementation_deps + stl_static + implementation_dynamic_deps + system_dynamic_deps + stl_shared,
         target_compatible_with = target_compatible_with,
     )
     native.cc_library(
         name = deps_stub,
-        deps = deps,
+        deps = deps + dynamic_deps,
         target_compatible_with = target_compatible_with,
     )
 
@@ -376,8 +376,10 @@ def _cc_library_shared_proxy_impl(ctx):
         ),
         _swap_shared_linker_input(ctx, ctx.attr.shared[CcSharedLibraryInfo], ctx.outputs.output_file),
         ctx.attr.table_of_contents[CcTocInfo],
-        # Propagate only includes from the root. Do not re-propagate linker inputs.
-        CcInfo(compilation_context = ctx.attr.root[CcInfo].compilation_context),
+        # The _only_ linker_input is the statically linked root itself. We need to propagate this
+        # as cc_shared_library identifies which libraries can be linked dynamically based on the
+        # linker_inputs of the roots
+        ctx.attr.root[CcInfo],
         CcStubLibrariesInfo(infos = stub_library_infos),
     ]
 
