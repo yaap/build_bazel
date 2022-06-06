@@ -194,6 +194,10 @@ def _run_apexer(ctx, apex_toolchain):
     args.add_all(['--target_sdk_version', '10000'])
     args.add_all(['--payload_fs_type', 'ext4'])
 
+    # Override the package name, if it's expicitly specified
+    if ctx.attr.package_name != None:
+        args.add_all(["--override_apk_package_name", ctx.attr.package_name])
+
     # TODO(b/215339575): This is a super rudimentary way to convert "current" to a numerical number.
     # Generalize this to API level handling logic in a separate Starlark utility, preferably using
     # API level maps dumped from api_levels.go
@@ -343,6 +347,7 @@ _apex = rule(
     attrs = {
         "manifest": attr.label(allow_single_file = [".json"]),
         "android_manifest": attr.label(allow_single_file = [".xml"]),
+        "package_name": attr.string(),
         "file_contexts": attr.label(allow_single_file = True, mandatory = True),
         "key": attr.label(providers = [ApexKeyInfo]),
         "certificate": attr.label(providers = [AndroidAppCertificateInfo]),
@@ -424,6 +429,7 @@ def apex(
         native_shared_libs_64 = [],
         binaries = [],
         prebuilts = [],
+        package_name = None,
         **kwargs):
     "Bazel macro to correspond with the APEX bundle Soong module."
 
@@ -459,5 +465,6 @@ def apex(
         # $ bazel build //path/to/module:com.android.module.capex
         apex_output = apex_output,
         capex_output = capex_output,
+        package_name = package_name,
         **kwargs
     )
