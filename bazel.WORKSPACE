@@ -15,10 +15,6 @@ soong_injection_repository(name="soong_injection")
 # prebuilts for migration purposes.
 make_injection_repository(
     name = "make_injection",
-    binaries = [
-        # APEX tools
-        "apexer",
-    ],
     target_module_files = {
         # For APEX comparisons
         "com.android.tzdata": ["system/apex/com.android.tzdata.apex"],
@@ -28,7 +24,6 @@ make_injection_repository(
     watch_android_bp_files = [
         "//:build/bazel/examples/apex/minimal/Android.bp", # for build.bazel.examples.apex.minimal
         "//:packages/modules/adbd/apex/Android.bp", # for com.android.adbd
-        "//:system/apex/apexer/Android.bp", # for apexer
     ],
 )
 

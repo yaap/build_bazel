@@ -232,10 +232,12 @@ def _run_apexer(ctx, apex_toolchain):
     # Outputs
     apex_output_file = ctx.actions.declare_file(ctx.attr.name + ".apex.unsigned")
 
+    apexer_files = apex_toolchain.apexer[DefaultInfo].files_to_run
+
     # Arguments
     args = ctx.actions.args()
     args.add(file_mapping_file.path)
-    args.add(apex_toolchain.apexer.path)
+    args.add(apexer_files.executable.path)
     if ctx.attr._apexer_verbose[BuildSettingInfo].value:
         args.add("--verbose")
     args.add('--force')
@@ -269,11 +271,8 @@ def _run_apexer(ctx, apex_toolchain):
     resize2fs_files = apex_toolchain.resize2fs[DefaultInfo].files_to_run
     sefcontext_compile_files = apex_toolchain.sefcontext_compile[DefaultInfo].files_to_run
     apexer_tool_paths = [
-        # These are built by make_injection
-        apex_toolchain.apexer.dirname,
-
-        # These are real Bazel targets
         apex_toolchain.aapt2.dirname,
+        apexer_files.executable.dirname,
         avbtool_files.executable.dirname,
         e2fsdroid_files.executable.dirname,
         mke2fs_files.executable.dirname,
@@ -303,13 +302,13 @@ def _run_apexer(ctx, apex_toolchain):
         inputs.append(android_manifest)
 
     tools = [
+        apexer_files,
         avbtool_files,
         e2fsdroid_files,
         mke2fs_files,
         resize2fs_files,
         sefcontext_compile_files,
         apex_toolchain.aapt2,
-        apex_toolchain.apexer,
     ]
 
     ctx.actions.run(
