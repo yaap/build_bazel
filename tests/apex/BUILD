@@ -1,6 +1,7 @@
 load(":apex_diff_test.bzl", "apex_diff_test")
 load(":apex_test.bzl", "apex_compression_test")
 load(":apex_aab_test.bzl", "apex_aab_test")
+load(":apex_aapt2_test.bzl", "apex_package_name_test")
 
 apex_diff_test(
     name = "com.android.tzdata",
@@ -56,4 +57,22 @@ apex_compression_test(
 apex_aab_test(
     name = "build.bazel.examples.apex.minimal_mainline-module",
     apex = "//build/bazel/examples/apex/minimal:build.bazel.examples.apex.minimal",
+)
+
+apex_package_name_test(
+    name = "build.bazel.examples.apex.minimal_package_name",
+    apex = "//build/bazel/examples/apex/minimal:build.bazel.examples.apex.minimal.apex",
+    expected_package_name = "build.bazel.examples.apex.minimal",
+)
+
+apex_package_name_test(
+    name = "build.bazel.examples.apex.override.minimal_package_name",
+    apex = "//build/bazel/examples/apex/minimal:build.bazel.examples.apex.override.minimal.apex",
+    expected_package_name = "build.bazel.examples.apex.override.minimal",
+)
+
+apex_package_name_test(
+    name = "com.android.adbd_package_name",
+    apex = "//packages/modules/adb/apex:com.android.adbd.apex",
+    expected_package_name = "com.android.adbd",
 )
