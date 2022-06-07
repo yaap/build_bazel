@@ -79,6 +79,7 @@ def cc_library_shared(
         inject_bssl_hash = False,
         sdk_version = "",
         min_sdk_version = "",
+        tags = [],
         **kwargs):
     "Bazel macro to correspond with the cc_library_shared Soong module."
 
@@ -131,6 +132,7 @@ def cc_library_shared(
         features = features,
         use_version_lib = use_version_lib,
         target_compatible_with = target_compatible_with,
+        tags = ["manual"],
     )
 
     stl_static, stl_shared = shared_stl_deps(stl)
@@ -146,11 +148,13 @@ def cc_library_shared(
         name = imp_deps_stub,
         deps = implementation_deps + stl_static + implementation_dynamic_deps + system_dynamic_deps + stl_shared,
         target_compatible_with = target_compatible_with,
+        tags = ["manual"],
     )
     native.cc_library(
         name = deps_stub,
         deps = deps + dynamic_deps,
         target_compatible_with = target_compatible_with,
+        tags = ["manual"],
     )
 
     shared_dynamic_deps = add_lists_defaulting_to_none(
@@ -177,6 +181,7 @@ def cc_library_shared(
         roots = [shared_root_name, imp_deps_stub, deps_stub] + whole_archive_deps,
         features = features,
         target_compatible_with = target_compatible_with,
+        tags = ["manual"],
         **kwargs
     )
 
@@ -185,6 +190,7 @@ def cc_library_shared(
         name = hashed_name,
         src = unstripped_name,
         inject_bssl_hash = inject_bssl_hash,
+        tags = ["manual"],
     )
 
     versioned_name = name + "_versioned"
@@ -192,12 +198,14 @@ def cc_library_shared(
         name = versioned_name,
         src = hashed_name,
         stamp_build_number = use_version_lib,
+        tags = ["manual"],
     )
 
     stripped_shared_library(
         name = stripped_name,
         src = versioned_name,
         target_compatible_with = target_compatible_with,
+        tags = ["manual"],
         **strip
     )
 
@@ -205,6 +213,7 @@ def cc_library_shared(
         name = toc_name,
         src = stripped_name,
         target_compatible_with = target_compatible_with,
+        tags = ["manual"],
     )
 
     # Emit the stub version of this library (e.g. for libraries that are
@@ -226,6 +235,7 @@ def cc_library_shared(
                 version = version,
                 target_compatible_with = target_compatible_with,
                 features = features,
+                tags = ["manual"],
             )
             stub_shared_libraries.append(stubs_library_name)
 
@@ -237,13 +247,14 @@ def cc_library_shared(
         output_file = soname,
         target_compatible_with = target_compatible_with,
         stub_shared_libraries = stub_shared_libraries,
+        tags = tags,
     )
 
 # cc_stub_library_shared creates a cc_library_shared target, but using stub C source files generated
 # from a library's .map.txt files and ndkstubgen. The top level target returns the same
 # providers as a cc_library_shared, with the addition of a CcStubInfo
 # containing metadata files and versions of the stub library.
-def cc_stub_library_shared(name, stubs_symbol_file, version, target_compatible_with, features):
+def cc_stub_library_shared(name, stubs_symbol_file, version, target_compatible_with, features, tags):
     # Call ndkstubgen to generate the stub.c source file from a .map.txt file. These
     # are accessible in the CcStubInfo provider of this target.
     cc_stub_gen(
@@ -251,6 +262,7 @@ def cc_stub_library_shared(name, stubs_symbol_file, version, target_compatible_w
         symbol_file = stubs_symbol_file,
         version = version,
         target_compatible_with = target_compatible_with,
+        tags = ["manual"],
     )
 
     # The static library at the root of the stub shared library.
@@ -275,6 +287,7 @@ def cc_stub_library_shared(name, stubs_symbol_file, version, target_compatible_w
         target_compatible_with = target_compatible_with,
         stl = "none",
         system_dynamic_deps = [],
+        tags = ["manual"],
     )
 
     # Create a .so for the stub library. This library is self contained, has
@@ -284,6 +297,7 @@ def cc_stub_library_shared(name, stubs_symbol_file, version, target_compatible_w
         roots = [name + "_root"],
         features = disable_crt_link(features),
         target_compatible_with = target_compatible_with,
+        tags = ["manual"],
     )
 
     # Create a target with CcSharedLibraryInfo and CcStubInfo providers.
@@ -291,6 +305,7 @@ def cc_stub_library_shared(name, stubs_symbol_file, version, target_compatible_w
         name = name,
         stub_target = name + "_files",
         library_target = name + "_so",
+        tags = tags,
     )
 
 def _cc_stub_library_shared_impl(ctx):
