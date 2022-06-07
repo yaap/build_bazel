@@ -60,40 +60,45 @@ canned_fs_config_test = analysistest.make(
 )
 
 # Set up test-local dependencies required for every apex.
-def setup_apex_required_deps(name):
-    file_contexts_name = name + "_file_contexts"
-    manifest_name = name + "_manifest"
-    key_name = name + "_key"
-    certificate_name = name + "_certificate"
+def setup_apex_required_deps():
+    file_contexts_name = "test_file_contexts"
+    manifest_name = "test_manifest"
+    key_name = "test_key"
+    certificate_name = "test_certificate"
 
-    native.genrule(
-        name = file_contexts_name,
-        outs = [file_contexts_name + ".out"],
-        cmd = "echo unused && exit 1",
-        tags = ["manual"],
-    )
+    # Use the same shared common deps for all test apexes.
+    if not native.existing_rule(file_contexts_name):
+        native.genrule(
+            name = file_contexts_name,
+            outs = [file_contexts_name + ".out"],
+            cmd = "echo unused && exit 1",
+            tags = ["manual"],
+        )
 
-    native.genrule(
-        name = manifest_name,
-        outs = [manifest_name + ".json"],
-        cmd = "echo unused && exit 1",
-        tags = ["manual"],
-    )
+    if not native.existing_rule(manifest_name):
+        native.genrule(
+            name = manifest_name,
+            outs = [manifest_name + ".json"],
+            cmd = "echo unused && exit 1",
+            tags = ["manual"],
+        )
 
     # Required for ApexKeyInfo provider
-    apex_key(
-        name = key_name,
-        private_key = key_name + ".pem",
-        public_key = key_name + ".avbpubkey",
-        tags = ["manual"],
-    )
+    if not native.existing_rule(key_name):
+        apex_key(
+            name = key_name,
+            private_key = key_name + ".pem",
+            public_key = key_name + ".avbpubkey",
+            tags = ["manual"],
+        )
 
     # Required for AndroidAppCertificate provider
-    android_app_certificate(
-        name = certificate_name,
-        certificate = certificate_name + ".cert",
-        tags = ["manual"],
-    )
+    if not native.existing_rule(certificate_name):
+        android_app_certificate(
+            name = certificate_name,
+            certificate = certificate_name + ".cert",
+            tags = ["manual"],
+        )
 
     return struct(
         file_contexts_name = file_contexts_name,
@@ -110,7 +115,7 @@ def test_apex(
     certificate = None,
     **kwargs):
 
-    names = setup_apex_required_deps(name)
+    names = setup_apex_required_deps()
     apex(
         name = name,
         file_contexts = file_contexts or names.file_contexts_name,
@@ -307,6 +312,93 @@ def _test_canned_fs_config_prebuilts():
 
     return test_name
 
+def _apex_manifest_test(ctx):
+    env = analysistest.begin(ctx)
+    actions = analysistest.target_actions(env)
+
+    conv_apex_manifest_action = [a for a in actions if a.mnemonic == "ConvApexManifest"][0]
+
+    apexer_action = [a for a in actions if a.mnemonic == "BazelApexerWrapper"][0]
+    manifest_index = apexer_action.argv.index("--manifest")
+    manifest_path = apexer_action.argv[manifest_index + 1]
+
+    asserts.equals(
+        env,
+        conv_apex_manifest_action.outputs.to_list()[0].path,
+        manifest_path,
+        "the generated apex manifest protobuf is used as input to apexer",
+    )
+    asserts.true(
+        env,
+        manifest_path.endswith(".pb"),
+        "the generated apex manifest should be a .pb file",
+    )
+
+    if ctx.attr.expected_min_sdk_version != "":
+        flag_index = apexer_action.argv.index("--min_sdk_version")
+        min_sdk_version_argv = apexer_action.argv[flag_index + 1]
+        asserts.equals(
+            env,
+            ctx.attr.expected_min_sdk_version,
+            min_sdk_version_argv,
+        )
+
+    return analysistest.end(env)
+
+apex_manifest_test = analysistest.make(
+    _apex_manifest_test,
+    attrs = {
+        "expected_min_sdk_version": attr.string(),
+    }
+)
+
+def _test_apex_manifest():
+    name = "apex_manifest"
+    test_name = name + "_test"
+
+    test_apex(name = name)
+
+    apex_manifest_test(
+        name = test_name,
+        target_under_test = name,
+    )
+
+    return test_name
+
+def _test_apex_manifest_min_sdk_version():
+    name = "apex_manifest_min_sdk_version"
+    test_name = name + "_test"
+
+    test_apex(
+        name = name,
+        min_sdk_version = "30",
+    )
+
+    apex_manifest_test(
+        name = test_name,
+        target_under_test = name,
+        expected_min_sdk_version = "30",
+    )
+
+    return test_name
+
+def _test_apex_manifest_min_sdk_version_current():
+    name = "apex_manifest_min_sdk_version_current"
+    test_name = name + "_test"
+
+    test_apex(
+        name = name,
+        min_sdk_version = "current",
+    )
+
+    apex_manifest_test(
+        name = test_name,
+        target_under_test = name,
+        expected_min_sdk_version = "10000",
+    )
+
+    return test_name
+
 def apex_test_suite(name):
     native.test_suite(
         name = name,
@@ -316,5 +408,8 @@ def apex_test_suite(name):
             _test_canned_fs_config_native_shared_libs_arm(),
             _test_canned_fs_config_native_shared_libs_arm64(),
             _test_canned_fs_config_prebuilts(),
+            _test_apex_manifest(),
+            _test_apex_manifest_min_sdk_version(),
+            _test_apex_manifest_min_sdk_version_current(),
         ],
     )
