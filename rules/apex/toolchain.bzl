@@ -28,6 +28,7 @@ ApexToolchainInfo = provider(
         "android_jar",
         "apex_compression_tool",
         "soong_zip",
+        "jsonmodify",
     ],
 )
 
@@ -45,6 +46,7 @@ def _apex_toolchain_impl(ctx):
             android_jar = ctx.file.android_jar,
             apex_compression_tool = ctx.attr.apex_compression_tool,
             soong_zip = ctx.file.soong_zip,
+            jsonmodify = ctx.attr.jsonmodify,
         ),
     )
     return [toolchain_info]
@@ -62,6 +64,7 @@ apex_toolchain = rule(
         "conv_apex_manifest": attr.label(cfg = "host", executable = True),
         "android_jar": attr.label(allow_single_file = True, cfg = "host"),
         "apex_compression_tool": attr.label(cfg = "host", executable = True),
+        "jsonmodify": attr.label(cfg = "host", executable = True, mandatory = True),
         # soong_zip is added as a dependency of apex_compression_tool which uses
         # soong_zip to compress APEX files. avbtool is also used in apex_compression tool
         # and has been added to apex toolchain previously.

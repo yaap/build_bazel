@@ -2,6 +2,7 @@ load(":apex_diff_test.bzl", "apex_diff_test")
 load(":apex_test.bzl", "apex_compression_test")
 load(":apex_aab_test.bzl", "apex_aab_test")
 load(":apex_aapt2_test.bzl", "apex_package_name_test")
+load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
 
 apex_diff_test(
     name = "com.android.tzdata",
@@ -75,4 +76,19 @@ apex_package_name_test(
     name = "com.android.adbd_package_name",
     apex = "//packages/modules/adb/apex:com.android.adbd.apex",
     expected_package_name = "com.android.adbd",
+)
+
+genrule(
+    name = "com.android.adbd.apex_manifest_json",
+    srcs = ["//packages/modules/adb/apex:com.android.adbd.apex"],
+    outs = ["com.android.adbd.apex_manifest.json"],
+    tools = ["//system/apex/tools:deapexer"],
+    cmd = "$(location //system/apex/tools:deapexer) info $< > $@",
+)
+
+diff_test(
+    name = "com.android.adbd.apex_manifest_diff_test",
+    file1 = "com.android.adbd.apex_manifest.json",
+    file2 = "com.android.adbd.apex_manifest.json.golden",
+    target_compatible_with = ["//build/bazel/platforms/os:android"],
 )

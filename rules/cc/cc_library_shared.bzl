@@ -238,6 +238,10 @@ def cc_library_shared(
                 tags = ["manual"],
             )
             stub_shared_libraries.append(stubs_library_name)
+    elif stubs_symbol_file or len(stubs_versions) > 0:
+        # TODO: add support for header_abi_checker.symbol_file and llndk symbol_file
+        # https://cs.android.com/android/platform/superproject/+/master:build/soong/cc/library.go;l=1991-1996;drc=bbe77d66e7bee8bd1f0bc7e5492b5376b0207ef6
+        fail("stubs_symbol_file and stubs_versions must be defined together.")
 
     _cc_library_shared_proxy(
         name = name,
