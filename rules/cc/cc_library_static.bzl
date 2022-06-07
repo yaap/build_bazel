@@ -68,7 +68,8 @@ def cc_library_static(
         data = [],
         sdk_version = "",
         min_sdk_version = "",
-        use_version_lib = False):
+        use_version_lib = False,
+        tags = []):
     "Bazel macro to correspond with the cc_library_static Soong module."
 
     exports_name = "%s_exports" % name
@@ -116,6 +117,7 @@ def cc_library_static(
         # whole archive deps always re-export their includes, etc
         deps = deps + whole_archive_deps + dynamic_deps,
         target_compatible_with = target_compatible_with,
+        tags = ["manual"],
     )
 
     _cc_includes(
@@ -124,6 +126,7 @@ def cc_library_static(
         absolute_includes = absolute_includes,
         deps = implementation_deps + implementation_dynamic_deps + system_dynamic_deps + static_stl_deps(stl) + implementation_whole_archive_deps,
         target_compatible_with = target_compatible_with,
+        tags = ["manual"],
     )
 
     # Silently drop these attributes for now:
@@ -159,18 +162,21 @@ def cc_library_static(
         name = cpp_name,
         srcs = srcs,
         copts = copts + cppflags,
+        tags = ["manual"],
         **common_attrs
     )
     native.cc_library(
         name = c_name,
         srcs = srcs_c,
         copts = copts + conlyflags,
+        tags = ["manual"],
         **common_attrs
     )
     native.cc_library(
         name = asm_name,
         srcs = srcs_as,
         copts = asflags,
+        tags = ["manual"],
         **common_attrs
     )
 
@@ -179,6 +185,7 @@ def cc_library_static(
         name = name,
         deps = [cpp_name, c_name, asm_name] + whole_archive_deps + implementation_whole_archive_deps,
         target_compatible_with = target_compatible_with,
+        tags = tags,
     )
 
 # Returns a CcInfo object which combines one or more CcInfo objects, except that all
