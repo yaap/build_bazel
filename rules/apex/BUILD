@@ -1,5 +1,6 @@
 load("//build/bazel/rules/apex:toolchain.bzl", "apex_toolchain")
 load("@bazel_skylib//rules:common_settings.bzl", "string_setting", "string_list_setting", "bool_flag")
+load(":apex_test.bzl", "apex_test_suite")
 
 string_setting(
     name = "apex_name",
@@ -94,4 +95,8 @@ sh_test(
         "//build/bazel/platforms/os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
+)
+
+apex_test_suite(
+    name = "apex_tests",
 )
