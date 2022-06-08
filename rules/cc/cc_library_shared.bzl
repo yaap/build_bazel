@@ -409,7 +409,6 @@ def _bssl_hash_injection_impl(ctx):
     if ctx.attr.inject_bssl_hash:
         hashed_file = ctx.actions.declare_file("lib" + ctx.attr.name + ".so")
         args = ctx.actions.args()
-        args.add_all(["-sha256"])
         args.add_all(["-in-object", ctx.files.src[0]])
         args.add_all(["-o", hashed_file])
 
