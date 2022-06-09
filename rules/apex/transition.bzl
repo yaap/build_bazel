@@ -57,6 +57,7 @@ def _impl_shared_lib_transition_32(settings, attr):
     # destination target (i.e. an APEX dependency).
 
     direct_deps = [str(dep) for dep in attr.native_shared_libs_32]
+    direct_deps += [str(dep) for dep in attr.binaries]
 
     # TODO: We need to check if this is a x86 or arm arch then only set one platform
     # instead of this 1:2 split to avoid performance hit.
@@ -87,6 +88,7 @@ def _impl_shared_lib_transition_64(settings, attr):
     # destination target (i.e. an APEX dependency).
 
     direct_deps = [str(dep) for dep in attr.native_shared_libs_64]
+    direct_deps += [str(dep) for dep in attr.binaries]
 
     # TODO: We need to check if this is a x86 or arm arch then only set one platform
     # instead of this 1:2 split to avoid performance hit.
