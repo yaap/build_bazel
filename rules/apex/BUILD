@@ -48,6 +48,7 @@ apex_toolchain(
     android_jar = "//prebuilts/sdk/current:public/android.jar",
     apex_compression_tool = "//system/apex/tools:apex_compression_tool",
     soong_zip = "//prebuilts/build-tools:linux-x86/bin/soong_zip",
+    jsonmodify = "//build/soong/scripts:jsonmodify",
 )
 
 toolchain(
