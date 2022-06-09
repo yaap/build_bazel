@@ -148,7 +148,16 @@ def _generate_canned_fs_config(ctx, filepaths):
     config_lines += ["/ 0 2000 0755"]
     config_lines += ["/apex_manifest.json 1000 1000 0644"]
     config_lines += ["/apex_manifest.pb 1000 1000 0644"]
-    config_lines += ["/" + filepath + " 1000 1000 0644" for filepath in filepaths]
+
+    for filepath in filepaths:
+        if filepath.startswith("bin/"):
+            # Mark all binaries as executable.
+            config_lines += ["/" + filepath + " 0 2000 0755"]
+        else:
+            # Everything else is read-only.
+            config_lines += ["/" + filepath + " 1000 1000 0644"]
+
+    # All directories have the same permission.
     config_lines += ["/" + d + " 0 2000 0755" for d in apex_subdirs_set.keys()]
     config_lines = sorted(config_lines)
 
@@ -349,8 +358,8 @@ _apex = rule(
         "android_manifest": attr.label(allow_single_file = [".xml"]),
         "package_name": attr.string(),
         "file_contexts": attr.label(allow_single_file = True, mandatory = True),
-        "key": attr.label(providers = [ApexKeyInfo]),
-        "certificate": attr.label(providers = [AndroidAppCertificateInfo]),
+        "key": attr.label(providers = [ApexKeyInfo], mandatory = True),
+        "certificate": attr.label(providers = [AndroidAppCertificateInfo], mandatory = True),
         "min_sdk_version": attr.string(default = "current"),
         "updatable": attr.bool(default = True),
         "installable": attr.bool(default = True),
