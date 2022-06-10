@@ -138,7 +138,7 @@ def _test_canned_fs_config_basic():
         name = test_name,
         target_under_test = name,
         expected_entries = [
-            "/ 0 2000 0755",
+            "/ 1000 1000 0755",
             "/apex_manifest.json 1000 1000 0644",
             "/apex_manifest.pb 1000 1000 0644",
         ],
@@ -171,7 +171,7 @@ def _test_canned_fs_config_binaries():
         name = test_name,
         target_under_test = name,
         expected_entries = [
-            "/ 0 2000 0755",
+            "/ 1000 1000 0755",
             "/apex_manifest.json 1000 1000 0644",
             "/apex_manifest.pb 1000 1000 0644",
             "/bin 0 2000 0755",
@@ -208,7 +208,7 @@ def _test_canned_fs_config_native_shared_libs_arm():
         name = test_name,
         target_under_test = name,
         expected_entries = [
-            "/ 0 2000 0755",
+            "/ 1000 1000 0755",
             "/apex_manifest.json 1000 1000 0644",
             "/apex_manifest.pb 1000 1000 0644",
             "/lib 0 2000 0755",
@@ -246,7 +246,7 @@ def _test_canned_fs_config_native_shared_libs_arm64():
         name = test_name,
         target_under_test = name,
         expected_entries = [
-            "/ 0 2000 0755",
+            "/ 1000 1000 0755",
             "/apex_manifest.json 1000 1000 0644",
             "/apex_manifest.pb 1000 1000 0644",
             "/lib 0 2000 0755",
@@ -300,7 +300,7 @@ def _test_canned_fs_config_prebuilts():
         name = test_name,
         target_under_test = name,
         expected_entries = [
-            "/ 0 2000 0755",
+            "/ 1000 1000 0755",
             "/apex_manifest.json 1000 1000 0644",
             "/apex_manifest.pb 1000 1000 0644",
             "/etc 0 2000 0755",
