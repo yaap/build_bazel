@@ -190,7 +190,7 @@ def _generate_canned_fs_config(ctx, filepaths):
                 apex_subdirs_set["/".join(dirs[:i])] = True
 
     config_lines = []
-    config_lines += ["/ 0 2000 0755"]
+    config_lines += ["/ 1000 1000 0755"]
     config_lines += ["/apex_manifest.json 1000 1000 0644"]
     config_lines += ["/apex_manifest.pb 1000 1000 0644"]
 
