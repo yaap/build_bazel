@@ -15,11 +15,12 @@
 load("//build/bazel/rules/android:android_app_certificate.bzl", "android_app_certificate")
 load("//build/bazel/rules:sh_binary.bzl", "sh_binary")
 load("//build/bazel/rules/cc:cc_binary.bzl", "cc_binary")
-load("//build/bazel/rules/cc:cc_library_shared.bzl", "cc_library_shared")
+load("//build/bazel/rules/cc:cc_library_shared.bzl", "cc_library_shared", "CcSharedLibraryInfo", "CcStubLibrariesInfo")
 load("//build/bazel/rules:prebuilt_file.bzl", "prebuilt_file")
-load(":apex.bzl", "apex")
+load(":apex.bzl", "apex", "ApexInfo")
 load(":apex_key.bzl", "apex_key")
 load("@bazel_skylib//lib:unittest.bzl", "analysistest", "asserts")
+load("@bazel_skylib//lib:new_sets.bzl", "sets")
 
 def _canned_fs_config_test(ctx):
     env = analysistest.begin(ctx)
@@ -399,6 +400,299 @@ def _test_apex_manifest_min_sdk_version_current():
 
     return test_name
 
+def _apex_native_libs_requires_provides_test(ctx):
+    env = analysistest.begin(ctx)
+    target_under_test = analysistest.target_under_test(env)
+    asserts.equals(
+        env,
+        sorted([t.label for t in ctx.attr.requires_native_libs]), # expected
+        sorted(target_under_test[ApexInfo].requires_native_libs), # actual
+    )
+    asserts.equals(
+        env,
+        sorted([t.label for t in ctx.attr.provides_native_libs]),
+        sorted(target_under_test[ApexInfo].provides_native_libs),
+    )
+
+    # Compare the argv of the jsonmodify action that updates the apex
+    # manifest with information about provided and required libs.
+    actions = analysistest.target_actions(env)
+    action = [a for a in actions if a.mnemonic == "ApexManifestModify"][0]
+    requires_argv_index = action.argv.index("requireNativeLibs") + 1
+    provides_argv_index = action.argv.index("provideNativeLibs") + 1
+
+    for idx, requires in enumerate(ctx.attr.requires_native_libs):
+        asserts.equals(
+            env,
+            requires.label.name + ".so", # expected
+            action.argv[requires_argv_index + idx], # actual
+        )
+
+    for idx, provides in enumerate(ctx.attr.provides_native_libs):
+        asserts.equals(
+            env,
+            provides.label.name + ".so",
+            action.argv[provides_argv_index + idx],
+        )
+
+    return analysistest.end(env)
+
+apex_native_libs_requires_provides_test = analysistest.make(
+    _apex_native_libs_requires_provides_test,
+    attrs = {
+        "requires_native_libs": attr.label_list(),
+        "provides_native_libs": attr.label_list(),
+        "requires_argv": attr.string_list(),
+        "provides_argv": attr.string_list(),
+    }
+)
+
+def _test_apex_manifest_dependencies_nodep():
+    name = "apex_manifest_dependencies_nodep"
+    test_name = name + "_test"
+
+    cc_library_shared(
+        name = name + "_lib_nodep",
+        stl = "none",
+        system_dynamic_deps = [],
+        tags = ["manual"],
+    )
+
+    test_apex(
+        name = name,
+        native_shared_libs_32 = [name + "_lib_nodep"],
+        native_shared_libs_64 = [name + "_lib_nodep"],
+    )
+
+    apex_native_libs_requires_provides_test(
+        name = test_name,
+        target_under_test = name,
+        requires_native_libs = [],
+        provides_native_libs = [],
+    )
+
+    return test_name
+
+def _test_apex_manifest_dependencies_cc_library_shared_bionic_deps():
+    name = "apex_manifest_dependencies_cc_library_shared_bionic_deps"
+    test_name = name + "_test"
+
+    cc_library_shared(
+        name = name + "_lib",
+        # implicit bionic system_dynamic_deps
+        tags = ["manual"],
+    )
+
+    test_apex(
+        name = name,
+        native_shared_libs_32 = [name + "_lib"],
+        native_shared_libs_64 = [name + "_lib"],
+    )
+
+    apex_native_libs_requires_provides_test(
+        name = test_name,
+        target_under_test = name,
+        requires_native_libs = [
+            "//bionic/libc",
+            "//bionic/libdl",
+            "//bionic/libm",
+        ],
+        provides_native_libs = [],
+    )
+
+    return test_name
+
+def _test_apex_manifest_dependencies_cc_binary_bionic_deps():
+    name = "apex_manifest_dependencies_cc_binary_bionic_deps"
+    test_name = name + "_test"
+
+    cc_binary(
+        name = name + "_bin",
+        # implicit bionic system_deps
+        tags = ["manual"],
+    )
+
+    test_apex(
+        name = name,
+        binaries = [name + "_bin"],
+    )
+
+    apex_native_libs_requires_provides_test(
+        name = test_name,
+        target_under_test = name,
+        requires_native_libs = [
+            "//bionic/libc",
+            "//bionic/libdl",
+            "//bionic/libm",
+        ],
+        provides_native_libs = [],
+    )
+
+    return test_name
+
+def _test_apex_manifest_dependencies_requires():
+    name = "apex_manifest_dependencies_requires"
+    test_name = name + "_test"
+
+    cc_library_shared(
+        name = name + "_lib_with_dep",
+        system_dynamic_deps = [],
+        stl = "none",
+        implementation_dynamic_deps = [name + "_libfoo"],
+        tags = ["manual"],
+    )
+
+    cc_library_shared(
+        name = name + "_libfoo",
+        system_dynamic_deps = [],
+        stl = "none",
+        stubs_versions = ["1"],
+        stubs_symbol_file = name + "_libfoo.map.txt",
+        tags = ["manual"],
+    )
+
+    test_apex(
+        name = name,
+        native_shared_libs_32 = [name + "_lib_with_dep"],
+        native_shared_libs_64 = [name + "_lib_with_dep"],
+    )
+
+    apex_native_libs_requires_provides_test(
+        name = test_name,
+        target_under_test = name,
+        requires_native_libs = [name + "_libfoo"],
+        provides_native_libs = [],
+    )
+
+    return test_name
+
+def _test_apex_manifest_dependencies_provides():
+    name = "apex_manifest_dependencies_provides"
+    test_name = name + "_test"
+
+    cc_library_shared(
+        name = name + "_libfoo",
+        stubs_versions = ["1"],
+        stubs_symbol_file = name + "_libfoo.map.txt",
+        system_dynamic_deps = [],
+        stl = "none",
+        tags = ["manual"],
+    )
+
+    test_apex(
+        name = name,
+        native_shared_libs_32 = [name + "_libfoo"],
+        native_shared_libs_64 = [name + "_libfoo"],
+    )
+
+    apex_native_libs_requires_provides_test(
+        name = test_name,
+        target_under_test = name,
+        requires_native_libs = [],
+        provides_native_libs = [name + "_libfoo"],
+    )
+
+    return test_name
+
+def _test_apex_manifest_dependencies_selfcontained():
+    name = "apex_manifest_dependencies_selfcontained"
+    test_name = name + "_test"
+
+    cc_library_shared(
+        name = name + "_lib_with_dep",
+        system_dynamic_deps = [],
+        stl = "none",
+        implementation_dynamic_deps = [name + "_libfoo"],
+        tags = ["manual"],
+    )
+
+    cc_library_shared(
+        name = name + "_libfoo",
+        stubs_versions = ["1"],
+        stubs_symbol_file = name + "_libfoo.map.txt",
+        system_dynamic_deps = [],
+        stl = "none",
+        tags = ["manual"],
+    )
+
+    test_apex(
+        name = name,
+        native_shared_libs_32 = [
+            name + "_lib_with_dep",
+            name + "_libfoo",
+        ],
+        native_shared_libs_64 = [
+            name + "_lib_with_dep",
+            name + "_libfoo",
+        ],
+    )
+
+    apex_native_libs_requires_provides_test(
+        name = test_name,
+        target_under_test = name,
+        requires_native_libs = [],
+        provides_native_libs = [name + "_libfoo"],
+    )
+
+    return test_name
+
+def _test_apex_manifest_dependencies_cc_binary():
+    name = "apex_manifest_dependencies_cc_binary"
+    test_name = name + "_test"
+
+    cc_binary(
+        name = name + "_bin",
+        stl = "none",
+        system_deps = [],
+        dynamic_deps = [
+            name + "_lib_with_dep",
+            name + "_librequires2",
+        ],
+        tags = ["manual"],
+    )
+
+    cc_library_shared(
+        name = name + "_lib_with_dep",
+        system_dynamic_deps = [],
+        stl = "none",
+        implementation_dynamic_deps = [name + "_librequires"],
+        tags = ["manual"],
+    )
+
+    cc_library_shared(
+        name = name + "_librequires",
+        stubs_versions = ["1"],
+        stubs_symbol_file = name + "_librequires.map.txt",
+        system_dynamic_deps = [],
+        stl = "none",
+        tags = ["manual"],
+    )
+
+    cc_library_shared(
+        name = name + "_librequires2",
+        stubs_versions = ["1"],
+        stubs_symbol_file = name + "_librequires2.map.txt",
+        system_dynamic_deps = [],
+        stl = "none",
+        tags = ["manual"],
+    )
+
+    test_apex(
+        name = name,
+        binaries = [name + "_bin"],
+    )
+
+    apex_native_libs_requires_provides_test(
+        name = test_name,
+        target_under_test = name,
+        requires_native_libs = [
+            name + "_librequires",
+            name + "_librequires2",
+        ],
+    )
+
+    return test_name
+
 def apex_test_suite(name):
     native.test_suite(
         name = name,
@@ -411,5 +705,12 @@ def apex_test_suite(name):
             _test_apex_manifest(),
             _test_apex_manifest_min_sdk_version(),
             _test_apex_manifest_min_sdk_version_current(),
+            _test_apex_manifest_dependencies_nodep(),
+            _test_apex_manifest_dependencies_cc_binary_bionic_deps(),
+            _test_apex_manifest_dependencies_cc_library_shared_bionic_deps(),
+            _test_apex_manifest_dependencies_requires(),
+            _test_apex_manifest_dependencies_provides(),
+            _test_apex_manifest_dependencies_selfcontained(),
+            _test_apex_manifest_dependencies_cc_binary(),
         ],
     )
