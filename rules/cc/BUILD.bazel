@@ -14,5 +14,7 @@ limitations under the License.
 """
 
 load(":flex_test.bzl", "flex_test_suite")
+load(":cc_binary_test.bzl", "cc_binary_test_suite")
 
 flex_test_suite(name = "flex_tests")
+cc_binary_test_suite(name = "cc_binary_tests")
