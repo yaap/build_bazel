@@ -158,5 +158,6 @@ def cc_binary(
         src = versioned_name,
         target_compatible_with = target_compatible_with,
         tags = tags,
+        **strip,
     )
 
