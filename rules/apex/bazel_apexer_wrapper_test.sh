@@ -18,7 +18,7 @@
 set -xeuo pipefail
 
 prebuilt_tool_path="${RUNFILES_DIR}/__main__/external/make_injection/host/linux-x86/bin"
-apexer_tool_path="${RUNFILES_DIR}/__main__/external/make_injection/host/linux-x86/bin/apexer"
+apexer_tool_path="${RUNFILES_DIR}/__main__/system/apex/apexer/apexer"
 conv_apex_manifest_tool_path="${RUNFILES_DIR}/__main__/system/apex/apexer/conv_apex_manifest"
 deapexer_tool_path="${RUNFILES_DIR}/__main__/system/apex/tools/deapexer"
 avb_tool_path="${RUNFILES_DIR}/__main__/external/avb"
