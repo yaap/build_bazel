@@ -39,7 +39,7 @@ apex_toolchain(
     name = "apex_toolchain",
     aapt2 = "//prebuilts/sdk/tools:linux/bin/aapt2",
     avbtool = "//external/avb:avbtool",
-    apexer = "@make_injection//:host/linux-x86/bin/apexer",
+    apexer = "//system/apex/apexer",
     mke2fs = "//external/e2fsprogs/misc:mke2fs",
     resize2fs = "//external/e2fsprogs/resize:resize2fs",
     e2fsdroid = "//external/e2fsprogs/contrib/android:e2fsdroid",
@@ -86,10 +86,10 @@ sh_test(
         "//prebuilts/build-tools:linux-x86/bin/soong_zip",
         "//prebuilts/sdk/current:public/android.jar",
         "//prebuilts/sdk/tools:linux/bin/aapt2",
+        "//system/apex/apexer:apexer",
         "//system/apex/apexer:conv_apex_manifest",
         "//system/apex/tools:apex_compression_tool",
         "//system/apex/tools:deapexer",
-        "@make_injection//:host/linux-x86/bin/apexer",
     ],
     # This is a host test.
     target_compatible_with = select({
