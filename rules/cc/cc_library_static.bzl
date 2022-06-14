@@ -23,8 +23,7 @@ load(
 )
 load(":stl.bzl", "static_stl_deps")
 load("@bazel_skylib//lib:collections.bzl", "collections")
-load("@rules_cc//cc:find_cc_toolchain.bzl", "find_cpp_toolchain")
-load("@rules_cc//examples:experimental_cc_shared_library.bzl", "CcSharedLibraryInfo")
+load("@bazel_tools//tools/cpp:toolchain_utils.bzl", "find_cpp_toolchain")
 load("//build/bazel/product_variables:constants.bzl", "constants")
 
 CcStaticLibraryInfo = provider(fields = ["root_static_archive", "objects"])
@@ -138,8 +137,8 @@ def cc_library_static(
             ("hdrs", hdrs),
             # Add dynamic_deps to implementation_deps, as the include paths from the
             # dynamic_deps are also needed.
-            ("implementation_deps", [locals_name]),
-            ("deps", [exports_name]),
+            ("deps", [locals_name]),
+            ("interface_deps", [exports_name]),
             ("features", toolchain_features),
             ("toolchains", ["//build/bazel/platforms:android_target_product_vars"]),
             ("alwayslink", alwayslink),
