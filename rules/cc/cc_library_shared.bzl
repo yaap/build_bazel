@@ -27,11 +27,9 @@ load(":generate_toc.bzl", "shared_library_toc", _CcTocInfo = "CcTocInfo")
 load(":stl.bzl", "shared_stl_deps")
 load(":stripped_cc_common.bzl", "stripped_shared_library")
 load(":versioned_cc_common.bzl", "versioned_shared_library")
-load("@rules_cc//examples:experimental_cc_shared_library.bzl", "cc_shared_library", _CcSharedLibraryInfo = "CcSharedLibraryInfo")
-load("@rules_cc//cc:find_cc_toolchain.bzl", "find_cpp_toolchain")
+load("@bazel_tools//tools/cpp:toolchain_utils.bzl", "find_cpp_toolchain")
 
 CcTocInfo = _CcTocInfo
-CcSharedLibraryInfo = _CcSharedLibraryInfo
 
 def cc_library_shared(
         name,
@@ -146,13 +144,13 @@ def cc_library_shared(
     deps_stub = name + "_deps"
     native.cc_library(
         name = imp_deps_stub,
-        deps = implementation_deps + stl_static + implementation_dynamic_deps + system_dynamic_deps + stl_shared,
+        interface_deps = implementation_deps + stl_static + implementation_dynamic_deps + system_dynamic_deps + stl_shared,
         target_compatible_with = target_compatible_with,
         tags = ["manual"],
     )
     native.cc_library(
         name = deps_stub,
-        deps = deps + dynamic_deps,
+        interface_deps = deps + dynamic_deps,
         target_compatible_with = target_compatible_with,
         tags = ["manual"],
     )
@@ -168,7 +166,7 @@ def cc_library_shared(
         soname = name + ".so"
     soname_flag = "-Wl,-soname," + soname
 
-    cc_shared_library(
+    native.cc_shared_library(
         name = unstripped_name,
         user_link_flags = linkopts + [soname_flag],
         # b/184806113: Note this is  a workaround so users don't have to
@@ -296,7 +294,7 @@ def cc_stub_library_shared(name, stubs_symbol_file, version, target_compatible_w
 
     # Create a .so for the stub library. This library is self contained, has
     # no deps, and doesn't link against crt.
-    cc_shared_library(
+    native.cc_shared_library(
         name = name + "_so",
         roots = [name + "_root"],
         features = disable_crt_link(features),
@@ -400,6 +398,7 @@ def _cc_library_shared_proxy_impl(ctx):
         # linker_inputs of the roots
         ctx.attr.root[CcInfo],
         CcStubLibrariesInfo(infos = stub_library_infos),
+        ctx.attr.shared[OutputGroupInfo],
     ]
 
 _cc_library_shared_proxy = rule(
@@ -443,6 +442,7 @@ def _bssl_hash_injection_impl(ctx):
     return [
         DefaultInfo(files = depset([hashed_file])),
         ctx.attr.src[CcSharedLibraryInfo],
+        ctx.attr.src[OutputGroupInfo],
     ]
 
 _bssl_hash_injection = rule(
