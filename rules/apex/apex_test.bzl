@@ -15,7 +15,7 @@
 load("//build/bazel/rules/android:android_app_certificate.bzl", "android_app_certificate")
 load("//build/bazel/rules:sh_binary.bzl", "sh_binary")
 load("//build/bazel/rules/cc:cc_binary.bzl", "cc_binary")
-load("//build/bazel/rules/cc:cc_library_shared.bzl", "cc_library_shared", "CcSharedLibraryInfo", "CcStubLibrariesInfo")
+load("//build/bazel/rules/cc:cc_library_shared.bzl", "cc_library_shared")
 load("//build/bazel/rules:prebuilt_file.bzl", "prebuilt_file")
 load(":apex.bzl", "apex", "ApexInfo")
 load(":apex_key.bzl", "apex_key")
