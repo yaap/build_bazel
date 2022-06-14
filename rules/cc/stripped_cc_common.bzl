@@ -16,8 +16,7 @@ limitations under the License.
 
 """A macro to handle shared library stripping."""
 
-load("@rules_cc//examples:experimental_cc_shared_library.bzl", "CcSharedLibraryInfo", "cc_shared_library")
-load("@rules_cc//cc:find_cc_toolchain.bzl", "find_cpp_toolchain")
+load("@bazel_tools//tools/cpp:toolchain_utils.bzl", "find_cpp_toolchain")
 
 # Keep this consistent with soong/cc/strip.go#NeedsStrip.
 def needs_strip(attrs):
@@ -145,6 +144,7 @@ def _stripped_shared_library_impl(ctx):
     return [
         DefaultInfo(files = depset([out_file])),
         ctx.attr.src[CcSharedLibraryInfo],
+        ctx.attr.src[OutputGroupInfo],
     ]
 
 stripped_shared_library = rule(
