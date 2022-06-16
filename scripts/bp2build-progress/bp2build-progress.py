@@ -312,14 +312,15 @@ def adjacency_list_from_queryview_xml(module_graph, ignore_by_name,
   return module_adjacency_list
 
 
-def get_module_adjacency_list(top_level_module, use_queryview, ignore_by_name):
+def get_module_adjacency_list(top_level_module, use_queryview, ignore_by_name,
+                              banchan_mode):
   # The main module graph containing _all_ modules in the Soong build,
   # and the list of converted modules.
   try:
     module_graph = dependency_analysis.get_queryview_module_info(
-        top_level_module
+        top_level_module, banchan_mode
     ) if use_queryview else dependency_analysis.get_json_module_info(
-        top_level_module)
+        top_level_module, banchan_mode)
     converted = dependency_analysis.get_bp2build_converted_modules()
   except subprocess.CalledProcessError as err:
     output = err.output.decode("utf-8") if err.output else ""
@@ -367,6 +368,13 @@ def main():
       required=False,
       help="Comma-separated list. When building the tree of transitive dependencies, will not follow dependency edges pointing to module names listed by this flag."
   )
+  parser.add_argument(
+      "--banchan",
+      type=bool,
+      default=False,
+      required=False,
+      help="whether to run Soong in a banchan configuration rather than lunch",
+  )
   args = parser.parse_args()
 
   if len(args.module) > 1 and args.mode != "report":
@@ -375,11 +383,12 @@ def main():
   mode = args.mode
   use_queryview = args.use_queryview
   ignore_by_name = args.ignore_by_name
+  banchan_mode = args.banchan
 
   report_infos = []
   for top_level_module in args.module:
     module_adjacency_list, converted = get_module_adjacency_list(
-        top_level_module, use_queryview, ignore_by_name)
+        top_level_module, use_queryview, ignore_by_name, banchan_mode)
 
     if mode == "graph":
       generate_dot_file(module_adjacency_list, converted, top_level_module)

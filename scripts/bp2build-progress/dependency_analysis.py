@@ -52,8 +52,24 @@ QUERYVIEW_IGNORE_KINDS = set([
 
 SRC_ROOT_DIR = os.path.abspath(__file__ + "/../../../../..")
 
+LUNCH_ENV = {
+    # Use aosp_arm as the canonical target product.
+    "TARGET_PRODUCT": "aosp_arm",
+    "TARGET_BUILD_VARIANT": "userdebug",
+}
 
-def _build_with_soong(target):
+BANCHAN_ENV = {
+    # Use module_arm64 as the canonical banchan target product.
+    "TARGET_PRODUCT": "module_arm64",
+    "TARGET_BUILD_VARIANT": "eng",
+    # just needs to be non-empty, not the specific module for Soong
+    # analysis purposes
+    "TARGET_BUILD_APPS": "all",
+}
+
+
+def _build_with_soong(target, banchan_mode=False):
+  env = BANCHAN_ENV if banchan_mode else LUNCH_ENV
   subprocess.check_output(
       [
           "build/soong/soong_ui.bash",
@@ -62,17 +78,13 @@ def _build_with_soong(target):
           target,
       ],
       cwd=SRC_ROOT_DIR,
-      env={
-          # Use aosp_arm as the canonical target product.
-          "TARGET_PRODUCT": "aosp_arm",
-          "TARGET_BUILD_VARIANT": "userdebug",
-      },
+      env=env,
   )
 
 
-def get_queryview_module_info(module):
+def get_queryview_module_info(module, banchan_mode=False):
   """Returns the list of transitive dependencies of input module as built by queryview."""
-  _build_with_soong("queryview")
+  _build_with_soong("queryview", banchan_mode)
 
   queryview_xml = subprocess.check_output(
       [
@@ -93,9 +105,9 @@ ParseError: {err}""".format(
     exit(1)
 
 
-def get_json_module_info(module):
+def get_json_module_info(module, banchan_mode=False):
   """Returns the list of transitive dependencies of input module as provided by Soong's json module graph."""
-  _build_with_soong("json-module-graph")
+  _build_with_soong("json-module-graph", banchan_mode)
   # Run query.sh on the module graph for the top level module
   jq_json = subprocess.check_output(
       [
