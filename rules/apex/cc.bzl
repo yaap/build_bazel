@@ -44,7 +44,7 @@ def has_cc_stubs(target, ctx):
 
     # Minimum SDK version supported by the APEX that transitively depends on
     # this target.
-    min_sdk_version = ctx.attr._min_sdk_version[BuildSettingInfo].value
+    min_sdk_version = ctx.attr.min_sdk_version
     apex_name = ctx.attr._apex_name[BuildSettingInfo].value
 
     available_versions = []
@@ -144,9 +144,12 @@ def _apex_cc_aspect_impl(target, ctx):
 apex_cc_aspect = aspect(
     implementation = _apex_cc_aspect_impl,
     attrs = {
-        "_min_sdk_version": attr.label(default = "//build/bazel/rules/apex:min_sdk_version"),
         "_apex_name": attr.label(default = "//build/bazel/rules/apex:apex_name"),
         "_apex_direct_deps": attr.label(default = "//build/bazel/rules/apex:apex_direct_deps"),
+        # This will be set to the min_sdk_version of the apex that runs this aspect.
+        # A values list must be provided, but we want to allow all sdk versions so just generate
+        # a bunch of ints here.
+        "min_sdk_version": attr.string(values = ["current"] + [str(i) for i in range(50)]),
     },
     attr_aspects = ["dynamic_deps", "shared", "src"],
     # TODO: Have this aspect also propagate along attributes of native_shared_libs?
