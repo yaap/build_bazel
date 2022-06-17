@@ -42,6 +42,7 @@ def _test_actions_impl(ctx):
 
     # Expect an action for each pair of input/output file
     asserts.equals(env, expected = len(SRCS), actual = len(actions))
+
     # Check name for input and output files for each action
     for i in range(len(actions)):
         action = actions[i]
@@ -66,6 +67,7 @@ actions_test = analysistest.make(_test_actions_impl)
 def _test_actions():
     name = "actions"
     test_name = name + "_test"
+
     # Rule under test
     gensrcs(
         name = name,
@@ -103,6 +105,7 @@ unset_output_extension_test = analysistest.make(_test_unset_output_extension_imp
 def _test_unset_output_extension():
     name = "unset_output_extension"
     test_name = name + "_test"
+
     # Rule under test
     gensrcs(
         name = "TSTSS",
@@ -117,6 +120,81 @@ def _test_unset_output_extension():
     )
     return test_name
 
+
+TOOL_FILE_NAME = "out.sh"
+
+def _test_gensrcs_tool_builds_for_host_impl(ctx):
+    env = analysistest.begin(ctx)
+    actions = analysistest.target_actions(env)
+    asserts.equals(env, expected = 1, actual = len(actions), msg = "expected actions")
+
+    action = actions[0]
+    inputs = action.inputs.to_list()
+    asserts.equals(env, expected = 2, actual = len(inputs), msg = "expected inputs")
+
+    input_map = {}
+    for i in inputs:
+      input_map[i.basename] = i
+    tool = input_map[TOOL_FILE_NAME]
+    asserts.true(
+        env,
+        # because we set --experimental_platform_in_output_dir, we expect the
+        # platform to be in the output path of a generated file
+        "darwin" in tool.path, # host platform
+        "expected 'darwin' in tool path, got '%s'" % tool.path,
+    )
+
+    outputs = action.outputs.to_list()
+    asserts.equals(env, expected = 1, actual = len(outputs), msg = "expected outputs %s" % outputs)
+    output = outputs[0]
+    asserts.true(
+        env,
+        # because we set --experimental_platform_in_output_dir, we expect the
+        # platform to be in the output path of a generated file
+        "android_x86" in output.path, # target platform
+        "expected 'android_x86' in output path, got '%s'" % output.path,
+    )
+
+    return analysistest.end(env)
+
+_gensrcs_tool_builds_for_host_test = analysistest.make(
+    _test_gensrcs_tool_builds_for_host_impl,
+    config_settings = {
+        "//command_line_option:platforms": "//build/bazel/platforms:android_x86",  # ensure target != host so there is a transition
+        "//command_line_option:host_platform": "//build/bazel/platforms:darwin_x86_64",  # ensure target != host so there is a transition
+    },
+)
+
+def _test_gensrcs_tool_builds_for_host():
+    native.genrule(
+        name = "gensrcs_test_bin",
+        outs = [TOOL_FILE_NAME],
+        executable = True,
+        cmd = "touch $@",
+        target_compatible_with = select({
+            # only supported OS is that specified as host_platform
+            "//build/bazel/platforms/os:darwin": [],
+            "//conditions:default": ["@platforms//:incompatible"],
+        }),
+        tags = ["manual"],
+    )
+
+    gensrcs(
+        name = "gensrcs_test_tool_builds_for_host",
+        tools = [":gensrcs_test_bin"],
+        srcs = ["input.txt"],
+        output_extension = OUTPUT_EXTENSION,
+        cmd = "",
+        tags = ["manual"],
+    )
+
+    test_name = "gensrcs_tools_build_for_host_test"
+    _gensrcs_tool_builds_for_host_test(
+        name = test_name,
+        target_under_test = ":gensrcs_test_tool_builds_for_host",
+    )
+    return test_name
+
 def gensrcs_tests_suite(name):
     """Creates test targets for gensrcs.bzl"""
     native.test_suite(
@@ -124,5 +202,6 @@ def gensrcs_tests_suite(name):
         tests = [
             _test_actions(),
             _test_unset_output_extension(),
+            _test_gensrcs_tool_builds_for_host(),
         ],
     )

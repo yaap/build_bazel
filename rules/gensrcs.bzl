@@ -83,6 +83,7 @@ gensrcs = rule(
             doc = "A list of tool dependencies for this rule. " +
                   "The path of an individual `tools` target //x:y can be " +
                   "obtained using `$(location //x:y)`",
+            cfg = "exec",
         ),
     },
 )
