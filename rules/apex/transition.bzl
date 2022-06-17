@@ -35,7 +35,6 @@ load("@bazel_skylib//lib:dicts.bzl", "dicts")
 def _create_apex_configuration(attr, additional = {}):
     return dicts.add({
         "//build/bazel/rules/apex:apex_name": attr.name,  # Name of the APEX
-        "//build/bazel/rules/apex:min_sdk_version": attr.min_sdk_version,  # Min SDK version of the APEX
     }, additional)
 
 def _impl(settings, attr):
@@ -48,7 +47,6 @@ apex_transition = transition(
     inputs = [],
     outputs = [
         "//build/bazel/rules/apex:apex_name",
-        "//build/bazel/rules/apex:min_sdk_version",
     ],
 )
 
@@ -77,7 +75,6 @@ shared_lib_transition_32 = transition(
     inputs = [],
     outputs = [
         "//build/bazel/rules/apex:apex_name",
-        "//build/bazel/rules/apex:min_sdk_version",
         "//build/bazel/rules/apex:apex_direct_deps",
         "//command_line_option:platforms",
     ],
@@ -108,7 +105,6 @@ shared_lib_transition_64 = transition(
     inputs = [],
     outputs = [
         "//build/bazel/rules/apex:apex_name",
-        "//build/bazel/rules/apex:min_sdk_version",
         "//build/bazel/rules/apex:apex_direct_deps",
         "//command_line_option:platforms",
     ],
