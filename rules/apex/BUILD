@@ -15,12 +15,6 @@ config_setting(
     },
 )
 
-string_setting(
-    name = "min_sdk_version",
-    build_setting_default = "",
-    visibility = ["//visibility:public"],
-)
-
 string_list_setting(
     name = "apex_direct_deps",
     build_setting_default = [],
