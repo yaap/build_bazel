@@ -17,7 +17,6 @@
 
 set -xeuo pipefail
 
-prebuilt_tool_path="${RUNFILES_DIR}/__main__/external/make_injection/host/linux-x86/bin"
 apexer_tool_path="${RUNFILES_DIR}/__main__/system/apex/apexer/apexer"
 conv_apex_manifest_tool_path="${RUNFILES_DIR}/__main__/system/apex/apexer/conv_apex_manifest"
 deapexer_tool_path="${RUNFILES_DIR}/__main__/system/apex/tools/deapexer"
@@ -103,7 +102,7 @@ echo "/ 0 2000 0755
 /dir7 0 2000 0755
 /dir7/three_level_sym_in_execroot 1000 1000 0644" > ${canned_fs_config}
 
-apexer_tool_paths=${prebuilt_tool_path}:${avb_tool_path}:${avb_tool_path}:${e2fsdroid_path}:${mke2fs_path}:${resize2fs_path}:${debugfs_path}:${soong_zip_path}:${aapt2_path}:${sefcontext_compile_path}
+apexer_tool_paths=${avb_tool_path}:${avb_tool_path}:${e2fsdroid_path}:${mke2fs_path}:${resize2fs_path}:${debugfs_path}:${soong_zip_path}:${aapt2_path}:${sefcontext_compile_path}
 
 #############################################
 # run bazel_apexer_wrapper
