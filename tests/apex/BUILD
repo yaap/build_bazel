@@ -4,43 +4,12 @@ load(":apex_aab_test.bzl", "apex_aab_test")
 load(":apex_aapt2_test.bzl", "apex_package_name_test")
 load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
 
+# Test that the compressed apex and uncompressed apex have the same contents
 apex_diff_test(
-    name = "com.android.tzdata",
-    apex1 = "//system/timezone/apex:com.android.tzdata.apex",
-    apex2 = "@make_injection//:target/product/generic/system/apex/com.android.tzdata.apex",
-)
-
-apex_diff_test(
-    name = "build.bazel.examples.apex.minimal",
-    apex1 = "//build/bazel/examples/apex/minimal:build.bazel.examples.apex.minimal.apex",
-    apex2 = "@make_injection//:target/product/generic/system/product/apex/build.bazel.examples.apex.minimal.apex",
-    # arch dependent test
-    target_compatible_with = [
-        "//build/bazel/platforms/os:android",
-        "//build/bazel/platforms/arch:arm",
-    ],
-)
-
-apex_diff_test(
-    name = "com.android.adbd_uncompressed",
-    apex1 = "//packages/modules/adb/apex:com.android.adbd.apex",
-    apex2 = "@make_injection//:target/product/generic/system/apex/com.android.adbd.capex",
-    # arch dependent test
-    target_compatible_with = [
-        "//build/bazel/platforms/os:android",
-        "//build/bazel/platforms/arch:arm",
-    ],
-)
-
-apex_diff_test(
-    name = "com.android.adbd_compressed",
+    name = "com.android.adbd_compressed_vs_uncompressed",
     apex1 = "//packages/modules/adb/apex:com.android.adbd.capex",
-    apex2 = "@make_injection//:target/product/generic/system/apex/com.android.adbd.capex",
-    # arch dependent test
-    target_compatible_with = [
-        "//build/bazel/platforms/os:android",
-        "//build/bazel/platforms/arch:arm",
-    ],
+    apex2 = "//packages/modules/adb/apex:com.android.adbd.apex",
+    target_compatible_with = ["//build/bazel/platforms/os:android"],
 )
 
 apex_compression_test(
