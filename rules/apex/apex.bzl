@@ -211,10 +211,30 @@ def _generate_canned_fs_config(ctx, filepaths):
 
     return file
 
+# Append an entry for apex_manifest.pb to the file_contexts file for this APEX,
+# which is either from /system/sepolicy/apex/<apexname>-file_contexts (set in
+# the apex macro) or custom file_contexts attribute value of this APEX. This
+# ensures that the manifest file is correctly labeled as system_file.
+def _generate_file_contexts(ctx):
+    file_contexts = ctx.actions.declare_file(ctx.attr.name + "-file_contexts")
+
+    ctx.actions.run_shell(
+        inputs = [ctx.file.file_contexts],
+        outputs = [file_contexts],
+        mnemonic = "GenerateApexFileContexts",
+        command = " ".join([
+            "cat", ctx.file.file_contexts.path, ">", file_contexts.path,
+            "&&", "echo", ">>", file_contexts.path,
+            "&&", "echo", "/apex_manifest\\\\.pb u:object_r:system_file:s0", ">>", file_contexts.path,
+            "&&", "echo", "/ u:object_r:system_file:s0", ">>", file_contexts.path,
+        ]
+    ))
+
+    return file_contexts
+
 # apexer - generate the APEX file.
 def _run_apexer(ctx, apex_toolchain):
     # Inputs
-    file_contexts = ctx.file.file_contexts
     apex_key_info = ctx.attr.key[ApexKeyInfo]
     privkey = apex_key_info.private_key
     pubkey = apex_key_info.public_key
@@ -223,6 +243,7 @@ def _run_apexer(ctx, apex_toolchain):
 
     file_mapping, requires_native_libs, provides_native_libs = _create_file_mapping(ctx)
     canned_fs_config = _generate_canned_fs_config(ctx, file_mapping.values())
+    file_contexts = _generate_file_contexts(ctx)
     full_apex_manifest_json = _add_apex_manifest_information(ctx, apex_toolchain, requires_native_libs, provides_native_libs)
     apex_manifest_pb = _convert_apex_manifest_json_to_pb(ctx, apex_toolchain, full_apex_manifest_json)
 
