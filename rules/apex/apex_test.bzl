@@ -797,6 +797,50 @@ def _test_logging_parent_flag():
 
     return test_name
 
+def _file_contexts_args_test(ctx):
+    env = analysistest.begin(ctx)
+    actions = analysistest.target_actions(env)
+
+    file_contexts_action = [a for a in actions if a.mnemonic == "GenerateApexFileContexts"][0]
+    # GenerateApexFileContexts is a run_shell action.
+    # ["/bin/bash", "c", "<args>"]
+    cmd = file_contexts_action.argv[2]
+
+    for i, expected_arg in enumerate(ctx.attr.expected_args):
+        asserts.true(
+            env,
+            expected_arg in cmd,
+            "failed to find '%s' in '%s'" % (expected_arg, cmd),
+        )
+
+    return analysistest.end(env)
+
+file_contexts_args_test = analysistest.make(
+    _file_contexts_args_test,
+    attrs = {
+        "expected_args": attr.string_list(mandatory = True),
+    }
+)
+
+def _test_generate_file_contexts():
+    name = "apex_manifest_pb_file_contexts"
+    test_name = name + "_test"
+
+    test_apex(
+        name = name,
+    )
+
+    file_contexts_args_test(
+        name = test_name,
+        target_under_test = name,
+        expected_args = [
+            "/apex_manifest\\\\.pb u:object_r:system_file:s0",
+            "/ u:object_r:system_file:s0",
+        ],
+    )
+
+    return test_name
+
 def apex_test_suite(name):
     native.test_suite(
         name = name,
@@ -818,5 +862,6 @@ def apex_test_suite(name):
             _test_apex_manifest_dependencies_selfcontained(),
             _test_apex_manifest_dependencies_cc_binary(),
             _test_logging_parent_flag(),
+            _test_generate_file_contexts(),
         ],
     )
