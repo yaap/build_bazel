@@ -167,6 +167,7 @@ def _convert_apex_manifest_json_to_pb(ctx, apex_toolchain, apex_manifest_json):
 
     return apex_manifest_pb
 
+# TODO(b/236683936): Add support for custom canned_fs_config concatenation.
 def _generate_canned_fs_config(ctx, filepaths):
     """Generate filesystem config.
 
@@ -189,25 +190,26 @@ def _generate_canned_fs_config(ctx, filepaths):
             for i in range(1, len(dirs)+1):
                 apex_subdirs_set["/".join(dirs[:i])] = True
 
+    # The order of entries is significant. Later entries are preferred over
+    # earlier entries. Keep this consistent with Soong.
     config_lines = []
     config_lines += ["/ 1000 1000 0755"]
     config_lines += ["/apex_manifest.json 1000 1000 0644"]
     config_lines += ["/apex_manifest.pb 1000 1000 0644"]
 
-    for filepath in filepaths:
-        if filepath.startswith("bin/"):
-            # Mark all binaries as executable.
-            config_lines += ["/" + filepath + " 0 2000 0755"]
-        else:
-            # Everything else is read-only.
-            config_lines += ["/" + filepath + " 1000 1000 0644"]
+    filepaths = sorted(filepaths)
+
+    # Readonly if not executable.
+    config_lines += ["/" + f + " 1000 1000 0644" for f in filepaths if not f.startswith("bin/")]
+
+    # Mark all binaries as executable.
+    config_lines += ["/" + f + " 0 2000 0755" for f in filepaths if f.startswith("bin/")]
 
     # All directories have the same permission.
-    config_lines += ["/" + d + " 0 2000 0755" for d in apex_subdirs_set.keys()]
-    config_lines = sorted(config_lines)
+    config_lines += ["/" + d + " 0 2000 0755" for d in sorted(apex_subdirs_set.keys())]
 
     file = ctx.actions.declare_file(ctx.attr.name + '_canned_fs_config.txt')
-    ctx.actions.write(file, '\n'.join(config_lines))
+    ctx.actions.write(file, '\n'.join(config_lines) + '\n')
 
     return file
 
