@@ -39,11 +39,12 @@ def _canned_fs_config_test(ctx):
         if not outputs[0].basename.endswith("_canned_fs_config.txt"):
             continue
 
-        actual_entries = sorted(a.content.split("\n"))
-        expected_entries = sorted(ctx.attr.expected_entries)
+        found_canned_fs_config_action = True
+        # Don't sort -- the order is significant.
+        actual_entries = a.content.split("\n")
+        expected_entries = ctx.attr.expected_entries
         asserts.equals(env, expected_entries, actual_entries)
 
-        found_canned_fs_config_action = True
         break
 
     # Ensures that we actually found the canned_fs_config.txt generation action.
@@ -141,6 +142,7 @@ def _test_canned_fs_config_basic():
             "/ 1000 1000 0755",
             "/apex_manifest.json 1000 1000 0644",
             "/apex_manifest.pb 1000 1000 0644",
+            "", # ends with a newline
         ],
     )
 
@@ -174,9 +176,10 @@ def _test_canned_fs_config_binaries():
             "/ 1000 1000 0755",
             "/apex_manifest.json 1000 1000 0644",
             "/apex_manifest.pb 1000 1000 0644",
-            "/bin 0 2000 0755",
             "/bin/bin_cc 0 2000 0755",
             "/bin/bin_sh 0 2000 0755",
+            "/bin 0 2000 0755",
+            "", # ends with a newline
         ],
     )
 
@@ -211,9 +214,10 @@ def _test_canned_fs_config_native_shared_libs_arm():
             "/ 1000 1000 0755",
             "/apex_manifest.json 1000 1000 0644",
             "/apex_manifest.pb 1000 1000 0644",
-            "/lib 0 2000 0755",
             "/lib/apex_canned_fs_config_native_shared_libs_arm_lib_cc.so 1000 1000 0644",
             "/lib/libc++.so 1000 1000 0644",
+            "/lib 0 2000 0755",
+            "", # ends with a newline
         ],
         target_compatible_with = ["//build/bazel/platforms/arch:arm"],
     )
@@ -249,12 +253,13 @@ def _test_canned_fs_config_native_shared_libs_arm64():
             "/ 1000 1000 0755",
             "/apex_manifest.json 1000 1000 0644",
             "/apex_manifest.pb 1000 1000 0644",
-            "/lib 0 2000 0755",
             "/lib/apex_canned_fs_config_native_shared_libs_arm64_lib_cc.so 1000 1000 0644",
             "/lib/libc++.so 1000 1000 0644",
-            "/lib64 0 2000 0755",
             "/lib64/apex_canned_fs_config_native_shared_libs_arm64_lib2_cc.so 1000 1000 0644",
             "/lib64/libc++.so 1000 1000 0644",
+            "/lib 0 2000 0755",
+            "/lib64 0 2000 0755",
+            "", # ends with a newline
         ],
         target_compatible_with = ["//build/bazel/platforms/arch:arm64"],
     )
@@ -303,15 +308,71 @@ def _test_canned_fs_config_prebuilts():
             "/ 1000 1000 0755",
             "/apex_manifest.json 1000 1000 0644",
             "/apex_manifest.pb 1000 1000 0644",
-            "/etc 0 2000 0755",
             "/etc/file 1000 1000 0644",
-            "/etc/nested 0 2000 0755",
             "/etc/nested/nested_file_in_dir 1000 1000 0644",
             "/etc/renamed_file3.txt 1000 1000 0644",
+            "/etc 0 2000 0755",
+            "/etc/nested 0 2000 0755",
+            "", # ends with a newline
         ],
     )
 
     return test_name
+
+def _test_canned_fs_config_prebuilts_sort_order():
+    name = "apex_canned_fs_config_prebuilts_sort_order"
+    test_name = name + "_test"
+
+    prebuilt_file(
+        name = "file_a",
+        src = "file_a.txt",
+        dir = "etc/a",
+        tags = ["manual"],
+    )
+
+    prebuilt_file(
+        name = "file_b",
+        src = "file_b.txt",
+        dir = "etc/b",
+        tags = ["manual"],
+    )
+
+    prebuilt_file(
+        name = "file_a_c",
+        src = "file_a_c.txt",
+        dir = "etc/a/c",
+        tags = ["manual"],
+    )
+
+    test_apex(
+        name = name,
+        prebuilts = [
+            ":file_a",
+            ":file_b",
+            ":file_a_c",
+        ],
+    )
+
+    canned_fs_config_test(
+        name = test_name,
+        target_under_test = name,
+        expected_entries = [
+            "/ 1000 1000 0755",
+            "/apex_manifest.json 1000 1000 0644",
+            "/apex_manifest.pb 1000 1000 0644",
+            "/etc/a/c/file_a_c 1000 1000 0644",
+            "/etc/a/file_a 1000 1000 0644",
+            "/etc/b/file_b 1000 1000 0644",
+            "/etc 0 2000 0755",
+            "/etc/a 0 2000 0755",
+            "/etc/a/c 0 2000 0755",
+            "/etc/b 0 2000 0755",
+            "", # ends with a newline
+        ],
+    )
+
+    return test_name
+
 
 def _apex_manifest_test(ctx):
     env = analysistest.begin(ctx)
@@ -736,6 +797,50 @@ def _test_logging_parent_flag():
 
     return test_name
 
+def _file_contexts_args_test(ctx):
+    env = analysistest.begin(ctx)
+    actions = analysistest.target_actions(env)
+
+    file_contexts_action = [a for a in actions if a.mnemonic == "GenerateApexFileContexts"][0]
+    # GenerateApexFileContexts is a run_shell action.
+    # ["/bin/bash", "c", "<args>"]
+    cmd = file_contexts_action.argv[2]
+
+    for i, expected_arg in enumerate(ctx.attr.expected_args):
+        asserts.true(
+            env,
+            expected_arg in cmd,
+            "failed to find '%s' in '%s'" % (expected_arg, cmd),
+        )
+
+    return analysistest.end(env)
+
+file_contexts_args_test = analysistest.make(
+    _file_contexts_args_test,
+    attrs = {
+        "expected_args": attr.string_list(mandatory = True),
+    }
+)
+
+def _test_generate_file_contexts():
+    name = "apex_manifest_pb_file_contexts"
+    test_name = name + "_test"
+
+    test_apex(
+        name = name,
+    )
+
+    file_contexts_args_test(
+        name = test_name,
+        target_under_test = name,
+        expected_args = [
+            "/apex_manifest\\\\.pb u:object_r:system_file:s0",
+            "/ u:object_r:system_file:s0",
+        ],
+    )
+
+    return test_name
+
 def apex_test_suite(name):
     native.test_suite(
         name = name,
@@ -745,6 +850,7 @@ def apex_test_suite(name):
             _test_canned_fs_config_native_shared_libs_arm(),
             _test_canned_fs_config_native_shared_libs_arm64(),
             _test_canned_fs_config_prebuilts(),
+            _test_canned_fs_config_prebuilts_sort_order(),
             _test_apex_manifest(),
             _test_apex_manifest_min_sdk_version(),
             _test_apex_manifest_min_sdk_version_current(),
@@ -756,5 +862,6 @@ def apex_test_suite(name):
             _test_apex_manifest_dependencies_selfcontained(),
             _test_apex_manifest_dependencies_cc_binary(),
             _test_logging_parent_flag(),
+            _test_generate_file_contexts(),
         ],
     )
