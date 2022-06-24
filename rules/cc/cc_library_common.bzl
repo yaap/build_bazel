@@ -78,6 +78,7 @@ def get_includes_paths(ctx, dirs, package_relative = True):
 
 def create_ccinfo_for_includes(
         ctx,
+        hdrs = [],
         includes = [],
         absolute_includes = [],
         system_includes = [],
@@ -86,6 +87,7 @@ def create_ccinfo_for_includes(
 
     # Create a compilation context using the string includes of this target.
     compilation_context = cc_common.create_compilation_context(
+        headers = depset(hdrs),
         includes = depset(
             get_includes_paths(ctx, includes) +
             get_includes_paths(ctx, absolute_includes, package_relative = False),
