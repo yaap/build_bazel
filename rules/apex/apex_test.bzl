@@ -380,7 +380,7 @@ def _apex_manifest_test(ctx):
 
     conv_apex_manifest_action = [a for a in actions if a.mnemonic == "ConvApexManifest"][0]
 
-    apexer_action = [a for a in actions if a.mnemonic == "BazelApexerWrapper"][0]
+    apexer_action = [a for a in actions if a.mnemonic == "Apexer"][0]
     manifest_index = apexer_action.argv.index("--manifest")
     manifest_path = apexer_action.argv[manifest_index + 1]
 
@@ -758,7 +758,7 @@ def _apexer_args_test(ctx):
     env = analysistest.begin(ctx)
     actions = analysistest.target_actions(env)
 
-    apexer_action = [a for a in actions if a.mnemonic == "BazelApexerWrapper"][0]
+    apexer_action = [a for a in actions if a.mnemonic == "Apexer"][0]
     flag_idx = apexer_action.argv.index(ctx.attr.expected_args[0])
 
     for i, expected_arg in enumerate(ctx.attr.expected_args):
