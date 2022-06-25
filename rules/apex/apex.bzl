@@ -341,9 +341,9 @@ def _run_apexer(ctx, apex_toolchain):
         inputs = inputs,
         tools = tools,
         outputs = [apex_output_file],
-        executable = ctx.executable._bazel_apexer_wrapper,
+        executable = ctx.executable._staging_dir_builder,
         arguments = [args],
-        mnemonic = "BazelApexerWrapper",
+        mnemonic = "Apexer",
     )
 
     return (
@@ -475,11 +475,11 @@ _apex = rule(
 
         # Required to use apex_transition. This is an acknowledgement to the risks of memory bloat when using transitions.
         "_allowlist_function_transition": attr.label(default = "@bazel_tools//tools/allowlists/function_transition_allowlist"),
-        "_bazel_apexer_wrapper": attr.label(
+        "_staging_dir_builder": attr.label(
             cfg = "host",
-            doc = "The apexer wrapper to avoid the problem where symlinks are created inside apex image.",
+            doc = "The staging dir builder to avoid the problem where symlinks are created inside apex image.",
             executable = True,
-            default = "//build/bazel/rules/apex:bazel_apexer_wrapper",
+            default = "//build/bazel/rules:staging_dir_builder",
         ),
         "_signapk": attr.label(
             cfg = "host",

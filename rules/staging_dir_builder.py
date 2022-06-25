@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (C) 2021 The Android Open Source Project
 #
@@ -22,31 +22,33 @@ import sys
 import tempfile
 
 def main(argv):
-    '''Build a staging directory, and then call apexer.
+    '''Build a staging directory, and then call a custom command.
 
     The first argument to this script must be the path to a file containing a json
-    dictionary mapping input files to their path in the staging directory. At least
-    one other argument must be "STAGING_DIR_PLACEHOLDER", which will be replaced
-    with the path to the staging directory.
+    dictionary mapping input files to their path in the staging directory. The rest
+    of the arguments will be run as a separate command. At least one other argument
+    must be "STAGING_DIR_PLACEHOLDER", which will be replaced with the path to the
+    staging directory.
 
     Example:
-    bazel_apexer_wrapper apex_file_mapping.json path/to/apexer --various-apexer-flags STAGING_DIR_PLACEHOLDER path/to/out.apex.unsigned
+    staging_dir_builder file_mapping.json path/to/apexer --various-apexer-flags STAGING_DIR_PLACEHOLDER path/to/out.apex.unsigned
     '''
     if len(argv) < 2:
-        sys.exit('bazel_apexer_wrapper needs at least 2 arguments.')
-    if not os.path.isfile(argv[0]):
-        sys.exit('File not found: '+argv[0])
+        sys.exit('usage: staging_dir_builder MAPPING_FILE COMMAND...')
     if "STAGING_DIR_PLACEHOLDER" not in argv[1:]:
-        sys.exit('bazel_apexer_wrapper needs at least one argument to be "STAGING_DIR_PLACEHOLDER"')
+        sys.exit('At least one argument must be "STAGING_DIR_PLACEHOLDER"')
 
-    with open(argv[0], 'r') as f:
-        file_mapping = json.load(f)
+    try:
+        with open(argv[0], 'r') as f:
+            file_mapping = json.load(f)
+    except (IOError, OSError) as e:
+        sys.exit(str(e))
+
     argv = argv[1:]
 
     with tempfile.TemporaryDirectory() as staging_dir:
-        for path_in_bazel, path_in_apex in file_mapping.items():
-            path_in_apex = os.path.join(staging_dir, path_in_apex)
-            os.makedirs(os.path.dirname(path_in_apex), exist_ok=True)
+        for path_in_bazel, path_in_staging_dir in file_mapping.items():
+            path_in_staging_dir = os.path.join(staging_dir, path_in_staging_dir.lstrip('/'))
 
             # Because Bazel execution root is a symlink forest, all the input files are symlinks, these
             # include the dependency files declared in the BUILD files as well as the files declared
@@ -83,10 +85,11 @@ def main(argv):
                 while os.path.islink(path_in_bazel) and 'execroot/__main__' in path_in_bazel:
                     path_in_bazel = os.readlink(path_in_bazel)
 
-            shutil.copyfile(path_in_bazel, path_in_apex, follow_symlinks=False)
+            os.makedirs(os.path.dirname(path_in_staging_dir), exist_ok=True)
+            shutil.copyfile(path_in_bazel, path_in_staging_dir, follow_symlinks=False)
 
         for i in range(len(argv)):
-            if argv[i] == "STAGING_DIR_PLACEHOLDER":
+            if argv[i] == 'STAGING_DIR_PLACEHOLDER':
                 argv[i] = staging_dir
 
         result = subprocess.run(argv)
