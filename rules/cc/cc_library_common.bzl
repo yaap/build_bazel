@@ -17,7 +17,6 @@ limitations under the License.
 load("//build/bazel/product_variables:constants.bzl", "constants")
 load("@soong_injection//api_levels:api_levels.bzl", "api_levels")
 load("@soong_injection//product_config:product_variables.bzl", "product_vars")
-load("@bazel_tools//tools/cpp:toolchain_utils.bzl", "find_cpp_toolchain")
 
 _bionic_targets = ["//bionic/libc", "//bionic/libdl", "//bionic/libm"]
 _static_bionic_targets = ["//bionic/libc:libc_bp2build_cc_library_static", "//bionic/libdl:libdl_bp2build_cc_library_static", "//bionic/libm:libm_bp2build_cc_library_static"]
@@ -82,8 +81,6 @@ def create_ccinfo_for_includes(
         absolute_includes = [],
         system_includes = [],
         deps = []):
-    cc_toolchain = find_cpp_toolchain(ctx)
-
     # Create a compilation context using the string includes of this target.
     compilation_context = cc_common.create_compilation_context(
         includes = depset(
