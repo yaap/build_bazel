@@ -15,8 +15,27 @@ soong_injection_repository(name="soong_injection")
 load("//build/bazel/rules:make_injection.bzl", "make_injection_repository")
 make_injection_repository(
     name = "make_injection",
+    binaries = [
+        "build_image",
+        "mkuserimg_mke2fs",
+    ],
     target_module_files = {},
-    watch_android_bp_files = [],
+    watch_android_bp_files = [
+        "//:build/make/tools/releasetools/Android.bp", # for build_image
+        "//:system/extras/ext4_utils/Android.bp", # for mkuserimg_mke2fs
+    ],
+)
+# ! WARNING ! WARNING ! WARNING !
+
+# ! WARNING ! WARNING ! WARNING !
+# This is an experimental product configuration repostory rule.
+# It currently has incrementality issues, and will not rebuild
+# when the product config is changed. Use @soong_injection//product_config
+# instead. b/237004497 tracks fixing this issue and consolidating
+# it with soong_injection.
+load("//build/bazel/product_config:product_config_repository_rule.bzl", "product_config")
+product_config(
+    name = "product_config",
 )
 # ! WARNING ! WARNING ! WARNING !
 
@@ -52,6 +71,9 @@ register_toolchains(
 
   # For APEX rules
   "//build/bazel/rules/apex:all",
+
+  # For partition rules
+  "//build/bazel/rules/partitions:all"
 )
 
 bind(
