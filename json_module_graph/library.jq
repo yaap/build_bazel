@@ -105,7 +105,7 @@ def directDeps($m):
   map($m[.] // []) + [.] | flatten | unique
 ;
 
-def rdeps($m):
+def reverseDeps($m):
  .[] | select(.Deps[].Name == $m)
 ;
 
