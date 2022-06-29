@@ -75,65 +75,56 @@ def _get_set_properties(module):
   return set_properties
 
 
-def _should_ignore(module, ignored_names):
-  return (dependency_analysis.is_windows_variation(module) or
-          module["Name"] in ignored_names or
-          dependency_analysis.ignore_kind(module["Type"]))
-
-def _update_infos(module_name, type_infos, module_graph_map, ignored_dep_names):
-  module = module_graph_map[module_name]
-  if _should_ignore(module, ignored_dep_names) or module_name in type_infos:
-    return
-  for dep in module["Deps"]:
-    dep_name = dep["Name"]
-    if dep_name == module_name:
-      continue
-    _update_infos(dep_name, type_infos, module_graph_map, ignored_dep_names)
-
-  java_source_extensions = _get_java_source_extensions(module)
-  type_to_properties = collections.defaultdict(set)
-  if module["Type"]:
-    type_to_properties[module["Type"]].update(_get_set_properties(module))
-  for dep in module["Deps"]:
-    dep_name = dep["Name"]
-    if _should_ignore(module_graph_map[dep_name], ignored_dep_names):
-      continue
-    if dep_name == module_name:
-      continue
-    for dep_type, dep_type_properties in type_infos[dep_name].type_to_properties.items():
-      type_to_properties[dep_type].update(dep_type_properties)
-      java_source_extensions.update(type_infos[dep_name].java_source_extensions)
-  type_infos[module_name] = _ModuleTypeInfo(
-      type_to_properties=type_to_properties,
-      java_source_extensions=java_source_extensions)
-
-
 def module_type_info_from_json(module_graph, module_type, ignored_dep_names):
   """Builds a map of module name to _ModuleTypeInfo for each module of module_type.
 
      Dependency edges pointing to modules in ignored_dep_names are not followed.
   """
-  module_graph_map = dict()
-  module_stack = []
-  for module in module_graph:
-    # Windows variants have incomplete dependency information in the json module graph.
-    if dependency_analysis.is_windows_variation(module):
-      continue
-    module_graph_map[module["Name"]] = module
-    if module["Type"] == module_type:
-      module_stack.append(module["Name"])
+
+  modules_of_type = set()
+
+  def filter_by_type(json):
+    if json["Type"] == module_type:
+      modules_of_type.add(json["Name"])
+      return True
+    return False
+
   # dictionary of module name to _ModuleTypeInfo.
+
   type_infos = {}
-  for module_name in module_stack:
-    # post-order traversal of the dependency graph builds the type_infos
-    # dictionary from the leaves so that common dependencies are visited
-    # only once.
-    _update_infos(module_name, type_infos, module_graph_map, ignored_dep_names)
+
+  def update_infos(module, deps):
+    module_name = module["Name"]
+    info = type_infos.get(
+        module_name,
+        _ModuleTypeInfo(
+            java_source_extensions=set(),
+            type_to_properties=collections.defaultdict(set),
+        ))
+
+    java_source_extensions = _get_java_source_extensions(module)
+
+    if module["Type"]:
+      info.type_to_properties[module["Type"]].update(
+          _get_set_properties(module))
+
+    for dep_name in deps:
+      for dep_type, dep_type_properties in type_infos[
+          dep_name].type_to_properties.items():
+        info.type_to_properties[dep_type].update(dep_type_properties)
+        java_source_extensions.update(
+            type_infos[dep_name].java_source_extensions)
+
+    info.java_source_extensions.update(java_source_extensions)
+    # for a module, collect all properties and java source extensions specified by
+    # transitive dependencies and the module itself
+    type_infos[module_name] = info
+
+  dependency_analysis.module_graph_from_json(module_graph, ignored_dep_names,
+                                             filter_by_type, update_infos)
 
   return {
-      name: info
-      for name, info in type_infos.items()
-      if module_graph_map[name]["Type"] == module_type
+      name: info for name, info in type_infos.items() if name in modules_of_type
   }
 
 

@@ -15,6 +15,7 @@
 # limitations under the License.
 """Utility functions to produce module or module type dependency graphs using json-module-graph or queryview."""
 
+import collections
 import json
 import os
 import os.path
@@ -106,6 +107,53 @@ JSONDecodeError: {err}""".format(
     exit(1)
 
 
+def module_graph_from_json(module_graph, ignore_by_name, filter_predicate,
+                           visit):
+  # The set of ignored modules. These modules (and their dependencies) are not shown
+  # in the graph or report.
+  ignored = set()
+
+  # name to all module variants
+  module_graph_map = collections.defaultdict(list)
+  root_module_names = []
+
+  # Do a single pass to find all top-level modules to be ignored
+  for module in module_graph:
+    name = module["Name"]
+    if is_windows_variation(module):
+      continue
+    if ignore_kind(module["Type"]) or name in ignore_by_name:
+      ignored.add(name)
+      continue
+    module_graph_map[name].append(module)
+    if filter_predicate(module):
+      root_module_names.append(name)
+
+  visited = set()
+
+  def json_module_graph_post_traversal(module_name):
+    if module_name in ignored or module_name in visited:
+      return
+    visited.add(module_name)
+
+    deps = set()
+    for module in module_graph_map[module_name]:
+      for dep in module["Deps"]:
+        if ignore_json_dep(dep, module_name, ignored):
+          continue
+
+        dep_name = dep["Name"]
+        deps.add(dep_name)
+
+        if dep_name not in visited:
+          json_module_graph_post_traversal(dep_name)
+
+      visit(module, deps)
+
+  for module_name in root_module_names:
+    json_module_graph_post_traversal(module_name)
+
+
 def get_bp2build_converted_modules():
   """ Returns the list of modules that bp2build can currently convert. """
   _build_with_soong("bp2build")
@@ -152,3 +200,15 @@ def is_windows_variation(module):
 
 def ignore_kind(kind):
   return kind in IGNORED_KINDS or "defaults" in kind
+
+
+def ignore_json_dep(dep, module_name, ignored_names):
+  """Whether to ignore a json dependency based on heuristics.
+
+  Args:
+    dep: dependency struct from an entry in Soogn's json-module-graph
+    module_name: name of the module this is a dependency of
+    ignored_names: a set of names to ignore
+  """
+  name = dep["Name"]
+  return name in ignored_names or name == module_name
