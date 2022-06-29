@@ -39,19 +39,21 @@ product_config(
 )
 # ! WARNING ! WARNING ! WARNING !
 
-local_repository(
-    name = "rules_cc",
-    path = "build/bazel/rules_cc",
-)
+load("//build/bazel_common_rules/workspace:external.bzl", "import_external_repositories")
 
-local_repository(
-    name = "bazel_skylib",
-    path = "external/bazel-skylib",
+import_external_repositories(
+    bazel_skylib = True,
+    io_abseil_py = True,
 )
 
 load("@bazel_skylib//:workspace.bzl", "bazel_skylib_workspace")
 
 bazel_skylib_workspace()
+
+local_repository(
+    name = "rules_cc",
+    path = "build/bazel/rules_cc",
+)
 
 local_repository(
     name = "rules_android",
