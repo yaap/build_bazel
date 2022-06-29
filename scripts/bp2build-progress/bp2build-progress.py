@@ -265,8 +265,9 @@ def adjacency_list_from_queryview_xml(module_graph, ignore_by_name,
     if name in ignore_by_name:
       ignore = True
 
-    if dependency_analysis.ignore_kind(kind) or variant.startswith(
-        "windows") or ignore:
+    if dependency_analysis.ignore_kind(
+        kind, extra_kinds=dependency_analysis.QUERYVIEW_IGNORE_KINDS
+    ) or variant.startswith("windows") or ignore:
       ignored.add(name_with_variant)
     else:
       if name == top_level_module:

@@ -31,15 +31,23 @@ IGNORED_KINDS = set([
     "license_kind",
     "license",
     "cc_defaults",
-    "cc_prebuilt_object",
+    "java_defaults",
+])
+
+# queryview doesn't have information on the type of deps, so we explicitly skip
+# prebuilt types
+QUERYVIEW_IGNORE_KINDS = set([
+    "android_app_import",
+    "android_library_import",
+    "cc_prebuilt_library",
     "cc_prebuilt_library_headers",
     "cc_prebuilt_library_shared",
     "cc_prebuilt_library_static",
     "cc_prebuilt_library_static",
-    "cc_prebuilt_library",
-    "java_defaults",
-    "ndk_prebuilt_static_stl",
-    "ndk_library",
+    "cc_prebuilt_object",
+    "java_import",
+    "java_import_host",
+    "java_sdk_library_import",
 ])
 
 SRC_ROOT_DIR = os.path.abspath(__file__ + "/../../../../..")
@@ -198,8 +206,18 @@ def is_windows_variation(module):
   return dep_variation_os == "windows"
 
 
-def ignore_kind(kind):
-  return kind in IGNORED_KINDS or "defaults" in kind
+def ignore_kind(kind, extra_kinds=set()):
+  return kind in IGNORED_KINDS or "defaults" in kind or kind in extra_kinds
+
+
+def is_prebuilt_to_source_dep(dep):
+  # Soong always adds a dependency from a source module to its corresponding
+  # prebuilt module, if it exists.
+  # https://cs.android.com/android/platform/superproject/+/master:build/soong/android/prebuilt.go;l=395-396;drc=5d6fa4d8571d01a6e5a63a8b7aa15e61f45737a9
+  # This makes it appear that the prebuilt is a transitive dependency regardless
+  # of whether it is actually necessary. Skip these to keep the graph to modules
+  # used to build.
+  return dep["Tag"] == "android.prebuiltDependencyTag {BaseDependencyTag:{}}"
 
 
 def ignore_json_dep(dep, module_name, ignored_names):
@@ -210,5 +228,7 @@ def ignore_json_dep(dep, module_name, ignored_names):
     module_name: name of the module this is a dependency of
     ignored_names: a set of names to ignore
   """
+  if is_prebuilt_to_source_dep(dep):
+    return True
   name = dep["Name"]
   return name in ignored_names or name == module_name
