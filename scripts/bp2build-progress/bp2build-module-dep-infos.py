@@ -161,14 +161,14 @@ def main():
       "properties",
       "java source extensions",
   ])
-  for module, module_type_info in type_infos.items():
+  for module, module_type_info in sorted(type_infos.items()):
     writer.writerow([
         module,
         ("[\"%s\"]" % '"\n"'.join([
-            "%s: %s" % (mtype, ",".join(properties)) for mtype, properties in
-            module_type_info.type_to_properties.items()
+            "%s: %s" % (mtype, ",".join(sorted(properties))) for mtype, properties in
+            sorted(module_type_info.type_to_properties.items())
         ]) if len(module_type_info.type_to_properties) else "[]"),
-        ("[\"%s\"]" % '", "'.join(module_type_info.java_source_extensions)
+        ("[\"%s\"]" % '", "'.join(sorted(module_type_info.java_source_extensions))
          if len(module_type_info.java_source_extensions) else "[]"),
     ])
 
