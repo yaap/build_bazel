@@ -15,6 +15,7 @@
 # limitations under the License.
 """Utility functions to produce module or module type dependency graphs using json-module-graph or queryview."""
 
+import collections
 import json
 import os
 import os.path
@@ -30,21 +31,45 @@ IGNORED_KINDS = set([
     "license_kind",
     "license",
     "cc_defaults",
-    "cc_prebuilt_object",
+    "java_defaults",
+])
+
+# queryview doesn't have information on the type of deps, so we explicitly skip
+# prebuilt types
+QUERYVIEW_IGNORE_KINDS = set([
+    "android_app_import",
+    "android_library_import",
+    "cc_prebuilt_library",
     "cc_prebuilt_library_headers",
     "cc_prebuilt_library_shared",
     "cc_prebuilt_library_static",
     "cc_prebuilt_library_static",
-    "cc_prebuilt_library",
-    "java_defaults",
-    "ndk_prebuilt_static_stl",
-    "ndk_library",
+    "cc_prebuilt_object",
+    "java_import",
+    "java_import_host",
+    "java_sdk_library_import",
 ])
 
 SRC_ROOT_DIR = os.path.abspath(__file__ + "/../../../../..")
 
+LUNCH_ENV = {
+    # Use aosp_arm as the canonical target product.
+    "TARGET_PRODUCT": "aosp_arm",
+    "TARGET_BUILD_VARIANT": "userdebug",
+}
 
-def _build_with_soong(target):
+BANCHAN_ENV = {
+    # Use module_arm64 as the canonical banchan target product.
+    "TARGET_PRODUCT": "module_arm64",
+    "TARGET_BUILD_VARIANT": "eng",
+    # just needs to be non-empty, not the specific module for Soong
+    # analysis purposes
+    "TARGET_BUILD_APPS": "all",
+}
+
+
+def _build_with_soong(target, banchan_mode=False):
+  env = BANCHAN_ENV if banchan_mode else LUNCH_ENV
   subprocess.check_output(
       [
           "build/soong/soong_ui.bash",
@@ -53,17 +78,13 @@ def _build_with_soong(target):
           target,
       ],
       cwd=SRC_ROOT_DIR,
-      env={
-          # Use aosp_arm as the canonical target product.
-          "TARGET_PRODUCT": "aosp_arm",
-          "TARGET_BUILD_VARIANT": "userdebug",
-      },
+      env=env,
   )
 
 
-def get_queryview_module_info(module):
+def get_queryview_module_info(module, banchan_mode=False):
   """Returns the list of transitive dependencies of input module as built by queryview."""
-  _build_with_soong("queryview")
+  _build_with_soong("queryview", banchan_mode)
 
   queryview_xml = subprocess.check_output(
       [
@@ -84,9 +105,9 @@ ParseError: {err}""".format(
     exit(1)
 
 
-def get_json_module_info(module):
+def get_json_module_info(module, banchan_mode=False):
   """Returns the list of transitive dependencies of input module as provided by Soong's json module graph."""
-  _build_with_soong("json-module-graph")
+  _build_with_soong("json-module-graph", banchan_mode)
   # Run query.sh on the module graph for the top level module
   jq_json = subprocess.check_output(
       [
@@ -104,6 +125,53 @@ JSONDecodeError: {err}""".format(
     json=jq_json, err=err)
     print(error_msg, file=sys.stderr)
     exit(1)
+
+
+def module_graph_from_json(module_graph, ignore_by_name, filter_predicate,
+                           visit):
+  # The set of ignored modules. These modules (and their dependencies) are not shown
+  # in the graph or report.
+  ignored = set()
+
+  # name to all module variants
+  module_graph_map = collections.defaultdict(list)
+  root_module_names = []
+
+  # Do a single pass to find all top-level modules to be ignored
+  for module in module_graph:
+    name = module["Name"]
+    if is_windows_variation(module):
+      continue
+    if ignore_kind(module["Type"]) or name in ignore_by_name:
+      ignored.add(name)
+      continue
+    module_graph_map[name].append(module)
+    if filter_predicate(module):
+      root_module_names.append(name)
+
+  visited = set()
+
+  def json_module_graph_post_traversal(module_name):
+    if module_name in ignored or module_name in visited:
+      return
+    visited.add(module_name)
+
+    deps = set()
+    for module in module_graph_map[module_name]:
+      for dep in module["Deps"]:
+        if ignore_json_dep(dep, module_name, ignored):
+          continue
+
+        dep_name = dep["Name"]
+        deps.add(dep_name)
+
+        if dep_name not in visited:
+          json_module_graph_post_traversal(dep_name)
+
+      visit(module, deps)
+
+  for module_name in root_module_names:
+    json_module_graph_post_traversal(module_name)
 
 
 def get_bp2build_converted_modules():
@@ -150,5 +218,29 @@ def is_windows_variation(module):
   return dep_variation_os == "windows"
 
 
-def ignore_kind(kind):
-  return kind in IGNORED_KINDS or "defaults" in kind
+def ignore_kind(kind, extra_kinds=set()):
+  return kind in IGNORED_KINDS or "defaults" in kind or kind in extra_kinds
+
+
+def is_prebuilt_to_source_dep(dep):
+  # Soong always adds a dependency from a source module to its corresponding
+  # prebuilt module, if it exists.
+  # https://cs.android.com/android/platform/superproject/+/master:build/soong/android/prebuilt.go;l=395-396;drc=5d6fa4d8571d01a6e5a63a8b7aa15e61f45737a9
+  # This makes it appear that the prebuilt is a transitive dependency regardless
+  # of whether it is actually necessary. Skip these to keep the graph to modules
+  # used to build.
+  return dep["Tag"] == "android.prebuiltDependencyTag {BaseDependencyTag:{}}"
+
+
+def ignore_json_dep(dep, module_name, ignored_names):
+  """Whether to ignore a json dependency based on heuristics.
+
+  Args:
+    dep: dependency struct from an entry in Soogn's json-module-graph
+    module_name: name of the module this is a dependency of
+    ignored_names: a set of names to ignore
+  """
+  if is_prebuilt_to_source_dep(dep):
+    return True
+  name = dep["Name"]
+  return name in ignored_names or name == module_name
