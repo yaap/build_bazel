@@ -18,8 +18,9 @@ load(
     ":cc_library_common.bzl",
     "get_includes_paths",
     "is_external_directory",
+    "parse_sdk_version",
     "system_dynamic_deps_defaults",
-    "parse_sdk_version")
+)
 load(":cc_constants.bzl", "constants")
 load(":stl.bzl", "static_stl_deps")
 
@@ -73,6 +74,9 @@ def _cc_object_impl(ctx):
     if is_external_directory(ctx.label.package):
         extra_disabled_features.append("non_external_compiler_flags")
         extra_features.append("external_compiler_flags")
+    else:
+        extra_features.append("non_external_compiler_flags")
+        extra_disabled_features.append("external_compiler_flags")
 
     if ctx.attr.min_sdk_version:
         extra_disabled_features.append("sdk_version_default")
