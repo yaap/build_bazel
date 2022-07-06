@@ -85,6 +85,11 @@ def cc_library_static(
             "-non_external_compiler_flags",
             "external_compiler_flags",
         ]
+    else:
+        toolchain_features += [
+            "non_external_compiler_flags",
+            "-external_compiler_flags",
+        ]
 
     if use_version_lib:
         libbuildversionLabel = "//build/soong/cc/libbuildversion:libbuildversion"
@@ -148,14 +153,13 @@ def cc_library_static(
 
     # TODO(b/231574899): restructure this to handle other images
     copts += select({
-      "//build/bazel/rules/apex:non_apex": [],
-      "//conditions:default": [
-          "-D__ANDROID_APEX__",
-          # TODO(b/231322772): sdk_version/min_sdk_version if not finalized
-          "-D__ANDROID_APEX_MIN_SDK_VERSION__=10000",
-      ],
+        "//build/bazel/rules/apex:non_apex": [],
+        "//conditions:default": [
+            "-D__ANDROID_APEX__",
+            # TODO(b/231322772): sdk_version/min_sdk_version if not finalized
+            "-D__ANDROID_APEX_MIN_SDK_VERSION__=10000",
+        ],
     })
-
 
     native.cc_library(
         name = cpp_name,
