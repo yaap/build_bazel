@@ -273,6 +273,8 @@ def _run_apexer(ctx, apex_toolchain):
     args.add_all(['--payload_type', 'image'])
     args.add_all(['--target_sdk_version', '10000'])
     args.add_all(['--payload_fs_type', 'ext4'])
+    # TODO(b/238153998): currently just set the version to fix CI errors in b/238399517.
+    args.add_all(['--apex_version', '339990000'])
 
     # Override the package name, if it's expicitly specified
     if ctx.attr.package_name:
