@@ -18,6 +18,13 @@ py_library(
     visibility = ["//visibility:public"],
 )
 
+py_test(
+    name = "dependency_analysis_test",
+    srcs = ["dependency_analysis_test.py"],
+    python_version = "PY3",
+    deps = [":dependency_analysis"],
+)
+
 py_binary(
     name = "bp2build-progress",
     srcs = ["bp2build-progress.py"],
