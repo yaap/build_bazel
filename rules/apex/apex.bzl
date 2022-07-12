@@ -135,6 +135,8 @@ def _add_apex_manifest_information(
     args.add_all(requires_native_libs, map_each = _add_so) # e.g. turn "//foo/bar:baz" to "baz.so"
     args.add_all(["-a", "provideNativeLibs"])
     args.add_all(provides_native_libs, map_each = _add_so)
+    # TODO(b/238153998): harcoding version to solve build errors, to be replaced with per-branch config
+    args.add_all(["-se", "version", "0", "339990000"])
     # TODO: support other optional flags like -v name and -a jniLibs
     args.add_all(["-o", apex_manifest_full_json])
 
@@ -273,8 +275,6 @@ def _run_apexer(ctx, apex_toolchain):
     args.add_all(['--payload_type', 'image'])
     args.add_all(['--target_sdk_version', '10000'])
     args.add_all(['--payload_fs_type', 'ext4'])
-    # TODO(b/238153998): currently just set the version to fix CI errors in b/238399517.
-    args.add_all(['--apex_version', '339990000'])
 
     # Override the package name, if it's expicitly specified
     if ctx.attr.package_name:
