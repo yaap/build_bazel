@@ -17,7 +17,7 @@ load("//build/bazel/rules:sh_binary.bzl", "sh_binary")
 load("//build/bazel/rules/cc:cc_binary.bzl", "cc_binary")
 load("//build/bazel/rules/cc:cc_library_shared.bzl", "cc_library_shared")
 load("//build/bazel/rules:prebuilt_file.bzl", "prebuilt_file")
-load(":apex.bzl", "apex", "ApexInfo")
+load(":apex.bzl", "ApexInfo", "apex")
 load(":apex_key.bzl", "apex_key")
 load("@bazel_skylib//lib:unittest.bzl", "analysistest", "asserts")
 load("@bazel_skylib//lib:new_sets.bzl", "sets")
@@ -40,6 +40,7 @@ def _canned_fs_config_test(ctx):
             continue
 
         found_canned_fs_config_action = True
+
         # Don't sort -- the order is significant.
         actual_entries = a.content.split("\n")
         expected_entries = ctx.attr.expected_entries
@@ -110,13 +111,12 @@ def setup_apex_required_deps():
     )
 
 def test_apex(
-    name,
-    file_contexts = None,
-    key = None,
-    manifest = None,
-    certificate = None,
-    **kwargs):
-
+        name,
+        file_contexts = None,
+        key = None,
+        manifest = None,
+        certificate = None,
+        **kwargs):
     names = setup_apex_required_deps()
     apex(
         name = name,
@@ -125,9 +125,8 @@ def test_apex(
         manifest = manifest or names.manifest_name,
         certificate = certificate or names.certificate_name,
         tags = ["manual"],
-        **kwargs,
+        **kwargs
     )
-
 
 def _test_canned_fs_config_basic():
     name = "apex_canned_fs_config_basic"
@@ -142,7 +141,7 @@ def _test_canned_fs_config_basic():
             "/ 1000 1000 0755",
             "/apex_manifest.json 1000 1000 0644",
             "/apex_manifest.pb 1000 1000 0644",
-            "", # ends with a newline
+            "",  # ends with a newline
         ],
     )
 
@@ -179,7 +178,7 @@ def _test_canned_fs_config_binaries():
             "/bin/bin_cc 0 2000 0755",
             "/bin/bin_sh 0 2000 0755",
             "/bin 0 2000 0755",
-            "", # ends with a newline
+            "",  # ends with a newline
         ],
     )
 
@@ -217,7 +216,7 @@ def _test_canned_fs_config_native_shared_libs_arm():
             "/lib/apex_canned_fs_config_native_shared_libs_arm_lib_cc.so 1000 1000 0644",
             "/lib/libc++.so 1000 1000 0644",
             "/lib 0 2000 0755",
-            "", # ends with a newline
+            "",  # ends with a newline
         ],
         target_compatible_with = ["//build/bazel/platforms/arch:arm"],
     )
@@ -259,7 +258,7 @@ def _test_canned_fs_config_native_shared_libs_arm64():
             "/lib64/libc++.so 1000 1000 0644",
             "/lib 0 2000 0755",
             "/lib64 0 2000 0755",
-            "", # ends with a newline
+            "",  # ends with a newline
         ],
         target_compatible_with = ["//build/bazel/platforms/arch:arm64"],
     )
@@ -313,7 +312,7 @@ def _test_canned_fs_config_prebuilts():
             "/etc/renamed_file3.txt 1000 1000 0644",
             "/etc 0 2000 0755",
             "/etc/nested 0 2000 0755",
-            "", # ends with a newline
+            "",  # ends with a newline
         ],
     )
 
@@ -367,12 +366,11 @@ def _test_canned_fs_config_prebuilts_sort_order():
             "/etc/a 0 2000 0755",
             "/etc/a/c 0 2000 0755",
             "/etc/b 0 2000 0755",
-            "", # ends with a newline
+            "",  # ends with a newline
         ],
     )
 
     return test_name
-
 
 def _apex_manifest_test(ctx):
     env = analysistest.begin(ctx)
@@ -411,7 +409,7 @@ apex_manifest_test = analysistest.make(
     _apex_manifest_test,
     attrs = {
         "expected_min_sdk_version": attr.string(),
-    }
+    },
 )
 
 def _test_apex_manifest():
@@ -466,8 +464,8 @@ def _apex_native_libs_requires_provides_test(ctx):
     target_under_test = analysistest.target_under_test(env)
     asserts.equals(
         env,
-        sorted([t.label for t in ctx.attr.requires_native_libs]), # expected
-        sorted(target_under_test[ApexInfo].requires_native_libs), # actual
+        sorted([t.label for t in ctx.attr.requires_native_libs]),  # expected
+        sorted(target_under_test[ApexInfo].requires_native_libs),  # actual
     )
     asserts.equals(
         env,
@@ -485,8 +483,8 @@ def _apex_native_libs_requires_provides_test(ctx):
     for idx, requires in enumerate(ctx.attr.requires_native_libs):
         asserts.equals(
             env,
-            requires.label.name + ".so", # expected
-            action.argv[requires_argv_index + idx], # actual
+            requires.label.name + ".so",  # expected
+            action.argv[requires_argv_index + idx],  # actual
         )
 
     for idx, provides in enumerate(ctx.attr.provides_native_libs):
@@ -505,7 +503,7 @@ apex_native_libs_requires_provides_test = analysistest.make(
         "provides_native_libs": attr.label_list(),
         "requires_argv": attr.string_list(),
         "provides_argv": attr.string_list(),
-    }
+    },
 )
 
 def _test_apex_manifest_dependencies_nodep():
@@ -774,7 +772,7 @@ apexer_args_test = analysistest.make(
     _apexer_args_test,
     attrs = {
         "expected_args": attr.string_list(mandatory = True),
-    }
+    },
 )
 
 def _test_logging_parent_flag():
@@ -802,6 +800,7 @@ def _file_contexts_args_test(ctx):
     actions = analysistest.target_actions(env)
 
     file_contexts_action = [a for a in actions if a.mnemonic == "GenerateApexFileContexts"][0]
+
     # GenerateApexFileContexts is a run_shell action.
     # ["/bin/bash", "c", "<args>"]
     cmd = file_contexts_action.argv[2]
@@ -819,7 +818,7 @@ file_contexts_args_test = analysistest.make(
     _file_contexts_args_test,
     attrs = {
         "expected_args": attr.string_list(mandatory = True),
-    }
+    },
 )
 
 def _test_generate_file_contexts():

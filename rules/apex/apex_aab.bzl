@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
 load(":apex.bzl", "ApexInfo")
 
 def _arch_transition_impl(settings, attr):
@@ -53,6 +54,7 @@ _arch_abi_map = {
 
 def _apex_proto_convert(ctx, arch, module_name, apex_file):
     """Run 'aapt2 convert' to convert resource files to protobuf format."""
+
     # Inputs
     inputs = [
         apex_file,
@@ -65,7 +67,8 @@ def _apex_proto_convert(ctx, arch, module_name, apex_file):
     proto_convert_file = ctx.actions.declare_file("/".join([
         module_name,
         arch,
-        filename[:pos_dot] + ".pb" + filename[pos_dot:]]))
+        filename[:pos_dot] + ".pb" + filename[pos_dot:],
+    ]))
     outputs = [proto_convert_file]
 
     # Arguments
@@ -203,6 +206,7 @@ def _apex_aab_impl(ctx):
         proto_convert_file = _apex_proto_convert(ctx, arch, module_name, apex_file)
         base_file = _apex_base_file(ctx, arch, module_name, proto_convert_file)
         apex_base_files.append(base_file)
+
         # It is assumed that the bundle config is the same for all products.
         if bundle_config_file == None:
             bundle_config_file = _build_bundle_config(ctx, arch, module_name)
