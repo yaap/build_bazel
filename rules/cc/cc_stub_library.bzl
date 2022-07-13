@@ -24,8 +24,8 @@ CcStubInfo = provider(
     fields = {
         "stub_map": "The .map file containing library symbols for the specific API version.",
         "version": "The API version of this library.",
-        "abi_symbol_list": "A plain-text list of all symbols of this library for the specific API version."
-    }
+        "abi_symbol_list": "A plain-text list of all symbols of this library for the specific API version.",
+    },
 )
 
 def _cc_stub_gen_impl(ctx):
@@ -45,6 +45,7 @@ def _cc_stub_gen_impl(ctx):
     ndkstubgen_args.add_all(["--arch", arch])
     ndkstubgen_args.add_all(["--api", ctx.attr.version])
     ndkstubgen_args.add_all(["--api-map", ctx.file._api_levels_file])
+
     # TODO(b/207812332): This always parses and builds the stub library as a dependency of an APEX. Parameterize this
     # for non-APEX use cases.
     ndkstubgen_args.add_all(["--apex", ctx.file.symbol_file])
@@ -81,4 +82,3 @@ cc_stub_gen = rule(
         "_ndkstubgen": attr.label(default = "//build/soong/cc/ndkstubgen", executable = True, cfg = "host"),
     }, ARCH_CONSTRAINT_ATTRS),
 )
-

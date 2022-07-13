@@ -26,11 +26,13 @@ ARCH_CONSTRAINT_ATTRS = {
 # of the target platform by executing the target_platform_has_constraint boilerplate.
 def get_arch(ctx):
     if not hasattr(ctx.attr, "_x86_constraint") or \
-      not hasattr(ctx.attr, "_x86_64_constraint") or \
-      not hasattr(ctx.attr, "_arm_constraint") or \
-      not hasattr(ctx.attr, "_arm64_constraint"):
-      fail("Could not get the target architecture of this rule due to missing constraint attrs.",
-           "Have you merged ARCH_CONSTRAINT_ATTRS into this rule's attributes?")
+       not hasattr(ctx.attr, "_x86_64_constraint") or \
+       not hasattr(ctx.attr, "_arm_constraint") or \
+       not hasattr(ctx.attr, "_arm64_constraint"):
+        fail(
+            "Could not get the target architecture of this rule due to missing constraint attrs.",
+            "Have you merged ARCH_CONSTRAINT_ATTRS into this rule's attributes?",
+        )
 
     x86_constraint = ctx.attr._x86_constraint[platform_common.ConstraintValueInfo]
     x86_64_constraint = ctx.attr._x86_64_constraint[platform_common.ConstraintValueInfo]
