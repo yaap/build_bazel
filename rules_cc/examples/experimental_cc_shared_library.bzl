@@ -223,7 +223,6 @@ def _filter_inputs(
         dependency_linker_inputs.extend(export[CcInfo].linking_context.linker_inputs.to_list())
         graph_structure_aspect_nodes.append(export[GraphNodeInfo])
 
-
     can_be_linked_dynamically = {}
     for linker_input in dependency_linker_inputs:
         owner = str(linker_input.owner)
@@ -417,7 +416,6 @@ def _collect_graph_structure_info_from_children(ctx, attr):
         # Single dep.
         children.append(deps[GraphNodeInfo])
     return children
-
 
 def _graph_structure_aspect_impl(target, ctx):
     children = []
