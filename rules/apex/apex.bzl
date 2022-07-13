@@ -109,6 +109,7 @@ def _create_file_mapping(ctx):
         elif ApexCcInfo in dep:
             # cc_binary just takes the final executable from the runfiles.
             file_mapping[dep[DefaultInfo].files_to_run.executable] = paths.join("bin", dep.label.name)
+
             # a cc_binary's transitive closure can also contribute to the list of provided
             # or required libs
             for lib in dep[ApexCcInfo].requires_native_libs.to_list():
@@ -122,21 +123,23 @@ def _add_so(label):
     return label.name + ".so"
 
 def _add_apex_manifest_information(
-    ctx,
-    apex_toolchain,
-    requires_native_libs,
-    provides_native_libs):
+        ctx,
+        apex_toolchain,
+        requires_native_libs,
+        provides_native_libs):
     apex_manifest_json = ctx.file.manifest
     apex_manifest_full_json = ctx.actions.declare_file(ctx.attr.name + "_apex_manifest_full.json")
 
     args = ctx.actions.args()
     args.add(apex_manifest_json)
     args.add_all(["-a", "requireNativeLibs"])
-    args.add_all(requires_native_libs, map_each = _add_so) # e.g. turn "//foo/bar:baz" to "baz.so"
+    args.add_all(requires_native_libs, map_each = _add_so)  # e.g. turn "//foo/bar:baz" to "baz.so"
     args.add_all(["-a", "provideNativeLibs"])
     args.add_all(provides_native_libs, map_each = _add_so)
+
     # TODO(b/238153998): harcoding version to solve build errors, to be replaced with per-branch config
     args.add_all(["-se", "version", "0", "339990000"])
+
     # TODO: support other optional flags like -v name and -a jniLibs
     args.add_all(["-o", apex_manifest_full_json])
 
@@ -186,10 +189,10 @@ def _generate_canned_fs_config(ctx, filepaths):
     apex_subdirs_set = {}
     for f in filepaths:
         d = paths.dirname(f)
-        if d != "": # The root dir is handled manually below
+        if d != "":  # The root dir is handled manually below
             # Make sure all the parent dirs of the current subdir are in the set, too
             dirs = d.split("/")
-            for i in range(1, len(dirs)+1):
+            for i in range(1, len(dirs) + 1):
                 apex_subdirs_set["/".join(dirs[:i])] = True
 
     # The order of entries is significant. Later entries are preferred over
@@ -210,8 +213,8 @@ def _generate_canned_fs_config(ctx, filepaths):
     # All directories have the same permission.
     config_lines += ["/" + d + " 0 2000 0755" for d in sorted(apex_subdirs_set.keys())]
 
-    file = ctx.actions.declare_file(ctx.attr.name + '_canned_fs_config.txt')
-    ctx.actions.write(file, '\n'.join(config_lines) + '\n')
+    file = ctx.actions.declare_file(ctx.attr.name + "_canned_fs_config.txt")
+    ctx.actions.write(file, "\n".join(config_lines) + "\n")
 
     return file
 
@@ -226,13 +229,9 @@ def _generate_file_contexts(ctx):
         inputs = [ctx.file.file_contexts],
         outputs = [file_contexts],
         mnemonic = "GenerateApexFileContexts",
-        command = " ".join([
-            "cat", ctx.file.file_contexts.path, ">", file_contexts.path,
-            "&&", "echo", ">>", file_contexts.path,
-            "&&", "echo", "/apex_manifest\\\\.pb u:object_r:system_file:s0", ">>", file_contexts.path,
-            "&&", "echo", "/ u:object_r:system_file:s0", ">>", file_contexts.path,
-        ]
-    ))
+        command = "cat {i} > {o} && echo >> {o} && echo /apex_manifest\\\\.pb u:object_r:system_file:s0 >> {o} && echo / u:object_r:system_file:s0 >> {o}"
+            .format(i = ctx.file.file_contexts.path, o = file_contexts.path),
+    )
 
     return file_contexts
 
@@ -251,8 +250,8 @@ def _run_apexer(ctx, apex_toolchain):
     full_apex_manifest_json = _add_apex_manifest_information(ctx, apex_toolchain, requires_native_libs, provides_native_libs)
     apex_manifest_pb = _convert_apex_manifest_json_to_pb(ctx, apex_toolchain, full_apex_manifest_json)
 
-    file_mapping_file = ctx.actions.declare_file(ctx.attr.name + '_apex_file_mapping.json')
-    ctx.actions.write(file_mapping_file, json.encode({k.path: v for k,v in file_mapping.items()}))
+    file_mapping_file = ctx.actions.declare_file(ctx.attr.name + "_apex_file_mapping.json")
+    ctx.actions.write(file_mapping_file, json.encode({k.path: v for k, v in file_mapping.items()}))
 
     # Outputs
     apex_output_file = ctx.actions.declare_file(ctx.attr.name + ".apex.unsigned")
@@ -265,16 +264,16 @@ def _run_apexer(ctx, apex_toolchain):
     args.add(apexer_files.executable.path)
     if ctx.attr._apexer_verbose[BuildSettingInfo].value:
         args.add("--verbose")
-    args.add('--force')
-    args.add('--include_build_info')
-    args.add_all(['--canned_fs_config', canned_fs_config.path])
+    args.add("--force")
+    args.add("--include_build_info")
+    args.add_all(["--canned_fs_config", canned_fs_config.path])
     args.add_all(["--manifest", apex_manifest_pb.path])
     args.add_all(["--file_contexts", file_contexts.path])
     args.add_all(["--key", privkey.path])
     args.add_all(["--pubkey", pubkey.path])
-    args.add_all(['--payload_type', 'image'])
-    args.add_all(['--target_sdk_version', '10000'])
-    args.add_all(['--payload_fs_type', 'ext4'])
+    args.add_all(["--payload_type", "image"])
+    args.add_all(["--target_sdk_version", "10000"])
+    args.add_all(["--payload_fs_type", "ext4"])
 
     # Override the package name, if it's expicitly specified
     if ctx.attr.package_name:
