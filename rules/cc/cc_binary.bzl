@@ -93,7 +93,7 @@ def cc_binary(
     else:
         system_static_deps = system_deps
 
-    stl = stl_deps(stl, linkshared, is_binary=True)
+    stl = stl_deps(stl, linkshared, is_binary = True)
 
     # The static library at the root of the shared library.
     # This may be distinct from the static version of the library if e.g.
@@ -107,7 +107,8 @@ def cc_binary(
         copts = copts,
         cpp_std = cpp_std,
         cppflags = cppflags,
-        deps = deps + whole_archive_deps + stl.static + system_static_deps,
+        deps = deps + stl.static + system_static_deps,
+        whole_archive_deps = whole_archive_deps,
         dynamic_deps = dynamic_deps + stl.shared,
         features = toolchain_features,
         local_includes = local_includes,
@@ -153,6 +154,5 @@ def cc_binary(
         src = versioned_name,
         target_compatible_with = target_compatible_with,
         tags = tags,
-        **strip,
+        **strip
     )
-
