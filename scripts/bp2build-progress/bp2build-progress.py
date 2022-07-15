@@ -34,7 +34,6 @@ import collections
 import datetime
 import dependency_analysis
 import os.path
-import queue
 import subprocess
 import sys
 
@@ -204,16 +203,30 @@ def adjacency_list_from_json(module_graph, ignore_by_name, top_level_module):
     return json["Name"] == top_level_module
 
   module_adjacency_list = collections.defaultdict(set)
+  name_to_info = {}
 
-  def collect_dependencies(module, deps_names):
-    module_info = _ModuleInfo(
-        name=module["Name"],
-        kind=module["Type"],
-        dirname=os.path.dirname(module["Blueprint"]))
+  def collect_transitive_dependencies(module, deps_names):
+    module_info = None
+    name = module["Name"]
+    name_to_info.setdefault(
+        name,
+        _ModuleInfo(
+            name=name,
+            kind=module["Type"],
+            dirname=os.path.dirname(module["Blueprint"]),
+        ))
+    module_info = name_to_info[name]
+
     module_adjacency_list[module_info].update(deps_names)
+    # account for transitive deps
+    for dep in deps_names:
+      dep_module_info = name_to_info[dep]
+      module_adjacency_list[module_info].update(
+          module_adjacency_list.get(dep_module_info, set()))
 
   dependency_analysis.visit_json_module_graph_post_order(
-      module_graph, ignore_by_name, filter_by_name, collect_dependencies)
+      module_graph, ignore_by_name, filter_by_name,
+      collect_transitive_dependencies)
 
   return module_adjacency_list
 
@@ -225,17 +238,28 @@ def adjacency_list_from_queryview_xml(module_graph, ignore_by_name,
     return module.name == top_level_module
 
   module_adjacency_list = collections.defaultdict(set)
+  name_to_info = {}
 
-  def collect_dependencies(module, deps_names):
-    module_info = _ModuleInfo(
-        name=module.name,
-        kind=module.kind,
-        dirname=module.dirname,
-    )
+  def collect_transitive_dependencies(module, deps_names):
+    module_info = None
+    name_to_info.setdefault(
+        module.name,
+        _ModuleInfo(
+            name=module.name,
+            kind=module.kind,
+            dirname=module.dirname,
+        ))
+    module_info = name_to_info[module.name]
+
     module_adjacency_list[module_info].update(deps_names)
+    for dep in deps_names:
+      dep_module_info = name_to_info[dep]
+      module_adjacency_list[module_info].update(
+          module_adjacency_list.get(dep_module_info, set()))
 
   dependency_analysis.visit_queryview_xml_module_graph_post_order(
-      module_graph, ignore_by_name, filter_by_name, collect_dependencies)
+      module_graph, ignore_by_name, filter_by_name,
+      collect_transitive_dependencies)
 
   return module_adjacency_list
 
