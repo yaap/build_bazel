@@ -36,7 +36,7 @@ IGNORED_KINDS = set([
 
 # queryview doesn't have information on the type of deps, so we explicitly skip
 # prebuilt types
-QUERYVIEW_IGNORE_KINDS = set([
+_QUERYVIEW_IGNORE_KINDS = set([
     "android_app_import",
     "android_library_import",
     "cc_prebuilt_library",
@@ -127,8 +127,8 @@ JSONDecodeError: {err}""".format(
     exit(1)
 
 
-def module_graph_from_json(module_graph, ignore_by_name, filter_predicate,
-                           visit):
+def visit_json_module_graph_post_order(module_graph, ignore_by_name,
+                                       filter_predicate, visit):
   # The set of ignored modules. These modules (and their dependencies) are not shown
   # in the graph or report.
   ignored = set()
@@ -172,6 +172,121 @@ def module_graph_from_json(module_graph, ignore_by_name, filter_predicate,
 
   for module_name in root_module_names:
     json_module_graph_post_traversal(module_name)
+
+
+QueryviewModule = collections.namedtuple("QueryviewModule", [
+    "name",
+    "kind",
+    "variant",
+    "dirname",
+    "deps",
+    "srcs",
+])
+
+
+def _bazel_target_to_dir(full_target):
+  dirname, _ = full_target.split(":")
+  return dirname[len("//"):]  # discard prefix
+
+
+def _get_queryview_module(name_with_variant, module, kind):
+  name = None
+  variant = ""
+  deps = []
+  srcs = []
+  for attr in module:
+    attr_name = attr.attrib["name"]
+    if attr.tag == "rule-input":
+      deps.append(attr_name)
+    elif attr_name == "soong_module_name":
+      name = attr.attrib["value"]
+    elif attr_name == "soong_module_variant":
+      variant = attr.attrib["value"]
+    elif attr_name == "soong_module_type" and kind == "generic_soong_module":
+      kind = attr.attrib["value"]
+    elif attr_name == "srcs":
+      for item in attr:
+        srcs.append(item.attrib["value"])
+
+  return QueryviewModule(
+      name=name,
+      kind=kind,
+      variant=variant,
+      dirname=_bazel_target_to_dir(name_with_variant),
+      deps=deps,
+      srcs=srcs,
+  )
+
+
+def _ignore_queryview_module(module, ignore_by_name):
+  if module.name in ignore_by_name:
+    return True
+  if ignore_kind(module.kind, extra_kinds=_QUERYVIEW_IGNORE_KINDS):
+    return True
+  # special handling for filegroup srcs, if a source has the same name as
+  # the filegroup module, we don't convert it
+  if module.kind == "filegroup" and module.name in module.srcs:
+    return True
+  return module.variant.startswith("windows")
+
+
+def visit_queryview_xml_module_graph_post_order(module_graph, ignored_by_name,
+                                                filter_predicate, visit):
+  # The set of ignored modules. These modules (and their dependencies) are
+  # not shown in the graph or report.
+  ignored = set()
+
+  # queryview embeds variant in long name, keep a map of the name with vaiarnt
+  # to just name
+  name_with_variant_to_name = dict()
+
+  module_graph_map = dict()
+  to_visit = []
+
+  for module in module_graph:
+    ignore = False
+    if module.tag != "rule":
+      continue
+    kind = module.attrib["class"]
+    name_with_variant = module.attrib["name"]
+
+    qv_module = _get_queryview_module(name_with_variant, module, kind)
+
+    if _ignore_queryview_module(qv_module, ignored_by_name):
+      ignored.add(name_with_variant)
+      continue
+
+    if filter_predicate(qv_module):
+      to_visit.append(name_with_variant)
+
+    name_with_variant_to_name.setdefault(name_with_variant, qv_module.name)
+    module_graph_map[name_with_variant] = qv_module
+
+  visited = set()
+
+  def queryview_module_graph_post_traversal(name_with_variant):
+    module = module_graph_map[name_with_variant]
+    if name_with_variant in ignored or name_with_variant in visited:
+      return
+    visited.add(name_with_variant)
+
+    name = name_with_variant_to_name[name_with_variant]
+
+    deps = set()
+    for dep_name_with_variant in module.deps:
+      if dep_name_with_variant in ignored:
+        continue
+      dep_name = name_with_variant_to_name[dep_name_with_variant]
+      if dep_name_with_variant not in visited:
+        queryview_module_graph_post_traversal(dep_name_with_variant)
+
+      if name != dep_name:
+        deps.add(dep_name)
+
+    visit(module, deps)
+
+  for name_with_variant in to_visit:
+    queryview_module_graph_post_traversal(name_with_variant)
 
 
 def get_bp2build_converted_modules():
