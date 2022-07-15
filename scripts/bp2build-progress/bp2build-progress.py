@@ -212,102 +212,30 @@ def adjacency_list_from_json(module_graph, ignore_by_name, top_level_module):
         dirname=os.path.dirname(module["Blueprint"]))
     module_adjacency_list[module_info].update(deps_names)
 
-  dependency_analysis.module_graph_from_json(module_graph, ignore_by_name,
-                                             filter_by_name,
-                                             collect_dependencies)
+  dependency_analysis.visit_json_module_graph_post_order(
+      module_graph, ignore_by_name, filter_by_name, collect_dependencies)
 
   return module_adjacency_list
 
 
-def bazel_target_to_dir(full_target):
-  dirname, _ = full_target.split(":")
-  return dirname[2:]
-
-
 def adjacency_list_from_queryview_xml(module_graph, ignore_by_name,
                                       top_level_module):
-  # The set of ignored modules. These modules (and their dependencies) are
-  # not shown in the graph or report.
-  ignored = set()
 
-  # A map of module name to ModuleInfo
-  name_to_info = dict()
+  def filter_by_name(module):
+    return module.name == top_level_module
 
-  # queryview embeds variant in long name, keep a map of the name with vaiarnt
-  # to just name
-  name_with_variant_to_name = dict()
+  module_adjacency_list = collections.defaultdict(set)
 
-  module_graph_map = dict()
-  q = queue.Queue()
+  def collect_dependencies(module, deps_names):
+    module_info = _ModuleInfo(
+        name=module.name,
+        kind=module.kind,
+        dirname=module.dirname,
+    )
+    module_adjacency_list[module_info].update(deps_names)
 
-  for module in module_graph:
-    ignore = False
-    if module.tag != "rule":
-      continue
-    kind = module.attrib["class"]
-    name_with_variant = module.attrib["name"]
-    name = None
-    variant = ""
-    for attr in module:
-      attr_name = attr.attrib["name"]
-      if attr_name == "soong_module_name":
-        name = attr.attrib["value"]
-      elif attr_name == "soong_module_variant":
-        variant = attr.attrib["value"]
-      elif attr_name == "soong_module_type" and kind == "generic_soong_module":
-        kind = attr.attrib["value"]
-      # special handling for filegroup srcs, if a source has the same name as
-      # the module, we don't convert it
-      elif kind == "filegroup" and attr_name == "srcs":
-        for item in attr:
-          if item.attrib["value"] == name:
-            ignore = True
-    if name in ignore_by_name:
-      ignore = True
-
-    if dependency_analysis.ignore_kind(
-        kind, extra_kinds=dependency_analysis.QUERYVIEW_IGNORE_KINDS
-    ) or variant.startswith("windows") or ignore:
-      ignored.add(name_with_variant)
-    else:
-      if name == top_level_module:
-        q.put(name_with_variant)
-      name_with_variant_to_name.setdefault(name_with_variant, name)
-      name_to_info.setdefault(
-          name,
-          _ModuleInfo(
-              name=name,
-              kind=kind,
-              dirname=bazel_target_to_dir(name_with_variant),
-          ))
-      module_graph_map[name_with_variant] = module
-
-  # An adjacency list for all modules in the transitive closure, excluding ignored modules.
-  module_adjacency_list = {}
-  visited = set()
-  while not q.empty():
-    name_with_variant = q.get()
-    module = module_graph_map[name_with_variant]
-    if module.tag != "rule":
-      continue
-    visited.add(name_with_variant)
-    if name_with_variant in ignored:
-      continue
-
-    name = name_with_variant_to_name[name_with_variant]
-    module_info = name_to_info[name]
-    module_adjacency_list.setdefault(module_info, set())
-    for attr in module:
-      if attr.tag != "rule-input":
-        continue
-      dep_name_with_variant = attr.attrib["name"]
-      if dep_name_with_variant in ignored:
-        continue
-      dep_name = name_with_variant_to_name[dep_name_with_variant]
-      if dep_name_with_variant not in visited:
-        q.put(dep_name_with_variant)
-      if name != dep_name:
-        module_adjacency_list[module_info].add(dep_name)
+  dependency_analysis.visit_queryview_xml_module_graph_post_order(
+      module_graph, ignore_by_name, filter_by_name, collect_dependencies)
 
   return module_adjacency_list
 
