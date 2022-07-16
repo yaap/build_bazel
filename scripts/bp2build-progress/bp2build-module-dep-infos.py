@@ -120,8 +120,8 @@ def module_type_info_from_json(module_graph, module_type, ignored_dep_names):
     # transitive dependencies and the module itself
     type_infos[module_name] = info
 
-  dependency_analysis.module_graph_from_json(module_graph, ignored_dep_names,
-                                             filter_by_type, update_infos)
+  dependency_analysis.visit_json_module_graph_post_order(
+      module_graph, ignored_dep_names, filter_by_type, update_infos)
 
   return {
       name: info for name, info in type_infos.items() if name in modules_of_type
@@ -156,10 +156,11 @@ def main():
     writer.writerow([
         module,
         ("[\"%s\"]" % '"\n"'.join([
-            "%s: %s" % (mtype, ",".join(sorted(properties))) for mtype, properties in
-            sorted(module_type_info.type_to_properties.items())
+            "%s: %s" % (mtype, ",".join(sorted(properties))) for mtype,
+            properties in sorted(module_type_info.type_to_properties.items())
         ]) if len(module_type_info.type_to_properties) else "[]"),
-        ("[\"%s\"]" % '", "'.join(sorted(module_type_info.java_source_extensions))
+        ("[\"%s\"]" %
+         '", "'.join(sorted(module_type_info.java_source_extensions))
          if len(module_type_info.java_source_extensions) else "[]"),
     ])
 
