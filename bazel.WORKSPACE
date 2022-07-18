@@ -106,3 +106,24 @@ local_repository(
     name = "remote_coverage_tools",
     path = "build/bazel/rules/coverage/remote_coverage_tools",
 )
+
+# The following 2 repositories contain prebuilts that are necessary to the Java Rules.
+# They are vendored locally to avoid the need for CI bots to download them.
+local_repository(
+    name = "remote_java_tools",
+    path = "prebuilts/bazel/common/remote_java_tools",
+)
+
+local_repository(
+    name = "remote_java_tools_linux",
+    path = "prebuilts/bazel/linux-x86_64/remote_java_tools_linux",
+)
+
+# The rules_java repository is stubbed and points to the native Java rules until
+# it can be properly vendored.
+local_repository(
+    name = "rules_java",
+    path = "build/bazel/rules/java/rules_java",
+)
+
+register_toolchains("@local_jdk//:all")
