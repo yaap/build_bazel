@@ -36,6 +36,8 @@ import dependency_analysis
 import os.path
 import subprocess
 import sys
+import xml
+from typing import Dict, List, Set
 
 _ModuleInfo = collections.namedtuple("_ModuleInfo", [
     "name",
@@ -76,23 +78,11 @@ def combine_report_data(data):
 
 
 # Generate a dot file containing the transitive closure of the module.
-def generate_dot_file(modules, converted, module):
-  DOT_TEMPLATE = """
-digraph mygraph {{
-  node [shape=box];
-
-  %s
-}}
-"""
-
-  make_node = lambda module, color: \
-      ('"{name}" [label="{name}\\n{kind}" color=black, style=filled, '
-       "fillcolor={color}]").format(name=module.name, kind=module.kind, color=color)
-  make_edge = lambda module, dep: \
-      '"%s" -> "%s"' % (module.name, dep)
-
+def generate_dot_file(
+    modules: Dict[_ModuleInfo, Set[str]],
+    converted: Set[str]):
   # Check that all modules in the argument are in the list of converted modules
-  all_converted = lambda modules: all(map(lambda m: m in converted, modules))
+  all_converted = lambda modules: all(m in converted for m in modules)
 
   dot_entries = []
 
@@ -100,19 +90,19 @@ digraph mygraph {{
     if module.name in converted:
       # Skip converted modules (nodes)
       continue
-    elif module.name not in converted:
-      if all_converted(deps):
-        dot_entries.append(make_node(module, "yellow"))
-      else:
-        dot_entries.append(make_node(module, "tomato"))
 
-    # Print all edges for this module
-    for dep in list(deps):
-      # Skip converted deps (edges)
-      if dep not in converted:
-        dot_entries.append(make_edge(module, dep))
+    dot_entries.append(
+        f'"{module.name}" [label="{module.name}\\n{module.kind}" color=black, style=filled, '
+        f"fillcolor={'yellow' if all_converted(deps) else 'tomato'}]")
+    dot_entries.extend(f'"{module.name}" -> "{dep}"' for dep in deps if dep not in converted)
 
-  print(DOT_TEMPLATE % "\n  ".join(dot_entries))
+  print("""
+digraph mygraph {{
+  node [shape=box];
+
+  %s
+}}
+""" % "\n  ".join(dot_entries))
 
 
 # Generate a report for each module in the transitive closure, and the blockers for each module
@@ -197,8 +187,10 @@ def generate_report(report_data):
   print("\n".join(report_lines))
 
 
-def adjacency_list_from_json(module_graph, ignore_by_name, top_level_module):
-
+def adjacency_list_from_json(
+    module_graph: ...,
+    ignore_by_name: List[str],
+    top_level_module: str) -> Dict[_ModuleInfo, Set[str]]:
   def filter_by_name(json):
     return json["Name"] == top_level_module
 
@@ -231,8 +223,10 @@ def adjacency_list_from_json(module_graph, ignore_by_name, top_level_module):
   return module_adjacency_list
 
 
-def adjacency_list_from_queryview_xml(module_graph, ignore_by_name,
-                                      top_level_module):
+def adjacency_list_from_queryview_xml(
+    module_graph: xml.etree.ElementTree,
+    ignore_by_name: List[str],
+    top_level_module: str) -> Dict[_ModuleInfo, Set[str]]:
 
   def filter_by_name(module):
     return module.name == top_level_module
@@ -264,86 +258,76 @@ def adjacency_list_from_queryview_xml(module_graph, ignore_by_name,
   return module_adjacency_list
 
 
-def get_module_adjacency_list(top_level_module, use_queryview, ignore_by_name,
-                              banchan_mode):
+def get_module_adjacency_list(
+    top_level_module: str,
+    use_queryview: bool,
+    ignore_by_name: List[str],
+    banchan_mode: bool) -> Dict[_ModuleInfo, Set[str]]:
   # The main module graph containing _all_ modules in the Soong build,
   # and the list of converted modules.
   try:
-    module_graph = dependency_analysis.get_queryview_module_info(
-        top_level_module, banchan_mode
-    ) if use_queryview else dependency_analysis.get_json_module_info(
-        top_level_module, banchan_mode)
-    converted = dependency_analysis.get_bp2build_converted_modules()
+    if use_queryview:
+      module_graph = dependency_analysis.get_queryview_module_info(
+          top_level_module, banchan_mode)
+      module_adjacency_list = adjacency_list_from_queryview_xml(
+          module_graph, ignore_by_name, top_level_module)
+    else:
+      module_graph = dependency_analysis.get_json_module_info(
+          top_level_module, banchan_mode)
+      module_adjacency_list = adjacency_list_from_json(
+          module_graph, ignore_by_name, top_level_module)
   except subprocess.CalledProcessError as err:
-    output = err.output.decode("utf-8") if err.output else ""
-    stderr = err.stderr.decode("utf-8") if err.stderr else ""
-    err_msg = """Error running: '{cmd}':"
-Output:
-{output}
-Error:
-{stderr}""".format(
-    cmd=" ".join(err.cmd), output=output, stderr=stderr)
-    print(err_msg, file=sys.stderr)
-    sys.exit(-1)
+    sys.exit(f"""Error running: '{' '.join(err.cmd)}':"
+Stdout:
+{err.stdout.decode('utf-8') if err.stdout else ''}
+Stderr:
+{err.stderr.decode('utf-8') if err.stderr else ''}""")
 
-  module_adjacency_list = None
-  if use_queryview:
-    module_adjacency_list = adjacency_list_from_queryview_xml(
-        module_graph, ignore_by_name, top_level_module)
-  else:
-    module_adjacency_list = adjacency_list_from_json(module_graph,
-                                                     ignore_by_name,
-                                                     top_level_module)
-
-  return module_adjacency_list, converted
+  return module_adjacency_list
 
 
 def main():
-  parser = argparse.ArgumentParser(description="")
+  parser = argparse.ArgumentParser()
   parser.add_argument("mode", help="mode: graph or report")
   parser.add_argument(
       "--module",
       "-m",
       action="append",
+      required=True,
       help="name(s) of Soong module(s). Multiple modules only supported for report"
   )
   parser.add_argument(
-      "--use_queryview",
-      type=bool,
-      default=False,
-      required=False,
+      "--use-queryview",
+      action="store_true",
       help="whether to use queryview or module_info")
   parser.add_argument(
-      "--ignore_by_name",
-      type=str,
+      "--ignore-by-name",
       default="",
-      required=False,
       help="Comma-separated list. When building the tree of transitive dependencies, will not follow dependency edges pointing to module names listed by this flag."
   )
   parser.add_argument(
       "--banchan",
-      type=bool,
-      default=False,
-      required=False,
+      action="store_true",
       help="whether to run Soong in a banchan configuration rather than lunch",
   )
   args = parser.parse_args()
 
   if len(args.module) > 1 and args.mode != "report":
-    print("Can only support one module with mode {}", args.mode)
+    sys.exit(f"Can only support one module with mode {args.mode}")
 
   mode = args.mode
   use_queryview = args.use_queryview
-  ignore_by_name = args.ignore_by_name
+  ignore_by_name = args.ignore_by_name.split(",")
   banchan_mode = args.banchan
 
   report_infos = []
   for top_level_module in args.module:
-    module_adjacency_list, converted = get_module_adjacency_list(
+    module_adjacency_list = get_module_adjacency_list(
         top_level_module, use_queryview, ignore_by_name, banchan_mode)
+    converted = dependency_analysis.get_bp2build_converted_modules()
 
     if mode == "graph":
-      generate_dot_file(module_adjacency_list, converted, top_level_module)
+      generate_dot_file(module_adjacency_list, converted)
     elif mode == "report":
       report_infos.append(
           generate_report_data(module_adjacency_list, converted,
