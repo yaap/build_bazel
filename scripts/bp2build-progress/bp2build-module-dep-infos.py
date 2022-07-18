@@ -22,8 +22,7 @@ name, or the dependency tag name.
 
 Usage:
   ./bp2build-module-dep-infos.py -m <module type>
-                                 --ignore_by_name <modules to ignore>
-                                 --ignore_by_tag <dependency tags to ignore>
+                                 --ignore-by-name <modules to ignore>
 
 """
 
@@ -129,13 +128,11 @@ def module_type_info_from_json(module_graph, module_type, ignored_dep_names):
 
 
 def main():
-  parser = argparse.ArgumentParser(description="")
-  parser.add_argument("--module_type", "-m", help="name of Soong module type.")
+  parser = argparse.ArgumentParser()
+  parser.add_argument("--module-type", "-m", help="name of Soong module type.")
   parser.add_argument(
-      "--ignore_by_name",
-      type=str,
+      "--ignore-by-name",
       default="",
-      required=False,
       help="Comma-separated list. When building the tree of transitive dependencies, will not follow dependency edges pointing to module names listed by this flag."
   )
   args = parser.parse_args()
