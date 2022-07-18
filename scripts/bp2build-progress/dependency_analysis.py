@@ -22,6 +22,7 @@ import os.path
 import subprocess
 import sys
 import xml.etree.ElementTree
+from typing import Set
 
 # This list of module types are omitted from the report and graph
 # for brevity and simplicity. Presence in this list doesn't mean
@@ -69,7 +70,6 @@ BANCHAN_ENV = {
 
 
 def _build_with_soong(target, banchan_mode=False):
-  env = BANCHAN_ENV if banchan_mode else LUNCH_ENV
   subprocess.check_output(
       [
           "build/soong/soong_ui.bash",
@@ -78,7 +78,7 @@ def _build_with_soong(target, banchan_mode=False):
           target,
       ],
       cwd=SRC_ROOT_DIR,
-      env=env,
+      env=BANCHAN_ENV if banchan_mode else LUNCH_ENV,
   )
 
 
@@ -97,12 +97,9 @@ def get_queryview_module_info(module, banchan_mode=False):
   try:
     return xml.etree.ElementTree.fromstring(queryview_xml)
   except xml.etree.ElementTree.ParseError as err:
-    error_msg = """Could not parse XML:
-{xml}
-ParseError: {err}""".format(
-    xml=queryview_xml, err=err)
-    print(error_msg, file=sys.stderr)
-    exit(1)
+    sys.exit(f"""Could not parse XML:
+{queryview_xml}
+ParseError: {err}""")
 
 
 def get_json_module_info(module, banchan_mode=False):
@@ -119,12 +116,9 @@ def get_json_module_info(module, banchan_mode=False):
   try:
     return json.loads(jq_json)
   except json.JSONDecodeError as err:
-    error_msg = """Could not decode json:
-{json}
-JSONDecodeError: {err}""".format(
-    json=jq_json, err=err)
-    print(error_msg, file=sys.stderr)
-    exit(1)
+    sys.exit(f"""Could not decode json:
+{jq_json}
+JSONDecodeError: {err}""")
 
 
 def visit_json_module_graph_post_order(module_graph, ignore_by_name,
@@ -221,7 +215,7 @@ def _get_queryview_module(name_with_variant, module, kind):
 def _ignore_queryview_module(module, ignore_by_name):
   if module.name in ignore_by_name:
     return True
-  if ignore_kind(module.kind, extra_kinds=_QUERYVIEW_IGNORE_KINDS):
+  if ignore_kind(module.kind, queryview=True):
     return True
   # special handling for filegroup srcs, if a source has the same name as
   # the filegroup module, we don't convert it
@@ -289,18 +283,18 @@ def visit_queryview_xml_module_graph_post_order(module_graph, ignored_by_name,
     queryview_module_graph_post_traversal(name_with_variant)
 
 
-def get_bp2build_converted_modules():
+def get_bp2build_converted_modules() -> Set[str]:
   """ Returns the list of modules that bp2build can currently convert. """
   _build_with_soong("bp2build")
   # Parse the list of converted module names from bp2build
   with open(
       os.path.join(
           SRC_ROOT_DIR,
-          "out/soong/soong_injection/metrics/converted_modules.txt")) as f:
+          "out/soong/soong_injection/metrics/converted_modules.txt"), 'r') as f:
     # Read line by line, excluding comments.
     # Each line is a module name.
-    ret = [line.strip() for line in f.readlines() if not line.startswith("#")]
-  return set(ret)
+    ret = set(line.strip() for line in f if not line.strip().startswith("#"))
+  return ret
 
 
 def get_json_module_type_info(module_type):
@@ -333,8 +327,10 @@ def is_windows_variation(module):
   return dep_variation_os == "windows"
 
 
-def ignore_kind(kind, extra_kinds=set()):
-  return kind in IGNORED_KINDS or "defaults" in kind or kind in extra_kinds
+def ignore_kind(kind, queryview=False):
+  if queryview and kind in _QUERYVIEW_IGNORE_KINDS:
+    return True
+  return kind in IGNORED_KINDS or "defaults" in kind
 
 
 def is_prebuilt_to_source_dep(dep):
