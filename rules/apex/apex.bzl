@@ -31,6 +31,8 @@ ApexInfo = provider(
         "requires_native_libs": "Labels of native shared libs that this apex requires.",
         "unsigned_output": "Unsigned .apex file.",
         "signed_output": "Signed .apex file.",
+        "bundle_key_pair": "APEX bundle signing public/private key pair (the value of the key: attribute).",
+        "container_key_pair": "APEX zip signing public/private key pair (the value of the certificate: attribute).",
     },
 )
 
@@ -425,6 +427,7 @@ def _apex_rule_impl(ctx):
         signed_capex = ctx.outputs.capex_output
         _run_signapk(ctx, compressed_apex_output_file, signed_capex, private_key, public_key, "BazelCompressedApexSigning")
 
+    apex_key_info = ctx.attr.key[ApexKeyInfo]
     return [
         DefaultInfo(files = depset([signed_apex])),
         ApexInfo(
@@ -432,6 +435,8 @@ def _apex_rule_impl(ctx):
             unsigned_output = unsigned_apex,
             requires_native_libs = requires_native_libs,
             provides_native_libs = provides_native_libs,
+            bundle_key_pair = [apex_key_info.public_key, apex_key_info.private_key],
+            container_key_pair = [public_key, private_key],
         ),
     ]
 
