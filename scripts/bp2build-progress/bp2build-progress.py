@@ -31,6 +31,7 @@ Example:
 
 import argparse
 import collections
+import dataclasses
 import datetime
 import dependency_analysis
 import os.path
@@ -45,8 +46,24 @@ _ModuleInfo = collections.namedtuple("_ModuleInfo", [
     "dirname",
 ])
 
+
+@dataclasses.dataclass(frozen=True, order=True)
+class _InputModule:
+  name: str
+  num_deps: int = 0
+  num_unconverted_deps: int = 0
+
+  def __str__(self):
+    total = self.num_deps
+    converted = self.num_deps - self.num_unconverted_deps
+    percent = converted / self.num_deps * 100
+    return f"{self.name}: {percent:.1f}% ({converted}/{total}) converted"
+
+
 _ReportData = collections.namedtuple("_ReportData", [
     "input_module",
+    "total_deps",
+    "unconverted_deps",
     "all_unconverted_modules",
     "blocked_modules",
     "dirs_with_unconverted_modules",
@@ -58,6 +75,8 @@ _ReportData = collections.namedtuple("_ReportData", [
 def combine_report_data(data):
   ret = _ReportData(
       input_module=set(),
+      total_deps=set(),
+      unconverted_deps=set(),
       all_unconverted_modules=collections.defaultdict(set),
       blocked_modules=collections.defaultdict(set),
       dirs_with_unconverted_modules=set(),
@@ -66,6 +85,8 @@ def combine_report_data(data):
   )
   for item in data:
     ret.input_module.add(item.input_module)
+    ret.total_deps.update(item.total_deps)
+    ret.unconverted_deps.update(item.unconverted_deps)
     for key, value in item.all_unconverted_modules.items():
       ret.all_unconverted_modules[key].update(value)
     for key, value in item.blocked_modules.items():
@@ -118,6 +139,9 @@ def generate_report_data(modules, converted, input_module):
   dirs_with_unconverted_modules = set()
   kind_of_unconverted_modules = set()
 
+  input_all_deps = set()
+  input_unconverted_deps = set()
+
   for module, deps in sorted(modules.items()):
     unconverted_deps = set(dep for dep in deps if dep not in converted)
     for dep in unconverted_deps:
@@ -134,8 +158,15 @@ def generate_report_data(modules, converted, input_module):
       dirs_with_unconverted_modules.add(module.dirname)
       kind_of_unconverted_modules.add(module.kind)
 
+    if module.name == input_module:
+      input_all_deps = deps
+      input_unconverted_deps = unconverted_deps
+
   return _ReportData(
-      input_module=input_module,
+      input_module=_InputModule(input_module, len(input_all_deps),
+                                len(input_unconverted_deps)),
+      total_deps=input_all_deps,
+      unconverted_deps=input_unconverted_deps,
       all_unconverted_modules=all_unconverted_modules,
       blocked_modules=blocked_modules,
       dirs_with_unconverted_modules=dirs_with_unconverted_modules,
@@ -146,9 +177,17 @@ def generate_report_data(modules, converted, input_module):
 
 def generate_report(report_data):
   report_lines = []
-  input_modules = sorted(report_data.input_module)
+  input_module_str = ", ".join(str(i) for i in sorted(report_data.input_module))
 
-  report_lines.append("# bp2build progress report for: %s\n" % input_modules)
+  report_lines.append("# bp2build progress report for: %s\n" % input_module_str)
+
+  total = len(report_data.total_deps)
+  unconverted = len(report_data.unconverted_deps)
+  converted = total - unconverted
+  percent = converted / total * 100
+  report_lines.append(f"Percent converted: {percent:.2f} ({converted}/{total})")
+  report_lines.append(f"Total unique unconverted dependencies: {unconverted}")
+
   report_lines.append("Ignored module types: %s\n" %
                       sorted(dependency_analysis.IGNORED_KINDS))
   report_lines.append("# Transitive dependency closure:")
@@ -159,7 +198,7 @@ def generate_report(report_data):
       report_lines.append("  " + module_string)
 
   report_lines.append("\n")
-  report_lines.append("# Unconverted deps of {}:\n".format(input_modules))
+  report_lines.append("# Unconverted deps of {}:\n".format(input_module_str))
   for count, dep in sorted(
       ((len(unconverted), dep)
        for dep, unconverted in report_data.all_unconverted_modules.items()),
