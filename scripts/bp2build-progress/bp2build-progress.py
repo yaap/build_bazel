@@ -78,9 +78,8 @@ def combine_report_data(data):
 
 
 # Generate a dot file containing the transitive closure of the module.
-def generate_dot_file(
-    modules: Dict[_ModuleInfo, Set[str]],
-    converted: Set[str]):
+def generate_dot_file(modules: Dict[_ModuleInfo, Set[str]],
+                      converted: Set[str]):
   # Check that all modules in the argument are in the list of converted modules
   all_converted = lambda modules: all(m in converted for m in modules)
 
@@ -94,7 +93,8 @@ def generate_dot_file(
     dot_entries.append(
         f'"{module.name}" [label="{module.name}\\n{module.kind}" color=black, style=filled, '
         f"fillcolor={'yellow' if all_converted(deps) else 'tomato'}]")
-    dot_entries.extend(f'"{module.name}" -> "{dep}"' for dep in deps if dep not in converted)
+    dot_entries.extend(
+        f'"{module.name}" -> "{dep}"' for dep in deps if dep not in converted)
 
   print("""
 digraph mygraph {{
@@ -190,14 +190,17 @@ def generate_report(report_data):
 def adjacency_list_from_json(
     module_graph: ...,
     ignore_by_name: List[str],
-    top_level_module: str) -> Dict[_ModuleInfo, Set[str]]:
+    top_level_module: str,
+    collect_transitive_dependencies: bool = True
+) -> Dict[_ModuleInfo, Set[str]]:
+
   def filter_by_name(json):
     return json["Name"] == top_level_module
 
   module_adjacency_list = collections.defaultdict(set)
   name_to_info = {}
 
-  def collect_transitive_dependencies(module, deps_names):
+  def collect_dependencies(module, deps_names):
     module_info = None
     name = module["Name"]
     name_to_info.setdefault(
@@ -210,15 +213,14 @@ def adjacency_list_from_json(
     module_info = name_to_info[name]
 
     module_adjacency_list[module_info].update(deps_names)
-    # account for transitive deps
-    for dep in deps_names:
-      dep_module_info = name_to_info[dep]
-      module_adjacency_list[module_info].update(
-          module_adjacency_list.get(dep_module_info, set()))
+    if collect_transitive_dependencies:
+      for dep in deps_names:
+        dep_module_info = name_to_info[dep]
+        module_adjacency_list[module_info].update(
+            module_adjacency_list.get(dep_module_info, set()))
 
   dependency_analysis.visit_json_module_graph_post_order(
-      module_graph, ignore_by_name, filter_by_name,
-      collect_transitive_dependencies)
+      module_graph, ignore_by_name, filter_by_name, collect_dependencies)
 
   return module_adjacency_list
 
@@ -226,7 +228,9 @@ def adjacency_list_from_json(
 def adjacency_list_from_queryview_xml(
     module_graph: xml.etree.ElementTree,
     ignore_by_name: List[str],
-    top_level_module: str) -> Dict[_ModuleInfo, Set[str]]:
+    top_level_module: str,
+    collect_transitive_dependencies: bool = True
+) -> Dict[_ModuleInfo, Set[str]]:
 
   def filter_by_name(module):
     return module.name == top_level_module
@@ -234,7 +238,7 @@ def adjacency_list_from_queryview_xml(
   module_adjacency_list = collections.defaultdict(set)
   name_to_info = {}
 
-  def collect_transitive_dependencies(module, deps_names):
+  def collect_dependencies(module, deps_names):
     module_info = None
     name_to_info.setdefault(
         module.name,
@@ -246,14 +250,14 @@ def adjacency_list_from_queryview_xml(
     module_info = name_to_info[module.name]
 
     module_adjacency_list[module_info].update(deps_names)
-    for dep in deps_names:
-      dep_module_info = name_to_info[dep]
-      module_adjacency_list[module_info].update(
-          module_adjacency_list.get(dep_module_info, set()))
+    if collect_transitive_dependencies:
+      for dep in deps_names:
+        dep_module_info = name_to_info[dep]
+        module_adjacency_list[module_info].update(
+            module_adjacency_list.get(dep_module_info, set()))
 
   dependency_analysis.visit_queryview_xml_module_graph_post_order(
-      module_graph, ignore_by_name, filter_by_name,
-      collect_transitive_dependencies)
+      module_graph, ignore_by_name, filter_by_name, collect_dependencies)
 
   return module_adjacency_list
 
@@ -262,7 +266,8 @@ def get_module_adjacency_list(
     top_level_module: str,
     use_queryview: bool,
     ignore_by_name: List[str],
-    banchan_mode: bool) -> Dict[_ModuleInfo, Set[str]]:
+    collect_transitive_dependencies: bool = True,
+    banchan_mode: bool = False) -> Dict[_ModuleInfo, Set[str]]:
   # The main module graph containing _all_ modules in the Soong build,
   # and the list of converted modules.
   try:
@@ -270,12 +275,14 @@ def get_module_adjacency_list(
       module_graph = dependency_analysis.get_queryview_module_info(
           top_level_module, banchan_mode)
       module_adjacency_list = adjacency_list_from_queryview_xml(
-          module_graph, ignore_by_name, top_level_module)
+          module_graph, ignore_by_name, top_level_module,
+          collect_transitive_dependencies)
     else:
       module_graph = dependency_analysis.get_json_module_info(
           top_level_module, banchan_mode)
       module_adjacency_list = adjacency_list_from_json(
-          module_graph, ignore_by_name, top_level_module)
+          module_graph, ignore_by_name, top_level_module,
+          collect_transitive_dependencies)
   except subprocess.CalledProcessError as err:
     sys.exit(f"""Error running: '{' '.join(err.cmd)}':"
 Stdout:
@@ -323,7 +330,11 @@ def main():
   report_infos = []
   for top_level_module in args.module:
     module_adjacency_list = get_module_adjacency_list(
-        top_level_module, use_queryview, ignore_by_name, banchan_mode)
+        top_level_module,
+        use_queryview,
+        ignore_by_name,
+        collect_transitive_dependencies=mode != "graph",
+        banchan_mode=banchan_mode)
     converted = dependency_analysis.get_bp2build_converted_modules()
 
     if mode == "graph":
