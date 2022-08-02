@@ -54,11 +54,6 @@ load("@bazel_skylib//:workspace.bzl", "bazel_skylib_workspace")
 bazel_skylib_workspace()
 
 local_repository(
-    name = "rules_cc",
-    path = "build/bazel/rules_cc",
-)
-
-local_repository(
     name = "rules_android",
     path = "external/bazelbuild-rules_android",
 )
