@@ -23,6 +23,7 @@ load("//build/bazel/rules/apex:transition.bzl", "apex_transition", "shared_lib_t
 load("//build/bazel/rules/apex:cc.bzl", "ApexCcInfo", "apex_cc_aspect")
 load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 load("@bazel_skylib//lib:paths.bzl", "paths")
+load("@soong_injection//apex_toolchain:constants.bzl", "default_manifest_version")
 
 ApexInfo = provider(
     "ApexInfo exports metadata about this apex.",
@@ -139,8 +140,7 @@ def _add_apex_manifest_information(
     args.add_all(["-a", "provideNativeLibs"])
     args.add_all(provides_native_libs, map_each = _add_so)
 
-    # TODO(b/238153998): harcoding version to solve build errors, to be replaced with per-branch config
-    args.add_all(["-se", "version", "0", "339990000"])
+    args.add_all(["-se", "version", "0", default_manifest_version])
 
     # TODO: support other optional flags like -v name and -a jniLibs
     args.add_all(["-o", apex_manifest_full_json])
