@@ -482,13 +482,13 @@ _apex = rule(
         # Required to use apex_transition. This is an acknowledgement to the risks of memory bloat when using transitions.
         "_allowlist_function_transition": attr.label(default = "@bazel_tools//tools/allowlists/function_transition_allowlist"),
         "_staging_dir_builder": attr.label(
-            cfg = "host",
+            cfg = "exec",
             doc = "The staging dir builder to avoid the problem where symlinks are created inside apex image.",
             executable = True,
             default = "//build/bazel/rules:staging_dir_builder",
         ),
         "_signapk": attr.label(
-            cfg = "host",
+            cfg = "exec",
             doc = "The signapk tool.",
             executable = True,
             default = "//build/make/tools/signapk",

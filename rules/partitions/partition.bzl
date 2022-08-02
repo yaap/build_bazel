@@ -354,7 +354,7 @@ partition = rule(
             aspects = [installable_aspect],
         ),
         "_staging_dir_builder": attr.label(
-            cfg = "host",
+            cfg = "exec",
             doc = "The tool used to build a staging directory, because if bazel were to build it it would be entirely symlinks.",
             executable = True,
             default = "//build/bazel/rules:staging_dir_builder",
