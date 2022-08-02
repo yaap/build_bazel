@@ -79,6 +79,6 @@ cc_stub_gen = rule(
         "version": attr.string(mandatory = True, default = "current"),
         # Private attributes
         "_api_levels_file": attr.label(default = "@soong_injection//api_levels:api_levels.json", allow_single_file = True),
-        "_ndkstubgen": attr.label(default = "//build/soong/cc/ndkstubgen", executable = True, cfg = "host"),
+        "_ndkstubgen": attr.label(default = "//build/soong/cc/ndkstubgen", executable = True, cfg = "exec"),
     }, ARCH_CONSTRAINT_ATTRS),
 )
