@@ -21,6 +21,7 @@ load(":apex_key.bzl", "apex_key")
 load(":apex_test_helpers.bzl", "test_apex")
 load("@bazel_skylib//lib:unittest.bzl", "analysistest", "asserts")
 load("@bazel_skylib//lib:new_sets.bzl", "sets")
+load("@soong_injection//apex_toolchain:constants.bzl", "default_manifest_version")
 
 def _canned_fs_config_test(ctx):
     env = analysistest.begin(ctx)
@@ -686,25 +687,26 @@ def _test_apex_manifest_dependencies_cc_binary():
 
     return test_name
 
-def _apexer_args_test(ctx):
+def _action_args_test(ctx):
     env = analysistest.begin(ctx)
     actions = analysistest.target_actions(env)
 
-    apexer_action = [a for a in actions if a.mnemonic == "Apexer"][0]
-    flag_idx = apexer_action.argv.index(ctx.attr.expected_args[0])
+    action = [a for a in actions if a.mnemonic == ctx.attr.action_mnemonic][0]
+    flag_idx = action.argv.index(ctx.attr.expected_args[0])
 
     for i, expected_arg in enumerate(ctx.attr.expected_args):
         asserts.equals(
             env,
             expected_arg,
-            apexer_action.argv[flag_idx + i],
+            action.argv[flag_idx + i],
         )
 
     return analysistest.end(env)
 
-apexer_args_test = analysistest.make(
-    _apexer_args_test,
+action_args_test = analysistest.make(
+    _action_args_test,
     attrs = {
+        "action_mnemonic": attr.string(mandatory = True),
         "expected_args": attr.string_list(mandatory = True),
     },
 )
@@ -718,12 +720,35 @@ def _test_logging_parent_flag():
         logging_parent = "logging.parent",
     )
 
-    apexer_args_test(
+    action_args_test(
         name = test_name,
         target_under_test = name,
+        action_mnemonic = "Apexer",
         expected_args = [
             "--logging_parent",
             "logging.parent",
+        ],
+    )
+
+    return test_name
+
+def _test_default_apex_manifest_version():
+    name = "default_apex_manifest_version"
+    test_name = name + "_test"
+
+    test_apex(
+        name = name,
+    )
+
+    action_args_test(
+        name = test_name,
+        target_under_test = name,
+        action_mnemonic = "ApexManifestModify",
+        expected_args = [
+            "-se",
+            "version",
+            "0",
+            str(default_manifest_version),
         ],
     )
 
@@ -796,5 +821,6 @@ def apex_test_suite(name):
             _test_apex_manifest_dependencies_cc_binary(),
             _test_logging_parent_flag(),
             _test_generate_file_contexts(),
+            _test_default_apex_manifest_version(),
         ],
     )
