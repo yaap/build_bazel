@@ -23,6 +23,7 @@ load("//build/bazel/rules/apex:transition.bzl", "apex_transition", "shared_lib_t
 load("//build/bazel/rules/apex:cc.bzl", "ApexCcInfo", "apex_cc_aspect")
 load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 load("@bazel_skylib//lib:paths.bzl", "paths")
+load("@soong_injection//apex_toolchain:constants.bzl", "default_manifest_version")
 
 ApexInfo = provider(
     "ApexInfo exports metadata about this apex.",
@@ -139,8 +140,7 @@ def _add_apex_manifest_information(
     args.add_all(["-a", "provideNativeLibs"])
     args.add_all(provides_native_libs, map_each = _add_so)
 
-    # TODO(b/238153998): harcoding version to solve build errors, to be replaced with per-branch config
-    args.add_all(["-se", "version", "0", "339990000"])
+    args.add_all(["-se", "version", "0", default_manifest_version])
 
     # TODO: support other optional flags like -v name and -a jniLibs
     args.add_all(["-o", apex_manifest_full_json])
@@ -482,13 +482,13 @@ _apex = rule(
         # Required to use apex_transition. This is an acknowledgement to the risks of memory bloat when using transitions.
         "_allowlist_function_transition": attr.label(default = "@bazel_tools//tools/allowlists/function_transition_allowlist"),
         "_staging_dir_builder": attr.label(
-            cfg = "host",
+            cfg = "exec",
             doc = "The staging dir builder to avoid the problem where symlinks are created inside apex image.",
             executable = True,
             default = "//build/bazel/rules:staging_dir_builder",
         ),
         "_signapk": attr.label(
-            cfg = "host",
+            cfg = "exec",
             doc = "The signapk tool.",
             executable = True,
             default = "//build/make/tools/signapk",
