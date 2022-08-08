@@ -91,12 +91,14 @@ class ArtifactType(enum.Enum):
   AUTO_INFER_FROM_SUFFIX = 0
   CC_OBJECT = 1
   CC_SHARED_LIBRARY = 2
+  CC_OBJECT_WITH_DEBUG_SYMBOLS = 3
   OTHER = 99
 
 
 FILE_TYPE_CHOICES = {
    "auto": ArtifactType.AUTO_INFER_FROM_SUFFIX,
    "object": ArtifactType.CC_OBJECT,
+   "object_with_debug_symbols": ArtifactType.CC_OBJECT_WITH_DEBUG_SYMBOLS,
    "shared_library": ArtifactType.CC_SHARED_LIBRARY,
 }
 
@@ -124,10 +126,14 @@ def _diff_fns(artifact_type: ArtifactType, level: DiffLevel) -> list[
   DiffFunction]:
   fns = []
 
-  if artifact_type == ArtifactType.CC_OBJECT:
+  if artifact_type in [ArtifactType.CC_OBJECT, ArtifactType.CC_OBJECT_WITH_DEBUG_SYMBOLS]:
     fns.append(clangcompile.nm_differences)
     if level >= DiffLevel.WARNING:
       fns.append(clangcompile.elf_differences)
+      if artifact_type == ArtifactType.CC_OBJECT_WITH_DEBUG_SYMBOLS:
+        fns.append(clangcompile.bloaty_differences_compileunits)
+      else:
+        fns.append(clangcompile.bloaty_differences)
   else:
     fns.append(literal_diff)
 
