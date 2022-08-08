@@ -25,6 +25,7 @@ from commands import is_flag_starts_with
 from commands import parse_flag_groups
 from diffs.diff import Diff, ExtractInfo
 from diffs.context import ContextDiff
+from diffs.nm import NmSymbolDiff
 
 
 class ClangCompileInfo(CommandInfo):
@@ -148,7 +149,7 @@ def nm_differences(left_path: pathlib.Path, right_path: pathlib.Path) -> list[
   str]:
   """Returns differences in symbol tables.
   Returns the empty list if these files are deemed "similar enough"."""
-  return ContextDiff(_external_tool("nm"), "symbol tables").diff(left_path, right_path)
+  return NmSymbolDiff(_external_tool("nm"), "symbol tables").diff(left_path, right_path)
 
 
 # TODO(usta) use readelf as a data dependency
