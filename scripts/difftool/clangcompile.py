@@ -26,6 +26,7 @@ from commands import parse_flag_groups
 from diffs.diff import Diff, ExtractInfo
 from diffs.context import ContextDiff
 from diffs.nm import NmSymbolDiff
+from diffs.bloaty import BloatyDiff
 
 
 class ClangCompileInfo(CommandInfo):
@@ -160,3 +161,31 @@ def elf_differences(left_path: pathlib.Path, right_path: pathlib.Path) -> list[
 
   The given files must exist and must be object (.o) files."""
   return ContextDiff(_external_tool("readelf", "-h"), "elf headers").diff(left_path, right_path)
+
+# TODO(usta) use bloaty as a data dependency
+def bloaty_differences(left_path: pathlib.Path, right_path: pathlib.Path) -> list[
+  str]:
+  """Returns differences in symbol and section tables.
+  Returns the empty list if these files are deemed "similar enough".
+
+  The given files must exist and must be object (.o) files."""
+  return _bloaty_differences(left_path, right_path)
+
+
+# TODO(usta) use bloaty as a data dependency
+def bloaty_differences_compileunits(left_path: pathlib.Path, right_path: pathlib.Path) -> list[
+  str]:
+  """Returns differences in symbol and section tables.
+  Returns the empty list if these files are deemed "similar enough".
+
+  The given files must exist and must be object (.o) files."""
+  return _bloaty_differences(left_path, right_path, True)
+
+
+# TODO(usta) use bloaty as a data dependency
+def _bloaty_differences(left_path: pathlib.Path, right_path: pathlib.Path, debug=False) -> list[
+  str]:
+  symbols = BloatyDiff("symbol tables", "symbols", has_debug_symbols=debug).diff(left_path, right_path)
+  sections = BloatyDiff("section tables", "sections", has_debug_symbols=debug).diff(left_path, right_path)
+  segments = BloatyDiff("segment tables", "segments", has_debug_symbols=debug).diff(left_path, right_path)
+  return symbols + sections + segments
