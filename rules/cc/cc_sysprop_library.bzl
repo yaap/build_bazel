@@ -111,6 +111,7 @@ def _cc_gen_sysprop_common(
     cc_gen_sysprop(
         name = sysprop_gen_name,
         dep = dep,
+        tags = ["manual"],
     )
 
     return sysprop_gen_name
