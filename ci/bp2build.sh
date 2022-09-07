@@ -123,10 +123,10 @@ mkdir -p "${bp2build_progress_output_dir}"
 report_args=""
 for m in "${BP2BUILD_PROGRESS_MODULES[@]}"; do
   report_args="$report_args -m ""${m}"
-  tools/bazel run ${FLAGS} "${bp2build_progress_script}" -- graph  -m "${m}" --use-queryview > "${bp2build_progress_output_dir}/${m}_graph.dot"
+  tools/bazel run ${FLAGS} --config=linux_x86_64 "${bp2build_progress_script}" -- graph  -m "${m}" > "${bp2build_progress_output_dir}/${m}_graph.dot"
 done
 
-tools/bazel run ${FLAGS} "${bp2build_progress_script}" -- \
-  report ${report_args} --use-queryview \
+tools/bazel run ${FLAGS} --config=linux_x86_64 "${bp2build_progress_script}" -- \
+  report ${report_args} \
   --proto-file=$( realpath "${bp2build_progress_output_dir}" )"/bp2build-progress.pb" \
   > "${bp2build_progress_output_dir}/progress_report.txt"

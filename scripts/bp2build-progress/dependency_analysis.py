@@ -50,6 +50,8 @@ IGNORED_KINDS = set([
     "java_defaults",
     "hidl_interface.go_android/soong/hidl.hidlGenFactory__loadHookModule",  # implementation detail of hidl_interface
     "hidl_package_root",  # not being converted, contents converted as part of hidl_interface
+    "aidl_interface.go_android/soong/aidl.wrapLibraryFactory.func1__topDownMutatorModule", # implementation detail of aidl_interface
+    "aidl_gen_rule.go_android/soong/aidl.aidlGenFactory__loadHookModule", # implementation detail of aidl_interface
 ])
 
 # queryview doesn't have information on the type of deps, so we explicitly skip
