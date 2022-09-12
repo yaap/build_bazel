@@ -46,13 +46,6 @@ from typing import Dict, List, Set, Optional
 import bp2build_pb2
 import dependency_analysis
 
-_KINDS_TO_SKIP_IN_REPORTING = frozenset({
-    "aidl_api.go_android/soong/aidl.aidlApiFactory__loadHookModule",  # implementation detail of aidl_interface
-    "aidl_gen_rule.go_android/soong/aidl.aidlGenFactory__loadHookModule",  # implementation detail of aidl_interface
-    "aidl_interface.go_android/soong/aidl.wrapLibraryFactory.func1__topDownMutatorModule",  # implementation detail of aidl_interface
-    "hidl_interface.go_android/soong/hidl.hidlGenFactory__loadHookModule",  # implementation detail of hidl_interface
-})
-
 
 @dataclasses.dataclass(frozen=True, order=True)
 class _ModuleInfo:
@@ -66,16 +59,16 @@ class _ModuleInfo:
     return f"{self.name} [{self.kind}] [{self.dirname}]"
 
   def is_converted(self, converted: Set[str]):
-    if self.name in converted:
-      return True
-    if self.created_by:
-      return self.created_by in converted
-    return False
+    return self.name in converted
 
   def is_converted_or_skipped(self, converted: Set[str]):
-    if self.kind in _KINDS_TO_SKIP_IN_REPORTING:
+    if self.is_converted(converted):
       return True
-    return self.is_converted(converted)
+    # these are implementation details of another module type that can never be
+    # created in a BUILD file
+    return ".go_android/soong" in self.kind and (
+        self.kind.endswith("__loadHookModule") or
+        self.kind.endswith("__topDownMutatorModule"))
 
 
 @dataclasses.dataclass(frozen=True, order=True)
@@ -380,6 +373,31 @@ Stderr:
   return module_adjacency_list
 
 
+def add_created_by_to_converted(
+    converted: Set[str],
+    module_adjacency_list: Dict[_ModuleInfo, Set[_ModuleInfo]]) -> Set[str]:
+  modules_by_name = {m.name: m for m in module_adjacency_list.keys()}
+
+  converted_modules = set()
+  converted_modules.update(converted)
+
+  def _update_converted(module_name):
+    if module_name in converted_modules:
+      return True
+    if module_name not in modules_by_name:
+      return False
+    module = modules_by_name[module_name]
+    if module.created_by and _update_converted(module.created_by):
+      converted_modules.add(module_name)
+      return True
+    return False
+
+  for module in modules_by_name.keys():
+    _update_converted(module)
+
+  return converted_modules
+
+
 def main():
   parser = argparse.ArgumentParser()
   parser.add_argument("mode", help="mode: graph or report")
@@ -429,6 +447,8 @@ def main():
       ignore_by_name,
       collect_transitive_dependencies=mode != "graph",
       banchan_mode=banchan_mode)
+
+  converted = add_created_by_to_converted(converted, module_adjacency_list)
 
   if mode == "graph":
     generate_dot_file(module_adjacency_list, converted)
