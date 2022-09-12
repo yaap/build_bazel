@@ -46,6 +46,13 @@ from typing import Dict, List, Set, Optional
 import bp2build_pb2
 import dependency_analysis
 
+_KINDS_TO_SKIP_IN_REPORTING = frozenset({
+    "aidl_api.go_android/soong/aidl.aidlApiFactory__loadHookModule",  # implementation detail of aidl_interface
+    "aidl_gen_rule.go_android/soong/aidl.aidlGenFactory__loadHookModule",  # implementation detail of aidl_interface
+    "aidl_interface.go_android/soong/aidl.wrapLibraryFactory.func1__topDownMutatorModule",  # implementation detail of aidl_interface
+    "hidl_interface.go_android/soong/hidl.hidlGenFactory__loadHookModule",  # implementation detail of hidl_interface
+})
+
 
 @dataclasses.dataclass(frozen=True, order=True)
 class _ModuleInfo:
@@ -64,6 +71,11 @@ class _ModuleInfo:
     if self.created_by:
       return self.created_by in converted
     return False
+
+  def is_converted_or_skipped(self, converted: Set[str]):
+    if self.kind in _KINDS_TO_SKIP_IN_REPORTING:
+      return True
+    return self.is_converted(converted)
 
 
 @dataclasses.dataclass(frozen=True, order=True)
@@ -141,7 +153,7 @@ def generate_report_data(modules: Dict[_ModuleInfo, Set[_ModuleInfo]],
 
   for module, deps in sorted(modules.items()):
     unconverted_deps = set(
-        dep.name for dep in deps if not dep.is_converted(converted))
+        dep.name for dep in deps if not dep.is_converted_or_skipped(converted))
 
     # replace deps count with transitive deps rather than direct deps count
     module = _ModuleInfo(
@@ -157,7 +169,7 @@ def generate_report_data(modules: Dict[_ModuleInfo, Set[_ModuleInfo]],
 
     unconverted_count = len(unconverted_deps)
 
-    if not module.is_converted(converted):
+    if not module.is_converted_or_skipped(converted):
       blocked_modules[module].update(unconverted_deps)
       dirs_with_unconverted_modules.add(module.dirname)
       kind_of_unconverted_modules.add(module.kind)
