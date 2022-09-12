@@ -123,15 +123,20 @@ def get_property_names(json_module):
   return get_properties(json_module).keys()
 
 
-def get_queryview_module_info(module, banchan_mode=False):
+def get_queryview_module_info(modules, banchan_mode=False):
   """Returns the list of transitive dependencies of input module as built by queryview."""
   _build_with_soong("queryview", banchan_mode)
 
   queryview_xml = subprocess.check_output(
       [
-          "tools/bazel", "query", "--config=ci", "--config=queryview",
+          "tools/bazel",
+          "query",
+          "--config=ci",
+          "--config=queryview",
           "--output=xml",
-          'deps(attr("soong_module_name", "^{}$", //...))'.format(module)
+          # union of queries to get the deps of all Soong modules with the give names
+          " + ".join(f'deps(attr("soong_module_name", "^{m}$", //...))'
+                     for m in modules)
       ],
       cwd=SRC_ROOT_DIR,
   )
@@ -143,7 +148,7 @@ def get_queryview_module_info(module, banchan_mode=False):
 ParseError: {err}""")
 
 
-def get_json_module_info(module, banchan_mode=False):
+def get_json_module_info(banchan_mode=False):
   """Returns the list of transitive dependencies of input module as provided by Soong's json module graph."""
   _build_with_soong("json-module-graph", banchan_mode)
   try:
