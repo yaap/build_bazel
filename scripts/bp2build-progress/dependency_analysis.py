@@ -184,6 +184,7 @@ def visit_json_module_graph_post_order(module_graph, ignore_by_name,
   # name to all module variants
   module_graph_map = {}
   root_module_keys = []
+  name_to_keys = collections.defaultdict(set)
 
   # Do a single pass to find all top-level modules to be ignored
   for module in module_graph:
@@ -192,6 +193,7 @@ def visit_json_module_graph_post_order(module_graph, ignore_by_name,
     if _ignore_json_module(module, ignore_by_name):
       ignored.add(key)
       continue
+    name_to_keys[name].add(key)
     module_graph_map[key] = module
     if filter_predicate(module):
       root_module_keys.append(key)
@@ -205,6 +207,19 @@ def visit_json_module_graph_post_order(module_graph, ignore_by_name,
 
     deps = set()
     module = module_graph_map[module_key]
+    created_by = module["CreatedBy"]
+    to_visit = set()
+
+    if created_by:
+      for key in name_to_keys[created_by]:
+        if key in ignored:
+          continue
+        # treat created by as a dep so it appears as a blocker, otherwise the
+        # module will be disconnected from the traversal graph despite having a
+        # direct relationship to a module and must addressed in the migration
+        deps.add(created_by)
+        json_module_graph_post_traversal(key)
+
     for dep in module["Deps"]:
       if ignore_json_dep(dep, module["Name"], ignored):
         continue
