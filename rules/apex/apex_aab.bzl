@@ -271,7 +271,7 @@ apex_aab = rule(
             allow_single_file = True,
             cfg = "exec",
             executable = True,
-            default = "//prebuilts/build-tools:linux-x86/bin/zip2zip",
+            default = "//build/soong/cmd/zip2zip:zip2zip",
         ),
         "_bundletool": attr.label(
             cfg = "exec",
