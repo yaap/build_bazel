@@ -79,7 +79,7 @@ toolchain_type(name = "apex_toolchain_type")
 
 apex_toolchain(
     name = "apex_toolchain",
-    aapt2 = "//prebuilts/sdk/tools:linux/bin/aapt2",
+    aapt2 = "//frameworks/base/tools/aapt2",
     android_jar = "//prebuilts/sdk/current:public/android.jar",
     apex_compression_tool = "//system/apex/tools:apex_compression_tool",
     apexer = "//system/apex/apexer",
