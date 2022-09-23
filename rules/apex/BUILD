@@ -90,7 +90,7 @@ apex_toolchain(
     mke2fs = "//external/e2fsprogs/misc:mke2fs",
     resize2fs = "//external/e2fsprogs/resize:resize2fs",
     sefcontext_compile = "//external/selinux/libselinux:sefcontext_compile",
-    soong_zip = "//prebuilts/build-tools:linux-x86/bin/soong_zip",
+    soong_zip = "//build/soong/zip/cmd:soong_zip",
 )
 
 toolchain(
