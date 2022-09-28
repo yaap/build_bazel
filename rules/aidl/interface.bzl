@@ -136,7 +136,7 @@ def aidl_interface(
             create_aidl_binding_for_backends(
                 name = name,
                 version = version_with_info["version"],
-                deps = version_with_info["deps"],
+                deps = version_with_info.get("deps"),
                 aidl_flags = aidl_flags,
                 backend_configs = enabled_backend_configs,
                 **kwargs
