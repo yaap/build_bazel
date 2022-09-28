@@ -65,6 +65,7 @@ local_repository(
 
 register_toolchains(
     "//prebuilts/build-tools:py_toolchain",
+    "//prebuilts/clang/host/linux-x86:all",
 
     # For Starlark Android rules
     "//prebuilts/sdk:android_default_toolchain",
@@ -148,7 +149,3 @@ new_local_repository(
 )
 
 register_toolchains("@rules_kotlin//toolchains/kotlin_jvm:kt_jvm_toolchain")
-
-load("//prebuilts/clang/host/linux-x86:cc_toolchain_config.bzl", "cc_register_toolchains")
-
-cc_register_toolchains()
