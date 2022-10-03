@@ -53,6 +53,18 @@ py_binary(
     ],
 )
 
+py_test(
+    name = "bp2build_progress_test",
+    srcs = ["bp2build_progress_test.py"],
+    python_version = "PY3",
+    deps = [
+        ":bp2build_progress",
+        ":dependency_analysis",
+        ":queryview_xml",
+        ":soong_module_json",
+    ],
+)
+
 py_binary(
     name = "bp2build_module_dep_infos",
     srcs = ["bp2build_module_dep_infos.py"],

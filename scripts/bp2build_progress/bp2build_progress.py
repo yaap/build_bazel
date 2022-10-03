@@ -45,7 +45,7 @@ import dependency_analysis
 
 
 @dataclasses.dataclass(frozen=True, order=True)
-class _ModuleInfo:
+class ModuleInfo:
   name: str
   kind: str
   dirname: str
@@ -69,8 +69,8 @@ class _ModuleInfo:
 
 
 @dataclasses.dataclass(frozen=True, order=True)
-class _InputModule:
-  module: _ModuleInfo
+class InputModule:
+  module: ModuleInfo
   num_deps: int = 0
   num_unconverted_deps: int = 0
 
@@ -82,19 +82,19 @@ class _InputModule:
 
 
 @dataclasses.dataclass(frozen=True)
-class _ReportData:
-  input_modules: Set[_InputModule]
-  total_deps: Set[_ModuleInfo]
-  unconverted_deps: Set[_ModuleInfo]
-  all_unconverted_modules: Dict[str, Set[_ModuleInfo]]
-  blocked_modules: Dict[_ModuleInfo, Set[str]]
+class ReportData:
+  input_modules: Set[InputModule]
+  total_deps: Set[ModuleInfo]
+  unconverted_deps: Set[str]
+  all_unconverted_modules: Dict[str, Set[ModuleInfo]]
+  blocked_modules: Dict[ModuleInfo, Set[str]]
   dirs_with_unconverted_modules: Set[str]
   kind_of_unconverted_modules: Set[str]
   converted: Set[str]
 
 
 # Generate a dot file containing the transitive closure of the module.
-def generate_dot_file(modules: Dict[_ModuleInfo, Set[_ModuleInfo]],
+def generate_dot_file(modules: Dict[ModuleInfo, Set[ModuleInfo]],
                       converted: Set[str]):
   # Check that all modules in the argument are in the list of converted modules
   all_converted = lambda modules: all(
@@ -102,7 +102,7 @@ def generate_dot_file(modules: Dict[_ModuleInfo, Set[_ModuleInfo]],
 
   dot_entries = []
 
-  for module, deps in modules.items():
+  for module, deps in sorted(modules.items()):
     if module.is_converted(converted):
       # Skip converted modules (nodeps)
       continue
@@ -110,22 +110,22 @@ def generate_dot_file(modules: Dict[_ModuleInfo, Set[_ModuleInfo]],
     dot_entries.append(
         f'"{module.name}" [label="{module.name}\\n{module.kind}" color=black, style=filled, '
         f"fillcolor={'yellow' if all_converted(deps) else 'tomato'}]")
-    dot_entries.extend(f'"{module.name}" -> "{dep.name}"' for dep in deps
+    dot_entries.extend(f'"{module.name}" -> "{dep.name}"' for dep in sorted(deps)
                        if not dep.is_converted(converted))
 
-  print("""
+  return """
 digraph mygraph {{
   node [shape=box];
 
   %s
 }}
-""" % "\n  ".join(dot_entries))
+""" % "\n  ".join(dot_entries)
 
 
 # Generate a report for each module in the transitive closure, and the blockers for each module
-def generate_report_data(modules: Dict[_ModuleInfo, Set[_ModuleInfo]],
-                         converted: Set[str],
-                         input_modules_names: Set[str]) -> _ReportData:
+def generate_report_data(modules: Dict[ModuleInfo,
+                                       Set[ModuleInfo]], converted: Set[str],
+                         input_modules_names: Set[str]) -> ReportData:
   # Map of [number of unconverted deps] to list of entries,
   # with each entry being the string: "<module>: <comma separated list of unconverted modules>"
   blocked_modules = collections.defaultdict(set)
@@ -146,7 +146,7 @@ def generate_report_data(modules: Dict[_ModuleInfo, Set[_ModuleInfo]],
         dep.name for dep in deps if not dep.is_converted_or_skipped(converted))
 
     # replace deps count with transitive deps rather than direct deps count
-    module = _ModuleInfo(
+    module = ModuleInfo(
         module.name,
         module.kind,
         module.dirname,
@@ -165,11 +165,11 @@ def generate_report_data(modules: Dict[_ModuleInfo, Set[_ModuleInfo]],
       kind_of_unconverted_modules.add(module.kind)
 
     if module.name in input_modules_names:
-      input_modules.add(_InputModule(module, len(deps), len(unconverted_deps)))
+      input_modules.add(InputModule(module, len(deps), len(unconverted_deps)))
       input_all_deps.update(deps)
       input_unconverted_deps.update(unconverted_deps)
 
-  return _ReportData(
+  return ReportData(
       input_modules=input_modules,
       total_deps=input_all_deps,
       unconverted_deps=input_unconverted_deps,
@@ -252,7 +252,8 @@ def generate_report(report_data):
   )
   report_lines.append("Generated at: %s" %
                       datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S %z"))
-  print("\n".join(report_lines))
+
+  return "\n".join(report_lines)
 
 
 def adjacency_list_from_json(
@@ -260,7 +261,7 @@ def adjacency_list_from_json(
     ignore_by_name: List[str],
     top_level_modules: List[str],
     collect_transitive_dependencies: bool = True
-) -> Dict[_ModuleInfo, Set[_ModuleInfo]]:
+) -> Dict[ModuleInfo, Set[ModuleInfo]]:
 
   def filter_by_name(json):
     return json["Name"] in top_level_modules
@@ -273,7 +274,7 @@ def adjacency_list_from_json(
     name = module["Name"]
     name_to_info.setdefault(
         name,
-        _ModuleInfo(
+        ModuleInfo(
             name=name,
             created_by=module["CreatedBy"],
             kind=module["Type"],
@@ -307,7 +308,7 @@ def adjacency_list_from_queryview_xml(
     ignore_by_name: List[str],
     top_level_modules: List[str],
     collect_transitive_dependencies: bool = True
-) -> Dict[_ModuleInfo, Set[_ModuleInfo]]:
+) -> Dict[ModuleInfo, Set[ModuleInfo]]:
 
   def filter_by_name(module):
     return module.name in top_level_modules
@@ -319,7 +320,7 @@ def adjacency_list_from_queryview_xml(
     module_info = None
     name_to_info.setdefault(
         module.name,
-        _ModuleInfo(
+        ModuleInfo(
             name=module.name,
             kind=module.kind,
             dirname=module.dirname,
@@ -349,7 +350,7 @@ def get_module_adjacency_list(
     use_queryview: bool,
     ignore_by_name: List[str],
     collect_transitive_dependencies: bool = True,
-    banchan_mode: bool = False) -> Dict[_ModuleInfo, Set[_ModuleInfo]]:
+    banchan_mode: bool = False) -> Dict[ModuleInfo, Set[ModuleInfo]]:
   # The main module graph containing _all_ modules in the Soong build,
   # and the list of converted modules.
   try:
@@ -376,7 +377,7 @@ Stderr:
 
 def add_created_by_to_converted(
     converted: Set[str],
-    module_adjacency_list: Dict[_ModuleInfo, Set[_ModuleInfo]]) -> Set[str]:
+    module_adjacency_list: Dict[ModuleInfo, Set[ModuleInfo]]) -> Set[str]:
   modules_by_name = {m.name: m for m in module_adjacency_list.keys()}
 
   converted_modules = set()
@@ -427,6 +428,13 @@ def main():
       "--proto-file",
       help="Path to write proto output",
   )
+  parser.add_argument(
+      "--out-file",
+      "-o",
+      type=argparse.FileType("w"),
+      default="-",
+      help="Path to write output, if omitted, writes to stdout",
+  )
   args = parser.parse_args()
 
   if len(args.module) > 1 and args.mode == "graph":
@@ -451,12 +459,15 @@ def main():
 
   converted = add_created_by_to_converted(converted, module_adjacency_list)
 
+  output_file = args.out_file
   if mode == "graph":
-    generate_dot_file(module_adjacency_list, converted)
+    dot_file = generate_dot_file(module_adjacency_list, converted)
+    output_file.write(dot_file)
   elif mode == "report":
     report_data = generate_report_data(module_adjacency_list, converted,
                                        modules)
-    generate_report(report_data)
+    report = generate_report(report_data)
+    output_file.write(report)
     if args.proto_file:
       generate_proto(report_data, args.proto_file)
   else:
