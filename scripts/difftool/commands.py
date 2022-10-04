@@ -144,3 +144,24 @@ def flag_repr(x):
     return f"-{x[0]} {x[1]}"
   else:
     return x
+
+
+def expand_rsp(arglist):
+  expanded_command = []
+  for arg in arglist:
+    if len(arg) > 4 and arg[-4:] == ".rsp":
+      if arg[0] == "@":
+        arg = arg[1:]
+      with open(arg) as f:
+        expanded_command.extend([f for l in f.readlines() for f in l.split()])
+    else:
+      expanded_command.append(arg)
+  return expanded_command
+
+
+def should_ignore_path_argument(arg):
+  if arg.startswith("bazel-out"):
+    return True
+  if arg.startswith("out/soong/.intermediates"):
+    return True
+  return False
