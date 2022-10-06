@@ -51,9 +51,15 @@ class ModuleInfo:
   dirname: str
   created_by: Optional[str]
   num_deps: int = 0
+  converted: bool = False
 
   def __str__(self):
-    return f"{self.name} [{self.kind}] [{self.dirname}]"
+    converted = " (converted)" if self.converted else ""
+    return f"{self.name} [{self.kind}] [{self.dirname}]{converted}"
+
+  def short_string(self, converted: Set[str]):
+    converted = " (c)" if self.is_converted(converted) else ""
+    return f"{self.name}{converted}"
 
   def is_converted(self, converted: Set[str]):
     return self.name in converted
@@ -91,11 +97,12 @@ class ReportData:
   dirs_with_unconverted_modules: Set[str]
   kind_of_unconverted_modules: Set[str]
   converted: Set[str]
+  show_converted: bool
 
 
 # Generate a dot file containing the transitive closure of the module.
 def generate_dot_file(modules: Dict[ModuleInfo, Set[ModuleInfo]],
-                      converted: Set[str]):
+                      converted: Set[str], show_converted: bool):
   # Check that all modules in the argument are in the list of converted modules
   all_converted = lambda modules: all(
       m.is_converted(converted) for m in modules)
@@ -103,15 +110,23 @@ def generate_dot_file(modules: Dict[ModuleInfo, Set[ModuleInfo]],
   dot_entries = []
 
   for module, deps in sorted(modules.items()):
+
     if module.is_converted(converted):
-      # Skip converted modules (nodeps)
-      continue
+      if show_converted:
+        color = "dodgerblue"
+      else:
+        continue
+    elif all_converted(deps):
+      color = "yellow"
+    else:
+      color = "tomato"
 
     dot_entries.append(
         f'"{module.name}" [label="{module.name}\\n{module.kind}" color=black, style=filled, '
-        f"fillcolor={'yellow' if all_converted(deps) else 'tomato'}]")
-    dot_entries.extend(f'"{module.name}" -> "{dep.name}"' for dep in sorted(deps)
-                       if not dep.is_converted(converted))
+        f"fillcolor={color}]")
+    dot_entries.extend(
+        f'"{module.name}" -> "{dep.name}"' for dep in sorted(deps)
+        if show_converted or not dep.is_converted(converted))
 
   return """
 digraph mygraph {{
@@ -123,9 +138,10 @@ digraph mygraph {{
 
 
 # Generate a report for each module in the transitive closure, and the blockers for each module
-def generate_report_data(modules: Dict[ModuleInfo,
-                                       Set[ModuleInfo]], converted: Set[str],
-                         input_modules_names: Set[str]) -> ReportData:
+def generate_report_data(modules: Dict[ModuleInfo, Set[ModuleInfo]],
+                         converted: Set[str],
+                         input_modules_names: Set[str],
+                         show_converted: bool = False) -> ReportData:
   # Map of [number of unconverted deps] to list of entries,
   # with each entry being the string: "<module>: <comma separated list of unconverted modules>"
   blocked_modules = collections.defaultdict(set)
@@ -152,15 +168,21 @@ def generate_report_data(modules: Dict[ModuleInfo,
         module.dirname,
         module.created_by,
         len(deps),
+        module.is_converted(converted),
     )
 
     for dep in unconverted_deps:
       all_unconverted_modules[dep].add(module)
 
-    unconverted_count = len(unconverted_deps)
+    if not module.is_converted_or_skipped(converted) or (
+        show_converted and not module.is_converted_or_skipped(set())):
+      if show_converted:
+        full_deps = set(f"{dep.short_string(converted)}" for dep in deps)
+        blocked_modules[module].update(full_deps)
+      else:
+        blocked_modules[module].update(unconverted_deps)
 
     if not module.is_converted_or_skipped(converted):
-      blocked_modules[module].update(unconverted_deps)
       dirs_with_unconverted_modules.add(module.dirname)
       kind_of_unconverted_modules.add(module.kind)
 
@@ -178,6 +200,7 @@ def generate_report_data(modules: Dict[ModuleInfo,
       dirs_with_unconverted_modules=dirs_with_unconverted_modules,
       kind_of_unconverted_modules=kind_of_unconverted_modules,
       converted=converted,
+      show_converted=show_converted,
   )
 
 
@@ -201,9 +224,15 @@ def generate_proto(report_data, file_name):
 
 def generate_report(report_data):
   report_lines = []
-  input_module_str = ", ".join(str(i) for i in sorted(report_data.input_modules))
+  input_module_str = ", ".join(
+      str(i) for i in sorted(report_data.input_modules))
 
   report_lines.append("# bp2build progress report for: %s\n" % input_module_str)
+
+  if report_data.show_converted:
+    report_lines.append(
+        "# progress report includes data both for converted and unconverted modules"
+    )
 
   total = len(report_data.total_deps)
   unconverted = len(report_data.unconverted_deps)
@@ -435,6 +464,12 @@ def main():
       default="-",
       help="Path to write output, if omitted, writes to stdout",
   )
+  parser.add_argument(
+      "--show-converted",
+      "-s",
+      action="store_true",
+      help="Show bp2build-converted modules in addition to the unconverted dependencies to see full dependencies post-migration. By default converted dependencies are not shown",
+  )
   args = parser.parse_args()
 
   if len(args.module) > 1 and args.mode == "graph":
@@ -461,11 +496,12 @@ def main():
 
   output_file = args.out_file
   if mode == "graph":
-    dot_file = generate_dot_file(module_adjacency_list, converted)
+    dot_file = generate_dot_file(module_adjacency_list, converted,
+                                 args.show_converted)
     output_file.write(dot_file)
   elif mode == "report":
     report_data = generate_report_data(module_adjacency_list, converted,
-                                       modules)
+                                       modules, args.show_converted)
     report = generate_report(report_data)
     output_file.write(report)
     if args.proto_file:

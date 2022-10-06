@@ -288,6 +288,47 @@ class Bp2BuildProgressTest(unittest.TestCase):
         dirs_with_unconverted_modules={'pkg', 'other', 'pkg2'},
         kind_of_unconverted_modules={'type1', 'type2', 'type4'},
         converted={'d', 'e', 'g'},
+        show_converted=False,
+    )
+
+    self.assertEqual(report_data, expected_report_data)
+
+  def test_generate_report_data_show_converted(self):
+    a = bp2build_progress.ModuleInfo(
+        name='a', kind='type1', dirname='pkg', num_deps=2, created_by=None)
+    b = bp2build_progress.ModuleInfo(
+        name='b', kind='type2', dirname='pkg2', num_deps=0, created_by=None, converted=True)
+    c = bp2build_progress.ModuleInfo(
+        name='c', kind='type3', dirname='other', num_deps=0, created_by=None)
+
+    module_graph = collections.defaultdict(set)
+    module_graph[a] = set([b, c])
+    module_graph[b].update(set())
+    module_graph[c].update(set())
+
+    report_data = bp2build_progress.generate_report_data(
+        module_graph, {'b'}, {'a'}, show_converted=True)
+
+    all_unconverted_modules = collections.defaultdict(set)
+    all_unconverted_modules['c'].update({a})
+
+    blocked_modules = collections.defaultdict(set)
+    blocked_modules[a].update({'b (c)', 'c'})
+    blocked_modules[b].update(set())
+    blocked_modules[c].update(set())
+
+    expected_report_data = bp2build_progress.ReportData(
+        input_modules={
+            bp2build_progress.InputModule(a, 2, 1),
+        },
+        total_deps={b, c},
+        unconverted_deps={'c'},
+        all_unconverted_modules=all_unconverted_modules,
+        blocked_modules=blocked_modules,
+        dirs_with_unconverted_modules={'pkg', 'other'},
+        kind_of_unconverted_modules={'type1', 'type3'},
+        converted={'b'},
+        show_converted=True,
     )
 
     self.assertEqual(report_data, expected_report_data)
@@ -312,7 +353,7 @@ class Bp2BuildProgressTest(unittest.TestCase):
     module_graph[d] = set([])
     module_graph[e] = set([])
 
-    dot_graph = bp2build_progress.generate_dot_file(module_graph, {'e'})
+    dot_graph = bp2build_progress.generate_dot_file(module_graph, {'e'}, False)
 
     expected_dot_graph = """
 digraph mygraph {{
@@ -325,6 +366,45 @@ digraph mygraph {{
   "b" -> "d"
   "c" [label="c\\ntype2" color=black, style=filled, fillcolor=yellow]
   "d" [label="d\\ntype2" color=black, style=filled, fillcolor=yellow]
+}}
+"""
+    self.assertEqual(dot_graph, expected_dot_graph)
+
+  def test_generate_dot_file_show_converted(self):
+    self.maxDiff = None
+    a = bp2build_progress.ModuleInfo(
+        name='a', kind='type1', dirname='pkg', num_deps=2, created_by=None)
+    b = bp2build_progress.ModuleInfo(
+        name='b', kind='type2', dirname='pkg', num_deps=1, created_by=None)
+    c = bp2build_progress.ModuleInfo(
+        name='c', kind='type2', dirname='other', num_deps=1, created_by=None)
+    d = bp2build_progress.ModuleInfo(
+        name='d', kind='type2', dirname='pkg', num_deps=0, created_by=None)
+    e = bp2build_progress.ModuleInfo(
+        name='e', kind='type2', dirname='other', num_deps=0, created_by=None)
+
+    module_graph = collections.defaultdict(set)
+    module_graph[a] = set([b, c])
+    module_graph[b] = set([d])
+    module_graph[c] = set([e])
+    module_graph[d] = set([])
+    module_graph[e] = set([])
+
+    dot_graph = bp2build_progress.generate_dot_file(module_graph, {'e'}, True)
+
+    expected_dot_graph = """
+digraph mygraph {{
+  node [shape=box];
+
+  "a" [label="a\\ntype1" color=black, style=filled, fillcolor=tomato]
+  "a" -> "b"
+  "a" -> "c"
+  "b" [label="b\\ntype2" color=black, style=filled, fillcolor=tomato]
+  "b" -> "d"
+  "c" [label="c\\ntype2" color=black, style=filled, fillcolor=yellow]
+  "c" -> "e"
+  "d" [label="d\\ntype2" color=black, style=filled, fillcolor=yellow]
+  "e" [label="e\\ntype2" color=black, style=filled, fillcolor=dodgerblue]
 }}
 """
     self.assertEqual(dot_graph, expected_dot_graph)
