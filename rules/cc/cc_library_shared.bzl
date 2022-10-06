@@ -98,10 +98,7 @@ def cc_library_shared(
         features = disable_crt_link(features)
 
     if min_sdk_version:
-        features = features + [
-            "sdk_version_" + parse_sdk_version(min_sdk_version),
-            "-sdk_version_default",
-        ]
+        features = features + parse_sdk_version(min_sdk_version) + ["-sdk_version_default"]
 
     stl = stl_deps(stl, True)
 

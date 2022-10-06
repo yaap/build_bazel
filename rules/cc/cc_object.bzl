@@ -80,7 +80,7 @@ def _cc_object_impl(ctx):
 
     if ctx.attr.min_sdk_version:
         extra_disabled_features.append("sdk_version_default")
-        extra_features.append("sdk_version_" + parse_sdk_version(ctx.attr.min_sdk_version))
+        extra_features += parse_sdk_version(ctx.attr.min_sdk_version)
 
     feature_configuration = cc_common.configure_features(
         ctx = ctx,
