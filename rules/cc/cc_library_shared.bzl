@@ -102,6 +102,17 @@ def cc_library_shared(
 
     stl = stl_deps(stl, True)
 
+    features = features + select({
+        "//build/bazel/rules/cc:android_coverage_lib_flag": ["android_coverage_lib"],
+        "//conditions:default": [],
+    })
+
+    # TODO(b/233660582): deal with the cases where the default lib shouldn't be used
+    implementation_deps = implementation_deps + select({
+        "//build/bazel/rules/cc:android_coverage_lib_flag": ["//system/extras/toolchain-extras:libprofile-clang-extras"],
+        "//conditions:default": [],
+    })
+
     # The static library at the root of the shared library.
     # This may be distinct from the static version of the library if e.g.
     # the static-variant srcs are different than the shared-variant srcs.
