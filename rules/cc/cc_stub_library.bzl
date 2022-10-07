@@ -105,6 +105,9 @@ def cc_stub_library_shared(name, stubs_symbol_file, version, export_includes, so
         tags = ["manual"],
     )
 
+    # Disable coverage for stub libraries.
+    features = features + ["-coverage"]
+
     # The static library at the root of the stub shared library.
     cc_library_static(
         name = name + "_root",
