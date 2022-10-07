@@ -78,10 +78,7 @@ def cc_binary(
         toolchain_features += ["-use_libcrt"]
 
     if min_sdk_version:
-        toolchain_features += [
-            "sdk_version_" + parse_sdk_version(min_sdk_version),
-            "-sdk_version_default",
-        ]
+        toolchain_features += parse_sdk_version(min_sdk_version) + ["-sdk_version_default"]
 
     system_dynamic_deps = []
     system_static_deps = []
