@@ -18,6 +18,13 @@ limitations under the License.
 
 load("@bazel_tools//tools/cpp:toolchain_utils.bzl", "find_cpp_toolchain")
 
+CcUnstrippedInfo = provider(
+    "Provides unstripped binary/shared library",
+    fields = {
+        "unstripped": "unstripped target",
+    },
+)
+
 # Keep this consistent with soong/cc/strip.go#NeedsStrip.
 def needs_strip(attrs):
     force_disable = attrs.none
@@ -175,6 +182,7 @@ def _stripped_binary_impl(ctx):
         ctx.attr.src[DebugPackageInfo],
         ctx.attr.src[OutputGroupInfo],
         StrippedCcBinaryInfo(),  # a marker for dependents
+        CcUnstrippedInfo(unstripped = ctx.attr.unstripped),
     ]
 
     out_file = stripped_impl(ctx, suffix = ctx.attr.suffix)
@@ -196,6 +204,11 @@ stripped_binary = rule(
             doc = "Deps that should be installed along with this target. Read by the apex cc aspect.",
         ),
         suffix = attr.string(),
+        unstripped = attr.label(
+            mandatory = True,
+            allow_single_file = True,
+            doc = "Unstripped binary to be returned by ",
+        ),
     ),
     executable = True,
     toolchains = ["@bazel_tools//tools/cpp:toolchain_type"],
