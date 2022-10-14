@@ -42,6 +42,35 @@ _stl = rule(
     },
 )
 
+def _test_stl(
+        stl,
+        is_shared,
+        is_binary,
+        android_deps,
+        non_android_deps):
+    target_name = _stl_deps(stl, is_shared, is_binary)
+    android_test_name = target_name + "_android_test"
+    non_android_test_name = target_name + "_non_android_test"
+
+    _stl_deps_android_test(
+        name = android_test_name,
+        static = android_deps.static,
+        shared = android_deps.shared,
+        target_under_test = target_name,
+    )
+
+    _stl_deps_non_android_test(
+        name = non_android_test_name,
+        static = non_android_deps.static,
+        shared = non_android_deps.shared,
+        target_under_test = target_name,
+    )
+
+    return [
+        android_test_name,
+        non_android_test_name,
+    ]
+
 def _stl_deps(name, is_shared = True, is_binary = True):
     target_name = name if name else "empty"
     target_name += "_shared" if is_shared else "_static"
@@ -102,335 +131,216 @@ _stl_deps_non_android_test = analysistest.make(
     },
 )
 
-def _test_stl_for_shared_library_unspecified_defaults_shared():
-    target_name = _stl_deps("", is_shared = True, is_binary = False)
-    android_test_name = target_name + "_android_test"
-    non_android_test_name = target_name + "_non_android_test"
-
-    _stl_deps_android_test(
-        name = android_test_name,
-        static = _ANDROID_STATIC_DEPS,
-        shared = _SHARED_DEP,
-        target_under_test = target_name,
-    )
-
-    _stl_deps_non_android_test(
-        name = non_android_test_name,
-        shared = _SHARED_DEP,
-        target_under_test = target_name,
-    )
-
-    return [android_test_name, non_android_test_name]
-
-def _test_stl_for_shared_library_system_uses_shared():
-    target_name = _stl_deps("system", is_shared = True, is_binary = False)
-    android_test_name = target_name + "_android_test"
-    non_android_test_name = target_name + "_non_android_test"
-
-    _stl_deps_android_test(
-        name = android_test_name,
-        static = _ANDROID_STATIC_DEPS,
-        shared = _SHARED_DEP,
-        target_under_test = target_name,
-    )
-
-    _stl_deps_non_android_test(
-        name = non_android_test_name,
-        shared = _SHARED_DEP,
-        target_under_test = target_name,
-    )
-
-    return [android_test_name, non_android_test_name]
-
-def _test_stl_for_shared_library_libcpp_uses_shared():
-    target_name = _stl_deps("libc++", is_shared = True, is_binary = False)
-    android_test_name = target_name + "_android_test"
-    non_android_test_name = target_name + "_non_android_test"
-
-    _stl_deps_android_test(
-        name = android_test_name,
-        static = _ANDROID_STATIC_DEPS,
-        shared = _SHARED_DEP,
-        target_under_test = target_name,
-    )
-
-    _stl_deps_non_android_test(
-        name = non_android_test_name,
-        shared = _SHARED_DEP,
-        target_under_test = target_name,
-    )
-
-    return [android_test_name, non_android_test_name]
-
-def _test_stl_for_shared_library_libcpp_static_uses_static():
-    target_name = _stl_deps("libc++_static", is_shared = True, is_binary = False)
-    android_test_name = target_name + "_android_test"
-    non_android_test_name = target_name + "_non_android_test"
-
-    _stl_deps_android_test(
-        name = android_test_name,
-        static = _ANDROID_STATIC_DEPS + _STATIC_DEP,
-        target_under_test = target_name,
-    )
-
-    _stl_deps_non_android_test(
-        name = non_android_test_name,
-        static = _STATIC_DEP,
-        target_under_test = target_name,
-    )
-
-    return [android_test_name, non_android_test_name]
-
-def _test_stl_for_static_library_unspecified_defaults_static():
-    target_name = _stl_deps("", is_shared = False, is_binary = False)
-    android_test_name = target_name + "_android_test"
-    non_android_test_name = target_name + "_non_android_test"
-
-    _stl_deps_android_test(
-        name = android_test_name,
-        static = _ANDROID_STATIC_DEPS + _STATIC_DEP,
-        target_under_test = target_name,
-    )
-
-    _stl_deps_non_android_test(
-        name = non_android_test_name,
-        static = _STATIC_DEP,
-        target_under_test = target_name,
-    )
-
-    return [android_test_name, non_android_test_name]
-
-def _test_stl_for_static_library_system_uses_static():
-    target_name = _stl_deps("system", is_shared = False, is_binary = False)
-    android_test_name = target_name + "_android_test"
-    non_android_test_name = target_name + "_non_android_test"
-
-    _stl_deps_android_test(
-        name = android_test_name,
-        static = _ANDROID_STATIC_DEPS + _STATIC_DEP,
-        target_under_test = target_name,
-    )
-
-    _stl_deps_non_android_test(
-        name = non_android_test_name,
-        static = _STATIC_DEP,
-        target_under_test = target_name,
-    )
-
-    return [android_test_name, non_android_test_name]
-
-def _test_stl_for_static_library_libcpp_uses_shared():
-    target_name = _stl_deps("libc++", is_shared = False, is_binary = False)
-    android_test_name = target_name + "_android_test"
-    non_android_test_name = target_name + "_non_android_test"
-
-    _stl_deps_android_test(
-        name = android_test_name,
-        static = _ANDROID_STATIC_DEPS,
-        shared = _SHARED_DEP,
-        target_under_test = target_name,
-    )
-
-    _stl_deps_non_android_test(
-        name = non_android_test_name,
-        shared = _SHARED_DEP,
-        target_under_test = target_name,
-    )
-
-    return [android_test_name, non_android_test_name]
-
-def _test_stl_for_static_library_libcpp_static_uses_static():
-    target_name = _stl_deps("libc++_static", is_shared = False, is_binary = False)
-    android_test_name = target_name + "_android_test"
-    non_android_test_name = target_name + "_non_android_test"
-
-    _stl_deps_android_test(
-        name = android_test_name,
-        static = _ANDROID_STATIC_DEPS + _STATIC_DEP,
-        target_under_test = target_name,
-    )
-
-    _stl_deps_non_android_test(
-        name = non_android_test_name,
-        static = _STATIC_DEP,
-        target_under_test = target_name,
-    )
-
-    return [android_test_name, non_android_test_name]
-
-def _test_stl_for_shared_binary_unspecified_defaults_shared():
-    target_name = _stl_deps("", is_shared = True, is_binary = True)
-    android_test_name = target_name + "_android_test"
-    non_android_test_name = target_name + "_non_android_test"
-
-    _stl_deps_android_test(
-        name = android_test_name,
-        static = _ANDROID_STATIC_DEPS + _ANDROID_BINARY_STATIC_DEP,
-        shared = _SHARED_DEP,
-        target_under_test = target_name,
-    )
-
-    _stl_deps_non_android_test(
-        name = non_android_test_name,
-        shared = _SHARED_DEP,
-        target_under_test = target_name,
-    )
-
-    return [android_test_name, non_android_test_name]
-
-def _test_stl_for_shared_binary_system_uses_shared():
-    target_name = _stl_deps("system", is_shared = True, is_binary = True)
-    android_test_name = target_name + "_android_test"
-    non_android_test_name = target_name + "_non_android_test"
-
-    _stl_deps_android_test(
-        name = android_test_name,
-        static = _ANDROID_STATIC_DEPS + _ANDROID_BINARY_STATIC_DEP,
-        shared = _SHARED_DEP,
-        target_under_test = target_name,
-    )
-
-    _stl_deps_non_android_test(
-        name = non_android_test_name,
-        shared = _SHARED_DEP,
-        target_under_test = target_name,
-    )
-
-    return [android_test_name, non_android_test_name]
-
-def _test_stl_for_shared_binary_libcpp_uses_shared():
-    target_name = _stl_deps("libc++", is_shared = True, is_binary = True)
-    android_test_name = target_name + "_android_test"
-    non_android_test_name = target_name + "_non_android_test"
-
-    _stl_deps_android_test(
-        name = android_test_name,
-        static = _ANDROID_STATIC_DEPS + _ANDROID_BINARY_STATIC_DEP,
-        shared = _SHARED_DEP,
-        target_under_test = target_name,
-    )
-
-    _stl_deps_non_android_test(
-        name = non_android_test_name,
-        shared = _SHARED_DEP,
-        target_under_test = target_name,
-    )
-
-    return [android_test_name, non_android_test_name]
-
-def _test_stl_for_shared_binary_libcpp_static_uses_static():
-    target_name = _stl_deps("libc++_static", is_shared = True, is_binary = True)
-    android_test_name = target_name + "_android_test"
-    non_android_test_name = target_name + "_non_android_test"
-
-    _stl_deps_android_test(
-        name = android_test_name,
-        static = _ANDROID_STATIC_DEPS + _STATIC_DEP + _ANDROID_BINARY_STATIC_DEP,
-        target_under_test = target_name,
-    )
-
-    _stl_deps_non_android_test(
-        name = non_android_test_name,
-        static = _STATIC_DEP,
-        target_under_test = target_name,
-    )
-
-    return [android_test_name, non_android_test_name]
-
-def _test_stl_for_static_binary_unspecified_defaults_static():
-    target_name = _stl_deps("", is_shared = False, is_binary = True)
-    android_test_name = target_name + "_android_test"
-    non_android_test_name = target_name + "_non_android_test"
-
-    _stl_deps_android_test(
-        name = android_test_name,
-        static = _ANDROID_STATIC_DEPS + _STATIC_DEP + _ANDROID_BINARY_STATIC_DEP,
-        target_under_test = target_name,
-    )
-
-    _stl_deps_non_android_test(
-        name = non_android_test_name,
-        static = _STATIC_DEP,
-        target_under_test = target_name,
-    )
-
-    return [android_test_name, non_android_test_name]
-
-def _test_stl_for_static_binary_system_uses_static():
-    target_name = _stl_deps("system", is_shared = False, is_binary = True)
-    android_test_name = target_name + "_android_test"
-    non_android_test_name = target_name + "_non_android_test"
-
-    _stl_deps_android_test(
-        name = android_test_name,
-        static = _ANDROID_STATIC_DEPS + _STATIC_DEP + _ANDROID_BINARY_STATIC_DEP,
-        target_under_test = target_name,
-    )
-
-    _stl_deps_non_android_test(
-        name = non_android_test_name,
-        static = _STATIC_DEP,
-        target_under_test = target_name,
-    )
-
-    return [android_test_name, non_android_test_name]
-
-def _test_stl_for_static_binary_libcpp_uses_shared():
-    target_name = _stl_deps("libc++", is_shared = False, is_binary = True)
-    android_test_name = target_name + "_android_test"
-    non_android_test_name = target_name + "_non_android_test"
-
-    _stl_deps_android_test(
-        name = android_test_name,
-        static = _ANDROID_STATIC_DEPS + _ANDROID_BINARY_STATIC_DEP,
-        shared = _SHARED_DEP,
-        target_under_test = target_name,
-    )
-
-    _stl_deps_non_android_test(
-        name = non_android_test_name,
-        shared = _SHARED_DEP,
-        target_under_test = target_name,
-    )
-
-    return [android_test_name, non_android_test_name]
-
-def _test_stl_for_static_binary_libcpp_static_uses_static():
-    target_name = _stl_deps("libc++_static", is_shared = False, is_binary = True)
-    android_test_name = target_name + "_android_test"
-    non_android_test_name = target_name + "_non_android_test"
-
-    _stl_deps_android_test(
-        name = android_test_name,
-        static = _ANDROID_STATIC_DEPS + _STATIC_DEP + _ANDROID_BINARY_STATIC_DEP,
-        target_under_test = target_name,
-    )
-
-    _stl_deps_non_android_test(
-        name = non_android_test_name,
-        static = _STATIC_DEP,
-        target_under_test = target_name,
-    )
-
-    return [android_test_name, non_android_test_name]
-
 def stl_test_suite(name):
     native.test_suite(
         name = name,
-        tests = _test_stl_for_shared_library_unspecified_defaults_shared() +
-                _test_stl_for_shared_library_system_uses_shared() +
-                _test_stl_for_shared_library_libcpp_uses_shared() +
-                _test_stl_for_shared_library_libcpp_static_uses_static() +
-                _test_stl_for_static_library_unspecified_defaults_static() +
-                _test_stl_for_static_library_system_uses_static() +
-                _test_stl_for_static_library_libcpp_uses_shared() +
-                _test_stl_for_static_library_libcpp_static_uses_static() +
-                _test_stl_for_shared_binary_unspecified_defaults_shared() +
-                _test_stl_for_shared_binary_system_uses_shared() +
-                _test_stl_for_shared_binary_libcpp_uses_shared() +
-                _test_stl_for_shared_binary_libcpp_static_uses_static() +
-                _test_stl_for_static_binary_unspecified_defaults_static() +
-                _test_stl_for_static_binary_system_uses_static() +
-                _test_stl_for_static_binary_libcpp_uses_shared() +
-                _test_stl_for_static_binary_libcpp_static_uses_static(),
+        tests =
+            _test_stl(
+                stl = "",
+                is_shared = True,
+                is_binary = False,
+                android_deps = struct(
+                    static = _ANDROID_STATIC_DEPS,
+                    shared = _SHARED_DEP,
+                ),
+                non_android_deps = struct(
+                    static = None,
+                    shared = _SHARED_DEP,
+                ),
+            ) +
+            _test_stl(
+                stl = "system",
+                is_shared = True,
+                is_binary = False,
+                android_deps = struct(
+                    static = _ANDROID_STATIC_DEPS,
+                    shared = _SHARED_DEP,
+                ),
+                non_android_deps = struct(
+                    static = None,
+                    shared = _SHARED_DEP,
+                ),
+            ) +
+            _test_stl(
+                stl = "libc++",
+                is_shared = True,
+                is_binary = False,
+                android_deps = struct(
+                    static = _ANDROID_STATIC_DEPS,
+                    shared = _SHARED_DEP,
+                ),
+                non_android_deps = struct(
+                    static = None,
+                    shared = _SHARED_DEP,
+                ),
+            ) +
+            _test_stl(
+                stl = "libc++_static",
+                is_shared = True,
+                is_binary = False,
+                android_deps = struct(
+                    static = _ANDROID_STATIC_DEPS + _STATIC_DEP,
+                    shared = None,
+                ),
+                non_android_deps = struct(
+                    static = _STATIC_DEP,
+                    shared = None,
+                ),
+            ) +
+            _test_stl(
+                stl = "",
+                is_shared = False,
+                is_binary = False,
+                android_deps = struct(
+                    static = _ANDROID_STATIC_DEPS + _STATIC_DEP,
+                    shared = None,
+                ),
+                non_android_deps = struct(
+                    static = _STATIC_DEP,
+                    shared = None,
+                ),
+            ) +
+            _test_stl(
+                stl = "system",
+                is_shared = False,
+                is_binary = False,
+                android_deps = struct(
+                    static = _ANDROID_STATIC_DEPS + _STATIC_DEP,
+                    shared = None,
+                ),
+                non_android_deps = struct(
+                    static = _STATIC_DEP,
+                    shared = None,
+                ),
+            ) +
+            _test_stl(
+                stl = "libc++",
+                is_shared = False,
+                is_binary = False,
+                android_deps = struct(
+                    static = _ANDROID_STATIC_DEPS,
+                    shared = _SHARED_DEP,
+                ),
+                non_android_deps = struct(
+                    static = None,
+                    shared = _SHARED_DEP,
+                ),
+            ) +
+            _test_stl(
+                stl = "libc++_static",
+                is_shared = False,
+                is_binary = False,
+                android_deps = struct(
+                    static = _ANDROID_STATIC_DEPS + _STATIC_DEP,
+                    shared = None,
+                ),
+                non_android_deps = struct(
+                    static = _STATIC_DEP,
+                    shared = None,
+                ),
+            ) +
+            _test_stl(
+                stl = "",
+                is_shared = True,
+                is_binary = True,
+                android_deps = struct(
+                    static = _ANDROID_STATIC_DEPS + _ANDROID_BINARY_STATIC_DEP,
+                    shared = _SHARED_DEP,
+                ),
+                non_android_deps = struct(
+                    static = None,
+                    shared = _SHARED_DEP,
+                ),
+            ) +
+            _test_stl(
+                stl = "system",
+                is_shared = True,
+                is_binary = True,
+                android_deps = struct(
+                    static = _ANDROID_STATIC_DEPS + _ANDROID_BINARY_STATIC_DEP,
+                    shared = _SHARED_DEP,
+                ),
+                non_android_deps = struct(
+                    static = None,
+                    shared = _SHARED_DEP,
+                ),
+            ) +
+            _test_stl(
+                stl = "libc++",
+                is_shared = True,
+                is_binary = True,
+                android_deps = struct(
+                    static = _ANDROID_STATIC_DEPS + _ANDROID_BINARY_STATIC_DEP,
+                    shared = _SHARED_DEP,
+                ),
+                non_android_deps = struct(
+                    static = None,
+                    shared = _SHARED_DEP,
+                ),
+            ) +
+            _test_stl(
+                stl = "libc++_static",
+                is_shared = True,
+                is_binary = True,
+                android_deps = struct(
+                    static = _ANDROID_STATIC_DEPS + _STATIC_DEP + _ANDROID_BINARY_STATIC_DEP,
+                    shared = None,
+                ),
+                non_android_deps = struct(
+                    static = _STATIC_DEP,
+                    shared = None,
+                ),
+            ) +
+            _test_stl(
+                stl = "",
+                is_shared = False,
+                is_binary = True,
+                android_deps = struct(
+                    static = _ANDROID_STATIC_DEPS + _STATIC_DEP + _ANDROID_BINARY_STATIC_DEP,
+                    shared = None,
+                ),
+                non_android_deps = struct(
+                    static = _STATIC_DEP,
+                    shared = None,
+                ),
+            ) +
+            _test_stl(
+                stl = "system",
+                is_shared = False,
+                is_binary = True,
+                android_deps = struct(
+                    static = _ANDROID_STATIC_DEPS + _STATIC_DEP + _ANDROID_BINARY_STATIC_DEP,
+                    shared = None,
+                ),
+                non_android_deps = struct(
+                    static = _STATIC_DEP,
+                    shared = None,
+                ),
+            ) +
+            _test_stl(
+                stl = "libc++",
+                is_shared = False,
+                is_binary = True,
+                android_deps = struct(
+                    static = _ANDROID_STATIC_DEPS + _ANDROID_BINARY_STATIC_DEP,
+                    shared = _SHARED_DEP,
+                ),
+                non_android_deps = struct(
+                    static = None,
+                    shared = _SHARED_DEP,
+                ),
+            ) +
+            _test_stl(
+                stl = "libc++_static",
+                is_shared = False,
+                is_binary = True,
+                android_deps = struct(
+                    static = _ANDROID_STATIC_DEPS + _STATIC_DEP + _ANDROID_BINARY_STATIC_DEP,
+                    shared = None,
+                ),
+                non_android_deps = struct(
+                    static = _STATIC_DEP,
+                    shared = None,
+                ),
+            ),
     )
