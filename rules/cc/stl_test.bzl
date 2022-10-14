@@ -34,6 +34,7 @@ _DARWIN_CPPFLAGS = [
     "-nostdinc++",
     "-D_LIBCPP_DISABLE_AVAILABILITY",
 ]
+_DARWIN_CPPFLAGS_STL_NONE = ["-nostdinc++"]
 _DARWIN_LINKOPTS = ["-nostdlib++"]
 _WINDOWS_CPPFLAGS = [
     "-nostdinc++",
@@ -41,6 +42,7 @@ _WINDOWS_CPPFLAGS = [
     "-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
     "-D_LIBCPP_HAS_THREAD_API_WIN32",
 ]
+_WINDOWS_CPPFLAGS_STL_NONE = ["-nostdinc++"]
 _WINDOWS_LINKOPTS = ["-nostdlib++"]
 
 _StlInfo = provider(fields = ["static", "shared"])
@@ -450,6 +452,39 @@ def stl_test_suite(name):
                 ),
             ) +
             _test_stl(
+                stl = "none",
+                is_shared = True,
+                is_binary = False,
+                android_deps = struct(
+                    static = None,
+                    shared = None,
+                ),
+                non_android_deps = struct(
+                    static = None,
+                    shared = None,
+                ),
+                android_flags = struct(
+                    cppflags = _ANDROID_CPPFLAGS,
+                    linkopts = _ANDROID_LINKOPTS,
+                ),
+                linux_flags = struct(
+                    cppflags = _LINUX_CPPFLAGS,
+                    linkopts = _LINUX_LINKOPTS,
+                ),
+                linux_bionic_flags = struct(
+                    cppflags = _LINUX_BIONIC_CPPFLAGS,
+                    linkopts = _LINUX_BIONIC_LINKOPTS,
+                ),
+                darwin_flags = struct(
+                    cppflags = _DARWIN_CPPFLAGS_STL_NONE,
+                    linkopts = _DARWIN_LINKOPTS,
+                ),
+                windows_flags = struct(
+                    cppflags = _WINDOWS_CPPFLAGS_STL_NONE,
+                    linkopts = _WINDOWS_LINKOPTS,
+                ),
+            ) +
+            _test_stl(
                 stl = "",
                 is_shared = False,
                 is_binary = False,
@@ -582,6 +617,39 @@ def stl_test_suite(name):
                 ),
             ) +
             _test_stl(
+                stl = "none",
+                is_shared = False,
+                is_binary = False,
+                android_deps = struct(
+                    static = None,
+                    shared = None,
+                ),
+                non_android_deps = struct(
+                    static = None,
+                    shared = None,
+                ),
+                android_flags = struct(
+                    cppflags = _ANDROID_CPPFLAGS,
+                    linkopts = _ANDROID_LINKOPTS,
+                ),
+                linux_flags = struct(
+                    cppflags = _LINUX_CPPFLAGS,
+                    linkopts = _LINUX_LINKOPTS,
+                ),
+                linux_bionic_flags = struct(
+                    cppflags = _LINUX_BIONIC_CPPFLAGS,
+                    linkopts = _LINUX_BIONIC_LINKOPTS,
+                ),
+                darwin_flags = struct(
+                    cppflags = _DARWIN_CPPFLAGS_STL_NONE,
+                    linkopts = _DARWIN_LINKOPTS,
+                ),
+                windows_flags = struct(
+                    cppflags = _WINDOWS_CPPFLAGS_STL_NONE,
+                    linkopts = _WINDOWS_LINKOPTS,
+                ),
+            ) +
+            _test_stl(
                 stl = "",
                 is_shared = True,
                 is_binary = True,
@@ -714,6 +782,39 @@ def stl_test_suite(name):
                 ),
             ) +
             _test_stl(
+                stl = "none",
+                is_shared = True,
+                is_binary = True,
+                android_deps = struct(
+                    static = None,
+                    shared = None,
+                ),
+                non_android_deps = struct(
+                    static = None,
+                    shared = None,
+                ),
+                android_flags = struct(
+                    cppflags = _ANDROID_CPPFLAGS,
+                    linkopts = _ANDROID_LINKOPTS,
+                ),
+                linux_flags = struct(
+                    cppflags = _LINUX_CPPFLAGS,
+                    linkopts = _LINUX_LINKOPTS,
+                ),
+                linux_bionic_flags = struct(
+                    cppflags = _LINUX_BIONIC_CPPFLAGS,
+                    linkopts = _LINUX_BIONIC_LINKOPTS,
+                ),
+                darwin_flags = struct(
+                    cppflags = _DARWIN_CPPFLAGS_STL_NONE,
+                    linkopts = _DARWIN_LINKOPTS,
+                ),
+                windows_flags = struct(
+                    cppflags = _WINDOWS_CPPFLAGS_STL_NONE,
+                    linkopts = _WINDOWS_LINKOPTS,
+                ),
+            ) +
+            _test_stl(
                 stl = "",
                 is_shared = False,
                 is_binary = True,
@@ -842,6 +943,39 @@ def stl_test_suite(name):
                 ),
                 windows_flags = struct(
                     cppflags = _WINDOWS_CPPFLAGS,
+                    linkopts = _WINDOWS_LINKOPTS,
+                ),
+            ) +
+            _test_stl(
+                stl = "none",
+                is_shared = False,
+                is_binary = True,
+                android_deps = struct(
+                    static = None,
+                    shared = None,
+                ),
+                non_android_deps = struct(
+                    static = None,
+                    shared = None,
+                ),
+                android_flags = struct(
+                    cppflags = _ANDROID_CPPFLAGS,
+                    linkopts = _ANDROID_LINKOPTS,
+                ),
+                linux_flags = struct(
+                    cppflags = _LINUX_CPPFLAGS,
+                    linkopts = _LINUX_LINKOPTS,
+                ),
+                linux_bionic_flags = struct(
+                    cppflags = _LINUX_BIONIC_CPPFLAGS,
+                    linkopts = _LINUX_BIONIC_LINKOPTS,
+                ),
+                darwin_flags = struct(
+                    cppflags = _DARWIN_CPPFLAGS_STL_NONE,
+                    linkopts = _DARWIN_LINKOPTS,
+                ),
+                windows_flags = struct(
+                    cppflags = _WINDOWS_CPPFLAGS_STL_NONE,
                     linkopts = _WINDOWS_LINKOPTS,
                 ),
             ),
