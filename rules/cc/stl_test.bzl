@@ -17,7 +17,7 @@ limitations under the License.
 load("//build/bazel/product_variables:constants.bzl", "constants")
 load("@bazel_skylib//lib:new_sets.bzl", "sets")
 load("@bazel_skylib//lib:unittest.bzl", "analysistest", "asserts")
-load(":stl.bzl", "stl_deps")
+load(":stl.bzl", "stl_info")
 
 _ANDROID_STATIC_DEPS = ["//external/libcxxabi:libc++demangle"]
 _STATIC_DEP = ["//external/libcxx:libc++_static"]
@@ -46,12 +46,12 @@ def _stl_deps(name, is_shared = True, is_binary = True):
     target_name = name if name else "empty"
     target_name += "_shared" if is_shared else "_static"
     target_name += "_bin" if is_binary else "_lib"
-    deps = stl_deps(name, is_shared, is_binary)
+    info = stl_info(name, is_shared, is_binary)
 
     _stl(
         name = target_name,
-        shared = deps.shared,
-        static = deps.static,
+        shared = info.shared_deps,
+        static = info.static_deps,
         tags = ["manual"],
     )
 
