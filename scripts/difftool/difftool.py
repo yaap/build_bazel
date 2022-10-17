@@ -105,7 +105,7 @@ FILE_TYPE_CHOICES = {
 
 def _artifact_type(file_path):
   ext = file_path.suffix
-  if ext == ".o":
+  if ext in [".o", ".a"]:
     return ArtifactType.CC_OBJECT
   elif ext == ".so":
     return ArtifactType.CC_SHARED_LIBRARY

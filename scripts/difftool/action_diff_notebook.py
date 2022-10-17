@@ -53,22 +53,26 @@ os.chdir(ANDROID_CHECKOUT_PATH)
 
 # %%
 LUNCH_TARGET = "aosp_arm64"
+TARGET_BUILD_VARIANT = "userdebug"
 
 subprocess.run([
     "build/soong/soong_ui.bash",
     "--make-mode",
     f"TARGET_PRODUCT={LUNCH_TARGET}",
-    "TARGET_BUILD_VARIANT=userdebug",
+    f"TARGET_BUILD_VARIANT={TARGET_BUILD_VARIANT}",
     "--skip-soong-tests",
     "bp2build",
     "nothing",
 ])
 
+
 # %%
 def get_bazel_actions(
     *, expr: str, config: str, mnemonic: str, additional_args: list[str] = []
 ):
-  return difftool.collect_commands_bazel(expr, config, mnemonic, *additional_args)
+  return difftool.collect_commands_bazel(
+      expr, config, mnemonic, *additional_args
+  )
 
 
 def get_ninja_actions(*, lunch_target: str, target: str, mnemonic: str):
@@ -101,8 +105,8 @@ ninja_actions = get_ninja_actions(
     target="out/soong/.intermediates/packages/modules/adb/adb_test/linux_glibc_x86_64/adb_test",
     mnemonic="clang++",
 )
-bazel_link_action = bzl_actions[0]["arguments"]
-ninja_link_action = ninja_actions[-1].split()
+bazel_action = bzl_actions[0]["arguments"]
+ninja_action = ninja_actions[-1].split()
 
 # %%
 # This example is similar and gets all of the "CppCompile" actions from the
@@ -123,10 +127,10 @@ ninja_actions = get_ninja_actions(
     target="out/soong/.intermediates/packages/modules/adb/adb_test/linux_glibc_x86_64/obj/packages/modules/adb/adb_io_test.o",
     mnemonic="clang++",
 )
-bazel_link_action = bzl_actions[0]["arguments"]
-ninja_link_action = ninja_actions[-1].split()
+bazel_action = bzl_actions[0]["arguments"]
+ninja_action = ninja_actions[-1].split()
 
-#%%
+# %%
 # This example gets all of the "CppCompile" actions from the deps of everything
 # under the //packages/modules/adb package, but it uses the additional_args
 # to exclude "manual" internal targets.
@@ -142,9 +146,9 @@ bzl_actions = get_bazel_actions(
 # %%
 # Once we have the command-line string for each action from Bazel and Ninja,
 # we can use difftool to parse and compare the actions.
-ninja_link_action = commands.expand_rsp(ninja_link_action)
-bzl_rich_commands = difftool.rich_command_info(" ".join(bazel_link_action))
-ninja_rich_commands = difftool.rich_command_info(" ".join(ninja_link_action))
+ninja_action = commands.expand_rsp(ninja_action)
+bzl_rich_commands = difftool.rich_command_info(" ".join(bazel_action))
+ninja_rich_commands = difftool.rich_command_info(" ".join(ninja_action))
 
 print("Bazel args:")
 print(" \\\n\t".join([bzl_rich_commands.tool] + bzl_rich_commands.args))
@@ -157,3 +161,34 @@ print("In Bazel, not Soong:")
 print(bzl_only)
 print("In Soong, not Bazel:")
 print(soong_only)
+
+# %%
+# Now that we've diffed the action strings, it is sometimes useful to also
+# diff the paths that go into the action. This helps us narrow down diffs
+# in a module that are created in their dependencies. This section attempts
+# to match paths from the Bazel action to corresponding paths in the Ninja
+# action, and the runs difftool on these paths.
+bzl_paths, _ = commands.extract_paths_from_action_args(bazel_action)
+ninja_paths, _ = commands.extract_paths_from_action_args(ninja_action)
+unmatched_paths = []
+for p1, p2 in commands.match_paths(bzl_paths, ninja_paths).items():
+  if p2 is None:
+    unmatched_paths.append(p1)
+    continue
+  diff = difftool.file_differences(
+      pathlib.Path(p1).resolve(),
+      pathlib.Path(p2).resolve(),
+      level=difftool.DiffLevel.FINE,
+  )
+  for row in diff:
+    print(row)
+if unmatched_paths:
+  # Since the test for file paths looks for existing files, this matching won't
+  # work if the Soong artifacts don't exist.
+  print(
+      "Found some Bazel paths that didn't have a good match in Soong "
+      + "intermediates. Did you run `m`?"
+  )
+  print("Unmatched paths:")
+  for i in unmatched_paths:
+    print("\t" + i)
