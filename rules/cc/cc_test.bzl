@@ -47,6 +47,7 @@ def cc_test(
         tidy = None,
         tidy_checks = None,
         tidy_checks_as_errors = None,
+        tidy_flags = None,
         **kwargs):
     # NOTE: Keep this in sync with cc/test.go#linkerDeps
     if gtest:
@@ -66,5 +67,6 @@ def cc_test(
         tidy = tidy,
         tidy_checks = tidy_checks,
         tidy_checks_as_errors = tidy_checks_as_errors,
+        tidy_flags = tidy_flags,
         **kwargs
     )
