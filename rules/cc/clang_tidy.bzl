@@ -44,6 +44,33 @@ def _get_compilation_args(toolchain, feature_config, flags, compilation_ctx, act
         variables = compilation_vars,
     )
 
+def _check_bad_tidy_flags(tidy_flags):
+    """should be kept up to date with
+    https://cs.android.com/android/platform/superproject/+/master:build/soong/cc/check.go;l=128;drc=b45a2ea782074944f79fc388df20b06e01f265f7
+    """
+    for flag in tidy_flags:
+        flag = flag.strip()
+        if not flag.startswith("-"):
+            fail("Flag `%s` must start with `-`" % flag)
+        if flag.startswith("-fix"):
+            fail("Flag `%s` is not allowed, since it could cause multiple writes to the same source file" % flag)
+        if flag.startswith("-checks="):
+            fail("Flag `%s` is not allowed, use `tidy_checks` property instead" % flag)
+        if "-warnings-as-errors=" in flag:
+            fail("Flag `%s` is not allowed, use `tidy_checks_as_errors` property instead" % flag)
+        if " " in flag:
+            fail("Bad flag: `%s` is not an allowed multi-word flag. Should it be split into multiple flags?" % flag)
+
+def _check_bad_tidy_checks(tidy_checks):
+    """should be kept up to date with
+    https://cs.android.com/android/platform/superproject/+/master:build/soong/cc/check.go;l=145;drc=b45a2ea782074944f79fc388df20b06e01f265f7
+    """
+    for check in tidy_checks:
+        if " " in check:
+            fail("Check `%s` invalid, cannot contain spaces" % check)
+        if "," in check:
+            fail("Check `%s` invalid, cannot contain commas. Split each entry into it's own string instead" % check)
+
 def _add_header_filter(ctx, tidy_flags):
     """If TidyFlags does not contain -header-filter, add default header filter.
     """
@@ -123,11 +150,22 @@ def _add_global_tidy_checks(local_checks):
 def _add_global_tidy_checks_as_errors(tidy_checks_as_errors):
     return tidy_checks_as_errors + TIDY_GLOBAL_NO_ERROR_CHECKS
 
-def _create_clang_tidy_action(ctx, clang_tool, input_file, tidy_checks, tidy_checks_as_errors, tidy_flags, clang_flags, headers):
+def _create_clang_tidy_action(
+        ctx,
+        clang_tool,
+        input_file,
+        tidy_checks,
+        tidy_checks_as_errors,
+        tidy_flags,
+        clang_flags,
+        headers):
     tidy_flags = _add_header_filter(ctx, tidy_flags)
     tidy_flags = _add_extra_arg_flags(tidy_flags)
     tidy_checks = _add_global_tidy_checks(tidy_checks)
     tidy_checks_as_errors = _add_global_tidy_checks_as_errors(tidy_checks_as_errors)
+
+    _check_bad_tidy_checks(tidy_checks)
+    _check_bad_tidy_flags(tidy_flags)
 
     args = ctx.actions.args()
     args.add(input_file)
