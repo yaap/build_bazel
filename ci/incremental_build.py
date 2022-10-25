@@ -322,7 +322,9 @@ def _handle_user_input() -> UserInput:
 
   p.add_argument('--bazel-mode-dev', default=False, action='store_true')
   p.add_argument('--bazel-mode', default=False, action='store_true')
-  p.add_argument('--skip-repo-status', default=False, action='store_true',
+  p.add_argument('--repo-diff-exit', default=False, action='store_true',
+                 help='Exit if "repo status" check shows local changes')
+  p.add_argument('--repo-diff-ignore', default=False, action='store_true',
                  help='Skip "repo status" check')
 
   p.add_argument('targets', nargs='*', default=['droid', 'dist'],
@@ -347,9 +349,6 @@ def _handle_user_input() -> UserInput:
     chosen_cujgroups = [i for sublist in options.cujs for i in sublist]
   else:
     chosen_cujgroups = [i for i in range(0, len(get_cujgroups()))]
-  chosen_cuj_list = '\n'.join(
-      [f'{i:2}: {get_cujgroups()[i]}' for i in chosen_cujgroups])
-  logging.info(f'CUJs chosen:\n{chosen_cuj_list}')
 
   if options.bazel_mode_dev and options.bazel_mode:
     sys.exit('mutually exclusive options --bazel-mode-dev and --bazel-mode')
@@ -370,11 +369,19 @@ def _handle_user_input() -> UserInput:
   else:
     build_type = BuildType.LEGACY
 
-  if not options.skip_repo_status and has_uncommitted_changed():
-    response = input('There are uncommitted changes (TIP: repo status).\n'
-                     'Continue?[Y/n]')
+  if options.repo_diff_ignore and options.repo_diff_exit:
+    sys.exit('--repo-diff-ignore and ---repo-diff-exit cannot both be set')
+  if not options.repo_diff_ignore and has_uncommitted_changed():
+    error_message = 'There are uncommitted changes (TIP: repo status).'
+    if options.repo_diff_exit:
+      sys.exit(error_message)
+    response = input(f'{error_message}\nContinue?[Y/n]')
     if response.upper() != 'Y':
       sys.exit(0)
+
+  chosen_cuj_list = '\n'.join(
+      [f'{i:2}: {get_cujgroups()[i]}' for i in chosen_cujgroups])
+  logging.info(f'CUJs chosen:\n{chosen_cuj_list}')
 
   return UserInput(
       build_type=build_type,
@@ -418,12 +425,12 @@ def main():
   """
   user_input = _handle_user_input()
 
-  logging.warning('If you kill this process, make sure to `repo status` and '
-                  'revert unwanted changes.\n'
-                  'TIP: If you have no local changes of interest you may\n  '
-                  'repo forall -p -c git reset --hard\n        and\n  '
-                  'repo forall -p -c git clean --force\n        and even\n  '
-                  'm clean')
+  logging.warning(textwrap.dedent('''
+  If you kill this process, make sure to revert unwanted changes.
+  TIP: If you have no local changes of interest you may
+       `repo forall -p -c git reset --hard`  and
+       `repo forall -p -c git clean --force` and even
+       `m clean && rm -rf out`'''))
 
   env = _prepare_env()
   cmd = f'{user_input.build_type.value} {" ".join(user_input.targets)}'
