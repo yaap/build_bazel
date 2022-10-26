@@ -45,20 +45,26 @@ from incremental_build_cujs import get_top_dir
 
 SUMMARY_CSV: Final[str] = 'summary.csv'
 
+IMPORTANT_METRICS = ['soong/bootstrap', 'soong_build/.bazel', 'ninja/ninja',
+                     'bp2build/']
+
 
 def _get_tip(d: Path) -> str:
   """
   :param d: the path to log directory
   :return: a quick shell command to view some collected metrics
   """
-  return (
-      f'TIP: For a quick look at key data points in {SUMMARY_CSV} try:\n'
-      f'  tail -n +2 "{d}/{SUMMARY_CSV}" | \\\n'  # skip the header row
-      '  column -t -s, -J \\\n'  # load as json
-      f'  -N "$(head -n 1 \'{d}/{SUMMARY_CSV}\')" | \\\n'  # row 1 = header
-      '  jq -r ".table[] | [.time, .ninja_explains, .description] | @tsv"'
-      # display the selected attributes as a table'
-  )
+  return textwrap.dedent(f'''
+    TIP: For a quick look at key data points try:
+    ( \\
+    export select_headers='[.ninja_explains, .time,
+      .["soong/bootstrap"], .["soong_build/.bazel"],
+      .["ninja/ninja"], .["bp2build/"], .run, .description]'; \\
+    export all_headers="$(head -n 1 "{d}/{SUMMARY_CSV}")"; \\
+    cat "{d}/{SUMMARY_CSV}" | \\
+    column -t -s, -J -N  "$all_headers" | \\
+    jq -r ".table[] | $select_headers | @tsv" \\
+    )''')
 
 
 class BuildResult(Enum):
@@ -84,6 +90,7 @@ class UserInput:
   chosen_cujgroups: list[int]
   log_dir: Path
   repeat_count: int
+  all_metrics: bool
   targets: list[str]
 
 
@@ -143,7 +150,17 @@ def read_perf_metrics(log_dir: Path, description: str, run_number: int) -> dict[
         _to_file(log_dir, f'bp2_build_metrics_{description}', run_number, 'pb'))
 
   events.sort(key=lambda e: e.start_time)
-  return {f'{m.name}/{m.description}': m.real_time for m in events}
+
+  def unwrap(desc: str) -> str:
+    """
+    soong_build events have a "mixed_build" event wrapper, remove it for
+    ease of comparison with legacy soong builds.
+    Also drop the "soong_build" root event.
+    """
+    return desc.replace('soong_build/soong_build.', 'soong_build/').replace(
+        '.mixed_build.', '.')
+
+  return {unwrap(f'{m.name}/{m.description}'): m.real_time for m in events}
 
 
 def read_perf_metrics_pb(
@@ -308,7 +325,9 @@ def _handle_user_input() -> UserInput:
                       'If 0, do not repeat (i.e. do exactly once). '
                       'Defaults to %(default)d\n'
                       'TIP: Repetitions should ideally be null builds.')
-
+  p.add_argument('--all-metrics', default=False, action='store_true',
+                 help=f'gather all metrics in {SUMMARY_CSV} instead of just'
+                      f'{", ".join(IMPORTANT_METRICS)}')
   log_levels = dict(getattr(logging, '_levelToName')).values()
   p.add_argument('-v', '--verbosity', choices=log_levels, default='INFO',
                  help='Log level, defaults to %(default)s')
@@ -318,7 +337,7 @@ def _handle_user_input() -> UserInput:
                       '$OUT_DIR/timing_logs.'
                       'TIP: specify a directory outside of the source tree\n'
                       f'There is also a {SUMMARY_CSV}\n'
-                      f'{_get_tip(Path("<log_dir>"))}')
+                      f'{_get_tip(Path("$log_dir"))}')
 
   p.add_argument('--bazel-mode-dev', default=False, action='store_true')
   p.add_argument('--bazel-mode', default=False, action='store_true')
@@ -390,6 +409,7 @@ def _handle_user_input() -> UserInput:
           options.log_dir) if options.log_dir else get_out_dir().joinpath(
           'timing_logs'),
       repeat_count=options.repeat,
+      all_metrics=options.all_metrics,
       targets=options.targets)
 
 
@@ -488,14 +508,17 @@ def main():
                    cujstep.description)
       cujstep.action()
       for run_number in range(0, user_input.repeat_count + 1):
-        row = build() | read_perf_metrics(
+        info = build()
+        perf = read_perf_metrics(
             user_input.log_dir,
             f'{cujgroup.description} {cujstep.description}',
             run_number)
+        if not user_input.all_metrics:
+          perf = {k: v for k, v in perf if k in IMPORTANT_METRICS}
         if clean:
-          row['build_type'] = 'CLEAN ' + row['build_type']
+          info['build_type'] = 'CLEAN ' + info['build_type']
           clean = False  # we don't clean subsequently
-        _write_csv_row(summary_csv_path, row)
+        _write_csv_row(summary_csv_path, info | perf)
       logging.info(' DONE %d "%s: %s"\n', i, cujgroup.description,
                    cujstep.description)
 
