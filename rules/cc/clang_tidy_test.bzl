@@ -559,6 +559,55 @@ def _test_cc_library_static_generates_clang_tidy_actions_for_srcs():
         ),
     ]
 
+def _no_clang_analyzer_on_generated_files_test_impl(ctx):
+    env = analysistest.begin(ctx)
+    actions = analysistest.target_actions(env)
+
+    clang_tidy_actions = [a for a in actions if a.mnemonic == "ClangTidy"]
+    for a in clang_tidy_actions:
+        found_clang_analyzer = False
+        for arg in a.argv:
+            if "-clang-analyzer-*" in arg:
+                found_clang_analyzer = True
+        asserts.true(env, found_clang_analyzer)
+
+    return analysistest.end(env)
+
+_no_clang_analyzer_on_generated_files_test = analysistest.make(
+    impl = _no_clang_analyzer_on_generated_files_test_impl,
+    config_settings = {
+        "@//build/bazel/flags/cc/tidy:allow_local_tidy_true": True,
+    },
+)
+
+def _test_no_clang_analyzer_on_generated_files():
+    name = "no_clang_analyzer_on_generated_files"
+    gen_name = name + "_generated_files"
+    test_name = name + "_test"
+
+    native.genrule(
+        name = gen_name,
+        outs = ["aout.cpp", "bout.cpp"],
+        cmd = "touch $(OUTS)",
+        tags = ["manual"],
+    )
+
+    cc_library_static(
+        name = name,
+        srcs = [":" + gen_name],
+        tidy = True,
+        tags = ["manual"],
+    )
+
+    _no_clang_analyzer_on_generated_files_test(
+        name = test_name,
+        target_under_test = name,
+    )
+
+    return [
+        test_name,
+    ]
+
 def clang_tidy_test_suite(name):
     native.test_suite(
         name = name,
@@ -569,5 +618,6 @@ def clang_tidy_test_suite(name):
             _test_bad_tidy_checks_fail() +
             _test_bad_tidy_flags_fail() +
             _test_disable_global_checks() +
-            _test_cc_library_static_generates_clang_tidy_actions_for_srcs(),
+            _test_cc_library_static_generates_clang_tidy_actions_for_srcs() +
+            _test_no_clang_analyzer_on_generated_files(),
     )
