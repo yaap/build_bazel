@@ -151,6 +151,9 @@ def _checks_test_impl(ctx):
 
     checks = _get_single_arg(env, actions, "-checks=").split(",")
     asserts.set_equals(env, sets.make(ctx.attr.expected_checks), sets.make(checks))
+    if len(ctx.attr.unexpected_checks) > 0:
+        for c in ctx.attr.unexpected_checks:
+            asserts.false(env, c in checks, "found unexpected check in -checks flag: %s" % c)
 
     checks_as_errors = _get_single_arg(env, actions, "-warnings-as-errors=").split(",")
     asserts.set_equals(env, sets.make(ctx.attr.expected_checks_as_errors), sets.make(checks_as_errors))
@@ -162,6 +165,7 @@ _checks_test = analysistest.make(
     attrs = {
         "expected_checks": attr.string_list(mandatory = True),
         "expected_checks_as_errors": attr.string_list(mandatory = True),
+        "unexpected_checks": attr.string_list(),
     },
 )
 
@@ -311,9 +315,34 @@ def _test_custom_header_dir():
         test_name,
     ]
 
+def _test_disabled_checks_are_removed():
+    name = "disabled_checks_are_removed"
+    test_name = name + "_test"
+
+    _clang_tidy(
+        name = name,
+        srcs = ["a.cpp"],
+        tidy_checks = ["misc-no-recursion", "readability-function-cognitive-complexity"],
+        tags = ["manual"],
+    )
+
+    _checks_test(
+        name = test_name,
+        target_under_test = name,
+        expected_checks = _DEFAULT_CHECKS,
+        expected_checks_as_errors = _DEFAULT_CHECKS_AS_ERRORS,
+        unexpected_checks = ["misc-no-recursion", "readability-function-cognitive-complexity"],
+    )
+
+    return [
+        test_name,
+    ]
+
 def clang_tidy_test_suite(name):
     native.test_suite(
         name = name,
-        tests = _test_clang_tidy() +
-                _test_custom_header_dir(),
+        tests =
+            _test_clang_tidy() +
+            _test_custom_header_dir() +
+            _test_disabled_checks_are_removed(),
     )
