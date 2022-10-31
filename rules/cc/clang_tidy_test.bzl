@@ -153,29 +153,71 @@ _checks_test = analysistest.make(
     },
 )
 
-def _test_checks():
+def _copts_test_impl(ctx):
+    env = analysistest.begin(ctx)
+    actions = analysistest.target_actions(env)
+
+    args = actions[0].argv
+    clang_flags = []
+    for i, a in enumerate(args):
+        if a == "--" and len(args) > i + 1:
+            clang_flags = args[i + 1:]
+            break
+    asserts.true(
+        env,
+        len(clang_flags) > 0,
+        "no flags passed to clang; all arguments: %s" % args,
+    )
+
+    for expected_arg in ctx.attr.expected_copts:
+        asserts.true(
+            env,
+            expected_arg in clang_flags,
+            "expected `%s` not present in clang flags" % expected_arg,
+        )
+
+    return analysistest.end(env)
+
+_copts_test = analysistest.make(
+    _copts_test_impl,
+    attrs = {
+        "expected_copts": attr.string_list(mandatory = True),
+    },
+)
+
+def _test_clang_tidy():
     name = "checks"
-    test_name = name + "test"
+    test_name = name + "_test"
+    checks_test_name = test_name + "_checks"
+    copts_test_name = test_name + "_copts"
 
     _clang_tidy(
         name = name,
         srcs = ["a.cpp"],
+        copts = ["-asdf1", "-asdf2"],
         tags = ["manual"],
     )
 
     _checks_test(
-        name = test_name,
+        name = checks_test_name,
         target_under_test = name,
         expected_checks = _DEFAULT_CHECKS,
         expected_checks_as_errors = _DEFAULT_CHECKS_AS_ERRORS,
     )
 
+    _copts_test(
+        name = copts_test_name,
+        target_under_test = name,
+        expected_copts = ["-asdf1", "-asdf2"],
+    )
+
     return [
-        test_name,
+        checks_test_name,
+        copts_test_name,
     ]
 
 def clang_tidy_test_suite(name):
     native.test_suite(
         name = name,
-        tests = _test_checks(),
+        tests = _test_clang_tidy(),
     )
