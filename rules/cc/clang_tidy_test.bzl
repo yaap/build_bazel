@@ -48,9 +48,12 @@ _DEFAULT_CHECKS = [
     "-cert-err33-c",
     "-bugprone-unchecked-optional-access",
 ]
-
-def _checks_arg_to_list(arg):
-    return arg[len("-checks="):].split(",")
+_DEFAULT_CHECKS_AS_ERRORS = [
+    "-bugprone-assignment-in-if-condition",
+    "-bugprone-branch-clone",
+    "-bugprone-signed-char-misuse",
+    "-misc-const-correctness",
+]
 
 def _clang_tidy_impl(ctx):
     tidy_outs = generate_clang_tidy_actions(
@@ -121,18 +124,24 @@ _clang_tidy = rule(
     fragments = ["cpp"],
 )
 
+def _get_arg(env, actions, argname):
+    arg = None
+    for a in actions[0].argv:
+        if a.startswith(argname):
+            arg = a[len(argname):]
+            break
+    asserts.false(env, arg == None, "could not find `{}` argument".format(argname))
+    return arg
+
 def _checks_test_impl(ctx):
     env = analysistest.begin(ctx)
     actions = analysistest.target_actions(env)
 
-    checks_arg = None
-    for arg in actions[0].argv:
-        if arg.startswith("-checks="):
-            checks_arg = arg
-    asserts.false(env, checks_arg == None, "could not find `-checks=` argument")
-
-    checks = _checks_arg_to_list(checks_arg)
+    checks = _get_arg(env, actions, "-checks=").split(",")
     asserts.set_equals(env, sets.make(ctx.attr.expected_checks), sets.make(checks))
+
+    checks_as_errors = _get_arg(env, actions, "-warnings-as-errors=").split(",")
+    asserts.set_equals(env, sets.make(ctx.attr.expected_checks_as_errors), sets.make(checks_as_errors))
 
     return analysistest.end(env)
 
@@ -140,6 +149,7 @@ _checks_test = analysistest.make(
     _checks_test_impl,
     attrs = {
         "expected_checks": attr.string_list(mandatory = True),
+        "expected_checks_as_errors": attr.string_list(mandatory = True),
     },
 )
 
@@ -157,6 +167,7 @@ def _test_checks():
         name = test_name,
         target_under_test = name,
         expected_checks = _DEFAULT_CHECKS,
+        expected_checks_as_errors = _DEFAULT_CHECKS_AS_ERRORS,
     )
 
     return [
