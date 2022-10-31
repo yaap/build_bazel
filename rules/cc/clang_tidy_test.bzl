@@ -185,16 +185,49 @@ _copts_test = analysistest.make(
     },
 )
 
+def _tidy_flags_test_impl(ctx):
+    env = analysistest.begin(ctx)
+    actions = analysistest.target_actions(env)
+
+    args = actions[0].argv
+    tidy_flags = []
+    for i, a in enumerate(args):
+        if a == "--" and len(args) > i + 1:
+            tidy_flags = args[:i]
+    asserts.true(
+        env,
+        len(tidy_flags) > 0,
+        "no tidy flags passed to clang-tidy; all arguments: %s" % args,
+    )
+
+    for expected_arg in ctx.attr.expected_tidy_flags:
+        asserts.true(
+            env,
+            expected_arg in tidy_flags,
+            "expected `%s` not present in flags to clang-tidy" % expected_arg,
+        )
+
+    return analysistest.end(env)
+
+_tidy_flags_test = analysistest.make(
+    _tidy_flags_test_impl,
+    attrs = {
+        "expected_tidy_flags": attr.string_list(mandatory = True),
+    },
+)
+
 def _test_clang_tidy():
     name = "checks"
     test_name = name + "_test"
     checks_test_name = test_name + "_checks"
     copts_test_name = test_name + "_copts"
+    tidy_flags_test_name = test_name + "_tidy_flags"
 
     _clang_tidy(
         name = name,
         srcs = ["a.cpp"],
         copts = ["-asdf1", "-asdf2"],
+        tidy_flags = ["-tidy-flag1", "-tidy-flag2"],
         tags = ["manual"],
     )
 
@@ -211,9 +244,16 @@ def _test_clang_tidy():
         expected_copts = ["-asdf1", "-asdf2"],
     )
 
+    _tidy_flags_test(
+        name = tidy_flags_test_name,
+        target_under_test = name,
+        expected_tidy_flags = ["-tidy-flag1", "-tidy-flag2"],
+    )
+
     return [
         checks_test_name,
         copts_test_name,
+        tidy_flags_test_name,
     ]
 
 def clang_tidy_test_suite(name):
