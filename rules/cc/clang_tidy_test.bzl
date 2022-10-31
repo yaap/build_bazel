@@ -55,6 +55,13 @@ _DEFAULT_CHECKS_AS_ERRORS = [
     "-bugprone-signed-char-misuse",
     "-misc-const-correctness",
 ]
+_EXTRA_ARGS_BEFORE = [
+    "-D__clang_analyzer__",
+    "-Xclang",
+    "-analyzer-config",
+    "-Xclang",
+    "c++-temp-dtor-inlining=false",
+]
 
 def _clang_tidy_impl(ctx):
     tidy_outs = generate_clang_tidy_actions(
@@ -125,23 +132,27 @@ _clang_tidy = rule(
     fragments = ["cpp"],
 )
 
-def _get_arg(env, actions, argname):
-    arg = None
+def _get_all_arg(env, actions, argname):
+    args = []
     for a in actions[0].argv:
         if a.startswith(argname):
-            arg = a[len(argname):]
-            break
-    asserts.false(env, arg == None, "could not find `{}` argument".format(argname))
-    return arg
+            args.append(a[len(argname):])
+    asserts.false(env, args == [], "could not arguments that start with `{}`".format(argname))
+    return args
+
+def _get_single_arg(env, actions, argname):
+    arg = _get_all_arg(env, actions, argname)
+    asserts.true(env, len(arg) == 1, "too many `%s` arguments. expected 1; got %s" % (argname, len(arg)))
+    return arg[0]
 
 def _checks_test_impl(ctx):
     env = analysistest.begin(ctx)
     actions = analysistest.target_actions(env)
 
-    checks = _get_arg(env, actions, "-checks=").split(",")
+    checks = _get_single_arg(env, actions, "-checks=").split(",")
     asserts.set_equals(env, sets.make(ctx.attr.expected_checks), sets.make(checks))
 
-    checks_as_errors = _get_arg(env, actions, "-warnings-as-errors=").split(",")
+    checks_as_errors = _get_single_arg(env, actions, "-warnings-as-errors=").split(",")
     asserts.set_equals(env, sets.make(ctx.attr.expected_checks_as_errors), sets.make(checks_as_errors))
 
     return analysistest.end(env)
@@ -208,7 +219,7 @@ def _tidy_flags_test_impl(ctx):
             "expected `%s` not present in flags to clang-tidy" % expected_arg,
         )
 
-    header_filter = _get_arg(env, actions, "-header-filter=")
+    header_filter = _get_single_arg(env, actions, "-header-filter=")
     asserts.true(
         env,
         header_filter == ctx.attr.expected_header_filter,
@@ -218,6 +229,14 @@ def _tidy_flags_test_impl(ctx):
         ),
     )
 
+    extra_arg_before = _get_all_arg(env, actions, "-extra-arg-before=")
+    for expected_arg in ctx.attr.expected_extra_arg_before:
+        asserts.true(
+            env,
+            expected_arg in extra_arg_before,
+            "did not find expected flag `%s` in args to clang-tidy" % expected_arg,
+        )
+
     return analysistest.end(env)
 
 _tidy_flags_test = analysistest.make(
@@ -225,6 +244,7 @@ _tidy_flags_test = analysistest.make(
     attrs = {
         "expected_tidy_flags": attr.string_list(mandatory = True),
         "expected_header_filter": attr.string(mandatory = True),
+        "expected_extra_arg_before": attr.string_list(mandatory = True),
     },
 )
 
@@ -261,6 +281,7 @@ def _test_clang_tidy():
         target_under_test = name,
         expected_tidy_flags = ["-tidy-flag1", "-tidy-flag2"],
         expected_header_filter = _PACKAGE_HEADER_FILTER,
+        expected_extra_arg_before = _EXTRA_ARGS_BEFORE,
     )
 
     return [
