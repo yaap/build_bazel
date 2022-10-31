@@ -80,7 +80,7 @@ def _check_bad_tidy_checks(tidy_checks):
         if " " in check:
             fail("Check `%s` invalid, cannot contain spaces" % check)
         if "," in check:
-            fail("Check `%s` invalid, cannot contain commas. Split each entry into it's own string instead" % check)
+            fail("Check `%s` invalid, cannot contain commas. Split each entry into its own string instead" % check)
 
 def _add_with_tidy_flags(ctx, tidy_flags):
     with_tidy_flags = ctx.attr._with_tidy_flags[BuildSettingInfo].value

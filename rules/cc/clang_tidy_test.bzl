@@ -17,6 +17,7 @@ limitations under the License.
 load("@bazel_skylib//lib:new_sets.bzl", "sets")
 load("@bazel_skylib//lib:unittest.bzl", "analysistest", "asserts")
 load(":clang_tidy.bzl", "generate_clang_tidy_actions")
+load("//build/bazel/rules/test_common:rules.bzl", "expect_failure_test")
 
 _PACKAGE_HEADER_FILTER = "^build/bazel/rules/cc/"
 _DEFAULT_CHECKS = [
@@ -338,11 +339,47 @@ def _test_disabled_checks_are_removed():
         test_name,
     ]
 
+def _create_bad_tidy_checks_test(name, tidy_checks, failure_message):
+    name = "bad_tidy_checks_fail" + name
+    test_name = name + "_test"
+
+    _clang_tidy(
+        name = name,
+        srcs = ["a.cpp"],
+        tidy_checks = tidy_checks,
+        tags = ["manual"],
+    )
+
+    expect_failure_test(
+        name = test_name,
+        target_under_test = name,
+        failure_message = failure_message,
+    )
+
+    return [
+        test_name,
+    ]
+
+def _test_bad_tidy_checks_fail():
+    return (
+        _create_bad_tidy_checks_test(
+            name = "with_spaces",
+            tidy_checks = ["check with spaces"],
+            failure_message = "Check `check with spaces` invalid, cannot contain spaces",
+        ) +
+        _create_bad_tidy_checks_test(
+            name = "with_commas",
+            tidy_checks = ["check,with,commas"],
+            failure_message = "Check `check,with,commas` invalid, cannot contain commas. Split each entry into its own string instead",
+        )
+    )
+
 def clang_tidy_test_suite(name):
     native.test_suite(
         name = name,
         tests =
             _test_clang_tidy() +
             _test_custom_header_dir() +
-            _test_disabled_checks_are_removed(),
+            _test_disabled_checks_are_removed() +
+            _test_bad_tidy_checks_fail(),
     )
