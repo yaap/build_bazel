@@ -74,7 +74,8 @@ def cc_library_static(
         tags = [],
         tidy = None,
         tidy_checks = None,
-        tidy_checks_as_errors = None):
+        tidy_checks_as_errors = None,
+        tidy_flags = None):
     "Bazel macro to correspond with the cc_library_static Soong module."
 
     exports_name = "%s_exports" % name
@@ -211,6 +212,7 @@ def cc_library_static(
         copts_c = copts + conlyflags,
         hdrs = hdrs,
         includes = [locals_name, exports_name],
+        tidy_flags = tidy_flags,
         tidy_checks = tidy_checks,
         tidy_checks_as_errors = tidy_checks_as_errors,
     )
@@ -323,6 +325,7 @@ def _cc_library_combiner_impl(ctx):
             cpp_srcs,
             hdrs,
             "c++",
+            ctx.attr.tidy_flags,
             ctx.attr.tidy_checks,
             ctx.attr.tidy_checks_as_errors,
         )
@@ -333,6 +336,7 @@ def _cc_library_combiner_impl(ctx):
             c_srcs,
             hdrs,
             "c",
+            ctx.attr.tidy_flags,
             ctx.attr.tidy_checks,
             ctx.attr.tidy_checks_as_errors,
         )
@@ -382,6 +386,7 @@ _cc_library_combiner = rule(
         "includes": attr.label_list(),
         "tidy_checks": attr.string_list(),
         "tidy_checks_as_errors": attr.string_list(),
+        "tidy_flags": attr.string_list(),
         "_clang_tidy_sh": attr.label(
             default = Label("@//prebuilts/clang/host/linux-x86:clang-tidy.sh"),
             allow_single_file = True,
