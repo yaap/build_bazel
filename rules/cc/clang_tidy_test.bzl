@@ -242,9 +242,9 @@ def _tidy_flags_test_impl(ctx):
 _tidy_flags_test = analysistest.make(
     _tidy_flags_test_impl,
     attrs = {
-        "expected_tidy_flags": attr.string_list(mandatory = True),
+        "expected_tidy_flags": attr.string_list(),
         "expected_header_filter": attr.string(mandatory = True),
-        "expected_extra_arg_before": attr.string_list(mandatory = True),
+        "expected_extra_arg_before": attr.string_list(),
     },
 )
 
@@ -290,8 +290,30 @@ def _test_clang_tidy():
         tidy_flags_test_name,
     ]
 
+def _test_custom_header_dir():
+    name = "custom_header_dir"
+    test_name = name + "_test"
+
+    _clang_tidy(
+        name = name,
+        srcs = ["a.cpp"],
+        tidy_flags = ["-header-filter=dir1/"],
+        tags = ["manual"],
+    )
+
+    _tidy_flags_test(
+        name = test_name,
+        target_under_test = name,
+        expected_header_filter = "dir1/",
+    )
+
+    return [
+        test_name,
+    ]
+
 def clang_tidy_test_suite(name):
     native.test_suite(
         name = name,
-        tests = _test_clang_tidy(),
+        tests = _test_clang_tidy() +
+                _test_custom_header_dir(),
     )
