@@ -20,7 +20,7 @@ load(":clang_tidy.bzl", "generate_clang_tidy_actions")
 load("//build/bazel/rules/test_common:rules.bzl", "expect_failure_test")
 
 _PACKAGE_HEADER_FILTER = "^build/bazel/rules/cc/"
-_DEFAULT_CHECKS = [
+_DEFAULT_GLOBAL_CHECKS = [
     "android-*",
     "bugprone-*",
     "cert-*",
@@ -41,12 +41,17 @@ _DEFAULT_CHECKS = [
     "-misc-unused-parameters",
     "-performance-no-int-to-ptr",
     "-clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling",
+]
+_DEFAULT_CHECKS = [
+    "-misc-no-recursion",
     "-readability-function-cognitive-complexity",
+    "-bugprone-unchecked-optional-access",
     "-bugprone-reserved-identifier*",
     "-cert-dcl51-cpp",
     "-cert-dcl37-c",
     "-readability-qualified-auto",
     "-bugprone-implicit-widening-of-multiplication-result",
+    "-bugprone-easily-swappable-parameters",
     "-cert-err33-c",
     "-bugprone-unchecked-optional-access",
 ]
@@ -271,7 +276,7 @@ def _test_clang_tidy():
     _checks_test(
         name = checks_test_name,
         target_under_test = name,
-        expected_checks = _DEFAULT_CHECKS,
+        expected_checks = _DEFAULT_CHECKS + _DEFAULT_GLOBAL_CHECKS,
         expected_checks_as_errors = _DEFAULT_CHECKS_AS_ERRORS,
     )
 
@@ -330,7 +335,7 @@ def _test_disabled_checks_are_removed():
     _checks_test(
         name = test_name,
         target_under_test = name,
-        expected_checks = _DEFAULT_CHECKS,
+        expected_checks = _DEFAULT_CHECKS + _DEFAULT_GLOBAL_CHECKS,
         expected_checks_as_errors = _DEFAULT_CHECKS_AS_ERRORS,
         unexpected_checks = ["misc-no-recursion", "readability-function-cognitive-complexity"],
     )
@@ -424,6 +429,28 @@ def _test_bad_tidy_flags_fail():
         )
     )
 
+def _test_disable_global_checks():
+    name = "disable_global_checks"
+    test_name = name + "_test"
+
+    _clang_tidy(
+        name = name,
+        srcs = ["a.cpp"],
+        tidy_checks = ["-*"],
+        tags = ["manual"],
+    )
+
+    _checks_test(
+        name = test_name,
+        target_under_test = name,
+        expected_checks = ["-*"] + _DEFAULT_CHECKS,
+        expected_checks_as_errors = _DEFAULT_CHECKS_AS_ERRORS,
+    )
+
+    return [
+        test_name,
+    ]
+
 def clang_tidy_test_suite(name):
     native.test_suite(
         name = name,
@@ -432,5 +459,6 @@ def clang_tidy_test_suite(name):
             _test_custom_header_dir() +
             _test_disabled_checks_are_removed() +
             _test_bad_tidy_checks_fail() +
-            _test_bad_tidy_flags_fail(),
+            _test_bad_tidy_flags_fail() +
+            _test_disable_global_checks(),
     )
