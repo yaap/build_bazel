@@ -108,8 +108,15 @@ def _add_extra_arg_flags(tidy_flags):
         "-Xclang",
         "c++-temp-dtor-inlining=false",
     ]
-
     return tidy_flags + ["-extra-arg-before=" + f for f in extra_arg_flags]
+
+def _add_quiet_if_not_global_tidy(tidy_flags):
+    if not product_vars["ClangTidy"]:
+        return tidy_flags + [
+            "-quiet",
+            "-extra-arg-before=-fno-caret-diagnostics",
+        ]
+    return tidy_flags
 
 def _clang_rewrite_tidy_checks(tidy_checks):
     # List of tidy checks that should be disabled globally. When the compiler is
@@ -161,6 +168,7 @@ def _create_clang_tidy_action(
         headers):
     tidy_flags = _add_header_filter(ctx, tidy_flags)
     tidy_flags = _add_extra_arg_flags(tidy_flags)
+    tidy_flags = _add_quiet_if_not_global_tidy(tidy_flags)
     tidy_checks = _add_global_tidy_checks(tidy_checks)
     tidy_checks_as_errors = _add_global_tidy_checks_as_errors(tidy_checks_as_errors)
 
