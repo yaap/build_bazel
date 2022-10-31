@@ -39,15 +39,60 @@ def _get_compilation_args(toolchain, feature_config, flags, compilation_ctx, act
         variables = compilation_vars,
     )
 
-def _create_clang_tidy_action(ctx, clang_tool, input_file, tidy_checks, tidy_checks_as_errors, cflags, headers):
+def _add_header_filter(ctx, tidy_flags):
+    """If TidyFlags does not contain -header-filter, add default header filter.
+    """
+    for flag in tidy_flags:
+        # Find the substring because the flag could also appear as --header-filter=...
+        # and with or without single or double quotes.
+        if "-header-filter=" in flag:
+            return tidy_flags
+
+    # Default header filter should include only the module directory,
+    # not the out/soong/.../ModuleDir/...
+    # Otherwise, there will be too many warnings from generated files in out/...
+    # If a module wants to see warnings in the generated source files,
+    # it should specify its own -header-filter flag.
+    #TODO(b/255744059) support DEFAULT_TIDY_HEADER_DIRS
+    header_filter = "-header-filter=^" + ctx.label.package + "/"
+    return tidy_flags + [header_filter]
+
+def _add_extra_arg_flags(tidy_flags):
+    """keep up to date with
+    https://cs.android.com/android/platform/superproject/+/master:build/soong/cc/tidy.go;l=138-152;drc=ff2efae9b014d644fcce8143258fa652fc2bcf13
+    TODO(b/255750565) export this
+    """
+    extra_arg_flags = [
+        # We might be using the static analyzer through clang tidy.
+        # https://bugs.llvm.org/show_bug.cgi?id=32914
+        "-D__clang_analyzer__",
+
+        # A recent change in clang-tidy (r328258) enabled destructor inlining, which
+        # appears to cause a number of false positives. Until that's resolved, this turns
+        # off the effects of r328258.
+        # https://bugs.llvm.org/show_bug.cgi?id=37459
+        "-Xclang",
+        "-analyzer-config",
+        "-Xclang",
+        "c++-temp-dtor-inlining=false",
+    ]
+
+    return tidy_flags + ["-extra-arg-before=" + f for f in extra_arg_flags]
+
+def _create_clang_tidy_action(ctx, clang_tool, input_file, tidy_checks, tidy_checks_as_errors, tidy_flags, clang_flags, headers):
+    tidy_flags = _add_header_filter(ctx, tidy_flags)
+    tidy_flags = _add_extra_arg_flags(tidy_flags)
+
     args = ctx.actions.args()
     args.add(input_file)
     if tidy_checks:
         args.add("-checks=" + ",".join(tidy_checks))
     if tidy_checks_as_errors:
         args.add("-warnings-as-errors=" + ",".join(tidy_checks_as_errors))
+    if tidy_flags:
+        args.add_all(tidy_flags)
     args.add("--")
-    args.add_all(cflags)
+    args.add_all(clang_flags)
 
     tidy_file = ctx.actions.declare_file(paths.join(ctx.label.name, input_file.short_path + ".tidy"))
     ctx.actions.run(
@@ -78,6 +123,7 @@ def generate_clang_tidy_actions(
         srcs,
         hdrs,
         language,
+        tidy_flags,
         tidy_checks,
         tidy_checks_as_errors):
     """Generates actions for clang tidy
@@ -92,6 +138,7 @@ def generate_clang_tidy_actions(
         srcs (list[File]): list of srcs to which clang-tidy will be applied
         hdrs (list[File]): list of headers used by srcs. This is used to provide explicit inputs to the action
         language (str): must be one of ["c++", "c"]. This is used to decide what toolchain arguments are passed to the clang compile action
+        tidy_flags (list[str]): additional flags to pass to the clang-tidy tool
         tidy_checks (list[str]): list of checks for clang-tidy to perform
         tidy_checks_as_errors (list[str]): list of checks to pass as "-warnings-as-errors" to clang-tidy
     Returns:
@@ -148,7 +195,8 @@ def generate_clang_tidy_actions(
             clang_tool = paths.basename(clang_tool),
             tidy_checks = tidy_checks,
             tidy_checks_as_errors = tidy_checks_as_errors,
-            cflags = args,
+            tidy_flags = tidy_flags,
+            clang_flags = args,
         )
         tidy_file_outputs.append(tidy_file)
 
