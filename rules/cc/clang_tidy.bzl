@@ -21,6 +21,11 @@ load(
     "CPP_COMPILE_ACTION_NAME",
     "C_COMPILE_ACTION_NAME",
 )
+load("@soong_injection//product_config:product_variables.bzl", "product_vars")
+load("@soong_injection//cc_toolchain:constants.bzl", "constants")
+
+TIDY_GLOBAL_NO_CHECKS = constants.TidyGlobalNoChecks.split(",")
+TIDY_GLOBAL_NO_ERROR_CHECKS = constants.TidyGlobalNoErrorChecks.split(",")
 
 def _get_compilation_args(toolchain, feature_config, flags, compilation_ctx, action_name):
     compilation_vars = cc_common.create_compile_variables(
@@ -38,6 +43,33 @@ def _get_compilation_args(toolchain, feature_config, flags, compilation_ctx, act
         action_name = action_name,
         variables = compilation_vars,
     )
+
+def _check_bad_tidy_flags(tidy_flags):
+    """should be kept up to date with
+    https://cs.android.com/android/platform/superproject/+/master:build/soong/cc/check.go;l=128;drc=b45a2ea782074944f79fc388df20b06e01f265f7
+    """
+    for flag in tidy_flags:
+        flag = flag.strip()
+        if not flag.startswith("-"):
+            fail("Flag `%s` must start with `-`" % flag)
+        if flag.startswith("-fix"):
+            fail("Flag `%s` is not allowed, since it could cause multiple writes to the same source file" % flag)
+        if flag.startswith("-checks="):
+            fail("Flag `%s` is not allowed, use `tidy_checks` property instead" % flag)
+        if "-warnings-as-errors=" in flag:
+            fail("Flag `%s` is not allowed, use `tidy_checks_as_errors` property instead" % flag)
+        if " " in flag:
+            fail("Bad flag: `%s` is not an allowed multi-word flag. Should it be split into multiple flags?" % flag)
+
+def _check_bad_tidy_checks(tidy_checks):
+    """should be kept up to date with
+    https://cs.android.com/android/platform/superproject/+/master:build/soong/cc/check.go;l=145;drc=b45a2ea782074944f79fc388df20b06e01f265f7
+    """
+    for check in tidy_checks:
+        if " " in check:
+            fail("Check `%s` invalid, cannot contain spaces" % check)
+        if "," in check:
+            fail("Check `%s` invalid, cannot contain commas. Split each entry into it's own string instead" % check)
 
 def _add_header_filter(ctx, tidy_flags):
     """If TidyFlags does not contain -header-filter, add default header filter.
@@ -76,12 +108,72 @@ def _add_extra_arg_flags(tidy_flags):
         "-Xclang",
         "c++-temp-dtor-inlining=false",
     ]
-
     return tidy_flags + ["-extra-arg-before=" + f for f in extra_arg_flags]
 
-def _create_clang_tidy_action(ctx, clang_tool, input_file, tidy_checks, tidy_checks_as_errors, tidy_flags, clang_flags, headers):
+def _add_quiet_if_not_global_tidy(tidy_flags):
+    if not product_vars["ClangTidy"]:
+        return tidy_flags + [
+            "-quiet",
+            "-extra-arg-before=-fno-caret-diagnostics",
+        ]
+    return tidy_flags
+
+def _clang_rewrite_tidy_checks(tidy_checks):
+    # List of tidy checks that should be disabled globally. When the compiler is
+    # updated, some checks enabled by this module may be disabled if they have
+    # become more strict, or if they are a new match for a wildcard group like
+    # `modernize-*`.
+    clang_tidy_disable_checks = [
+        "misc-no-recursion",
+        "readability-function-cognitive-complexity",  # http://b/175055536
+    ]
+
+    tidy_checks = tidy_checks + ["-" + c for c in clang_tidy_disable_checks]
+
+    # clang-tidy does not allow later arguments to override earlier arguments,
+    # so if we just disabled an argument that was explicitly enabled we must
+    # remove the enabling argument from the list.
+    return [t for t in tidy_checks if t not in clang_tidy_disable_checks]
+
+def _add_global_tidy_checks(local_checks):
+    global_tidy_checks = ""
+    if product_vars["TidyChecks"]:
+        global_tidy_checks = product_vars.TidyChecks
+    else:
+        pass  #TODO(b/255747495) TidyChecksForDir
+
+    # If Tidy_checks contains "-*", ignore all checks before "-*".
+    for i, check in enumerate(local_checks):
+        if check == "-*":
+            global_tidy_checks = ""
+            local_checks = local_checks[i:]
+
+    tidy_checks = [global_tidy_checks] + _clang_rewrite_tidy_checks(local_checks)
+    tidy_checks.extend(TIDY_GLOBAL_NO_CHECKS)
+
+    #TODO(b/255747672) disable cert check on windows only
+    return tidy_checks
+
+def _add_global_tidy_checks_as_errors(tidy_checks_as_errors):
+    return tidy_checks_as_errors + TIDY_GLOBAL_NO_ERROR_CHECKS
+
+def _create_clang_tidy_action(
+        ctx,
+        clang_tool,
+        input_file,
+        tidy_checks,
+        tidy_checks_as_errors,
+        tidy_flags,
+        clang_flags,
+        headers):
     tidy_flags = _add_header_filter(ctx, tidy_flags)
     tidy_flags = _add_extra_arg_flags(tidy_flags)
+    tidy_flags = _add_quiet_if_not_global_tidy(tidy_flags)
+    tidy_checks = _add_global_tidy_checks(tidy_checks)
+    tidy_checks_as_errors = _add_global_tidy_checks_as_errors(tidy_checks_as_errors)
+
+    _check_bad_tidy_checks(tidy_checks)
+    _check_bad_tidy_flags(tidy_flags)
 
     args = ctx.actions.args()
     args.add(input_file)
