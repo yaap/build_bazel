@@ -60,6 +60,9 @@ def cc_binary(
         use_version_lib = False,
         tags = [],
         generate_cc_test = False,
+        tidy = None,
+        tidy_checks = None,
+        tidy_checks_as_errors = None,
         **kwargs):
     "Bazel macro to correspond with the cc_binary Soong module."
 
@@ -126,6 +129,9 @@ def cc_binary(
         system_dynamic_deps = system_dynamic_deps,
         target_compatible_with = target_compatible_with,
         tags = ["manual"],
+        tidy = tidy,
+        tidy_checks = tidy_checks,
+        tidy_checks_as_errors = tidy_checks_as_errors,
     )
 
     binary_dynamic_deps = add_lists_defaulting_to_none(
