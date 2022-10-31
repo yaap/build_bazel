@@ -340,7 +340,7 @@ def _test_disabled_checks_are_removed():
     ]
 
 def _create_bad_tidy_checks_test(name, tidy_checks, failure_message):
-    name = "bad_tidy_checks_fail" + name
+    name = "bad_tidy_checks_fail_" + name
     test_name = name + "_test"
 
     _clang_tidy(
@@ -374,6 +374,56 @@ def _test_bad_tidy_checks_fail():
         )
     )
 
+def _create_bad_tidy_flags_test(name, tidy_flags, failure_message):
+    name = "bad_tidy_flags_fail_" + name
+    test_name = name + "_test"
+
+    _clang_tidy(
+        name = name,
+        srcs = ["a.cpp"],
+        tidy_flags = tidy_flags,
+        tags = ["manual"],
+    )
+
+    expect_failure_test(
+        name = test_name,
+        target_under_test = name,
+        failure_message = failure_message,
+    )
+
+    return [
+        test_name,
+    ]
+
+def _test_bad_tidy_flags_fail():
+    return (
+        _create_bad_tidy_flags_test(
+            name = "without_leading_dash",
+            tidy_flags = ["flag1"],
+            failure_message = "Flag `flag1` must start with `-`",
+        ) +
+        _create_bad_tidy_flags_test(
+            name = "fix_flags",
+            tidy_flags = ["-fix"],
+            failure_message = "Flag `%s` is not allowed, since it could cause multiple writes to the same source file",
+        ) +
+        _create_bad_tidy_flags_test(
+            name = "checks_in_flags",
+            tidy_flags = ["-checks=asdf"],
+            failure_message = "Flag `-checks=asdf` is not allowed, use `tidy_checks` property instead",
+        ) +
+        _create_bad_tidy_flags_test(
+            name = "warnings_as_errors_in_flags",
+            tidy_flags = ["-warnings-as-errors=asdf"],
+            failure_message = "Flag `-warnings-as-errors=asdf` is not allowed, use `tidy_checks_as_errors` property instead",
+        ) +
+        _create_bad_tidy_flags_test(
+            name = "space_in_flags",
+            tidy_flags = ["-flag with spaces"],
+            failure_message = "Bad flag: `-flag with spaces` is not an allowed multi-word flag. Should it be split into multiple flags",
+        )
+    )
+
 def clang_tidy_test_suite(name):
     native.test_suite(
         name = name,
@@ -381,5 +431,6 @@ def clang_tidy_test_suite(name):
             _test_clang_tidy() +
             _test_custom_header_dir() +
             _test_disabled_checks_are_removed() +
-            _test_bad_tidy_checks_fail(),
+            _test_bad_tidy_checks_fail() +
+            _test_bad_tidy_flags_fail(),
     )
