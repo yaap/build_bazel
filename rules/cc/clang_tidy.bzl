@@ -21,6 +21,11 @@ load(
     "CPP_COMPILE_ACTION_NAME",
     "C_COMPILE_ACTION_NAME",
 )
+load("@soong_injection//product_config:product_variables.bzl", "product_vars")
+load("@soong_injection//cc_toolchain:constants.bzl", "constants")
+
+TIDY_GLOBAL_NO_CHECKS = constants.TidyGlobalNoChecks.split(",")
+TIDY_GLOBAL_NO_ERROR_CHECKS = constants.TidyGlobalNoErrorChecks.split(",")
 
 def _get_compilation_args(toolchain, feature_config, flags, compilation_ctx, action_name):
     compilation_vars = cc_common.create_compile_variables(
@@ -79,9 +84,50 @@ def _add_extra_arg_flags(tidy_flags):
 
     return tidy_flags + ["-extra-arg-before=" + f for f in extra_arg_flags]
 
+def _clang_rewrite_tidy_checks(tidy_checks):
+    # List of tidy checks that should be disabled globally. When the compiler is
+    # updated, some checks enabled by this module may be disabled if they have
+    # become more strict, or if they are a new match for a wildcard group like
+    # `modernize-*`.
+    clang_tidy_disable_checks = [
+        "misc-no-recursion",
+        "readability-function-cognitive-complexity",  # http://b/175055536
+    ]
+
+    tidy_checks = tidy_checks + ["-" + c for c in clang_tidy_disable_checks]
+
+    # clang-tidy does not allow later arguments to override earlier arguments,
+    # so if we just disabled an argument that was explicitly enabled we must
+    # remove the enabling argument from the list.
+    return [t for t in tidy_checks if t not in clang_tidy_disable_checks]
+
+def _add_global_tidy_checks(local_checks):
+    global_tidy_checks = ""
+    if product_vars["TidyChecks"]:
+        global_tidy_checks = product_vars.TidyChecks
+    else:
+        pass  #TODO(b/255747495) TidyChecksForDir
+
+    # If Tidy_checks contains "-*", ignore all checks before "-*".
+    for i, check in enumerate(local_checks):
+        if check == "-*":
+            global_tidy_checks = ""
+            local_checks = local_checks[i:]
+
+    tidy_checks = [global_tidy_checks] + _clang_rewrite_tidy_checks(local_checks)
+    tidy_checks.extend(TIDY_GLOBAL_NO_CHECKS)
+
+    #TODO(b/255747672) disable cert check on windows only
+    return tidy_checks
+
+def _add_global_tidy_checks_as_errors(tidy_checks_as_errors):
+    return tidy_checks_as_errors + TIDY_GLOBAL_NO_ERROR_CHECKS
+
 def _create_clang_tidy_action(ctx, clang_tool, input_file, tidy_checks, tidy_checks_as_errors, tidy_flags, clang_flags, headers):
     tidy_flags = _add_header_filter(ctx, tidy_flags)
     tidy_flags = _add_extra_arg_flags(tidy_flags)
+    tidy_checks = _add_global_tidy_checks(tidy_checks)
+    tidy_checks_as_errors = _add_global_tidy_checks_as_errors(tidy_checks_as_errors)
 
     args = ctx.actions.args()
     args.add(input_file)
