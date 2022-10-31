@@ -18,6 +18,7 @@ load("@bazel_skylib//lib:new_sets.bzl", "sets")
 load("@bazel_skylib//lib:unittest.bzl", "analysistest", "asserts")
 load(":clang_tidy.bzl", "generate_clang_tidy_actions")
 
+_PACKAGE_HEADER_FILTER = "^build/bazel/rules/cc/"
 _DEFAULT_CHECKS = [
     "android-*",
     "bugprone-*",
@@ -207,12 +208,23 @@ def _tidy_flags_test_impl(ctx):
             "expected `%s` not present in flags to clang-tidy" % expected_arg,
         )
 
+    header_filter = _get_arg(env, actions, "-header-filter=")
+    asserts.true(
+        env,
+        header_filter == ctx.attr.expected_header_filter,
+        (
+            "expected header-filter to have value `%s`; got `%s`" %
+            (ctx.attr.expected_header_filter, header_filter)
+        ),
+    )
+
     return analysistest.end(env)
 
 _tidy_flags_test = analysistest.make(
     _tidy_flags_test_impl,
     attrs = {
         "expected_tidy_flags": attr.string_list(mandatory = True),
+        "expected_header_filter": attr.string(mandatory = True),
     },
 )
 
@@ -248,6 +260,7 @@ def _test_clang_tidy():
         name = tidy_flags_test_name,
         target_under_test = name,
         expected_tidy_flags = ["-tidy-flag1", "-tidy-flag2"],
+        expected_header_filter = _PACKAGE_HEADER_FILTER,
     )
 
     return [
