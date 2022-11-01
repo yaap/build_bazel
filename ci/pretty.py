@@ -23,9 +23,9 @@ NA = "--:--"
 
 
 def mark_if_clean(line: dict) -> dict:
-  if "CLEAN " in line['build_type']:
+  if "CLEAN " in line['build_type_name']:
     line["description"] = "CLEAN " + line["description"]
-    line["build_type"] = line["build_type"].replace("CLEAN ", "")
+    line["build_type_name"] = line["build_type_name"].replace("CLEAN ", "")
   return line
 
 
@@ -72,26 +72,26 @@ def pretty(filename):
   for line in lines:
     if line["build_result"] != "SUCCESS":
       print(f"{line['build_result']}: "
-            f"{line['description']} / {line['build_type']}")
+            f"{line['description']} / {line['build_type_name']}")
 
   by_cuj = groupby(lines, lambda l: l["description"])
-  by_cuj_by_build_type = {
-      k: groupby(v, lambda l: l["build_type"]) for k, v in
+  by_cuj_by_build_type_name = {
+      k: groupby(v, lambda l: l["build_type_name"]) for k, v in
       by_cuj.items()}
 
-  build_types = []
+  build_type_names = []
   for line in lines:
-    build_type = line["build_type"]
-    if build_type not in build_types:
-      build_types.append(line["build_type"])
+    build_type_name = line["build_type_name"]
+    if build_type_name not in build_type_names:
+      build_type_names.append(line["build_type_name"])
 
   rows = []
-  rows.append(["cuj", "build command"] + build_types)
-  for cuj, by_build_type in by_cuj_by_build_type.items():
-    targets = next(iter(by_build_type.values()))[0]["targets"]
+  rows.append(["cuj", "build command"] + build_type_names)
+  for cuj, by_build_type_name in by_cuj_by_build_type_name.items():
+    targets = next(iter(by_build_type_name.values()))[0]["targets"]
     row = [cuj, f"m {targets}"]
-    for build_type in build_types:
-      lines = by_build_type.get(build_type)
+    for build_type_name in build_type_names:
+      lines = by_build_type_name.get(build_type_name)
       row.append(NA if not lines else pretty_time(lines[-1]['time']))
     rows.append(row)
 
