@@ -419,6 +419,9 @@ _cc_library_combiner = rule(
         "_with_tidy_flags": attr.label(
             default = "//build/bazel/flags/cc/tidy:with_tidy_flags",
         ),
+        "_default_tidy_header_dirs": attr.label(
+            default = "//build/bazel/flags/cc/tidy:default_tidy_header_dirs",
+        ),
     },
     toolchains = ["@bazel_tools//tools/cpp:toolchain_type"],
     provides = [CcInfo],
