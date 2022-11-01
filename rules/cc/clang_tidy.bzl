@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 load("@bazel_skylib//lib:paths.bzl", "paths")
 load("@bazel_tools//tools/cpp:toolchain_utils.bzl", "find_cpp_toolchain")
 load(
@@ -80,6 +81,12 @@ def _check_bad_tidy_checks(tidy_checks):
             fail("Check `%s` invalid, cannot contain spaces" % check)
         if "," in check:
             fail("Check `%s` invalid, cannot contain commas. Split each entry into it's own string instead" % check)
+
+def _add_with_tidy_flags(ctx, tidy_flags):
+    with_tidy_flags = ctx.attr._with_tidy_flags[BuildSettingInfo].value
+    if with_tidy_flags:
+        return tidy_flags + with_tidy_flags
+    return tidy_flags
 
 def _add_header_filter(ctx, tidy_flags):
     """If TidyFlags does not contain -header-filter, add default header filter.
@@ -205,6 +212,7 @@ def _create_clang_tidy_action(
         tidy_flags,
         clang_flags,
         headers):
+    tidy_flags = _add_with_tidy_flags(ctx, tidy_flags)
     tidy_flags = _add_header_filter(ctx, tidy_flags)
     tidy_flags = _add_extra_arg_flags(tidy_flags)
     tidy_flags = _add_quiet_if_not_global_tidy(tidy_flags)
@@ -264,6 +272,7 @@ def generate_clang_tidy_actions(
             - ctx.executable._clang_tidy
             - ctx.executable._clang_tidy_sh
             - ctx.executable._clang_tidy_real
+            - ctx.label._with_tidy_flags
         flags (list[str]): list of target-specific (non-toolchain) flags passed to clang compile action
         deps (list[Target]): list of Targets which provide headers to compilation context
         srcs (list[File]): list of srcs to which clang-tidy will be applied

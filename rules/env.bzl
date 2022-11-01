@@ -14,7 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-_CAPTURED_ENV_VARS = []
+_CAPTURED_ENV_VARS = [
+    "WITH_TIDY_FLAGS",
+]
 
 _ALLOWED_SPECIAL_CHARACTERS = [
     "/",
@@ -22,6 +24,7 @@ _ALLOWED_SPECIAL_CHARACTERS = [
     "-",
     "'",
     ".",
+    " ",
 ]
 
 # Since we write the env var value literally into a .bzl file, ensure that the string
