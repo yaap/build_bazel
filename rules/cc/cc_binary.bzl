@@ -65,6 +65,7 @@ def cc_binary(
         tidy_checks_as_errors = None,
         tidy_flags = None,
         tidy_disabled_srcs = None,
+        tidy_timeout_srcs = None,
         **kwargs):
     "Bazel macro to correspond with the cc_binary Soong module."
 
