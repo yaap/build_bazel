@@ -16,6 +16,7 @@ limitations under the License.
 
 load("@bazel_skylib//lib:new_sets.bzl", "sets")
 load("@bazel_skylib//lib:unittest.bzl", "analysistest", "asserts")
+load(":cc_library_static.bzl", "cc_library_static")
 load(":clang_tidy.bzl", "generate_clang_tidy_actions")
 load("//build/bazel/rules/test_common:rules.bzl", "expect_failure_test")
 
@@ -267,7 +268,10 @@ def _test_clang_tidy():
 
     _clang_tidy(
         name = name,
-        srcs = ["a.cpp"],
+        # clang-tidy operates differently on generated and non-generated files
+        # use test_srcs so that the tidy rule doesn't think these are genearted
+        # files
+        srcs = ["//build/bazel/rules/cc/testing:test_srcs"],
         copts = ["-asdf1", "-asdf2"],
         tidy_flags = ["-tidy-flag1", "-tidy-flag2"],
         tags = ["manual"],
@@ -327,7 +331,10 @@ def _test_disabled_checks_are_removed():
 
     _clang_tidy(
         name = name,
-        srcs = ["a.cpp"],
+        # clang-tidy operates differently on generated and non-generated files.
+        # use test_srcs so that the tidy rule doesn't think these are genearted
+        # files
+        srcs = ["//build/bazel/rules/cc/testing:test_srcs"],
         tidy_checks = ["misc-no-recursion", "readability-function-cognitive-complexity"],
         tags = ["manual"],
     )
@@ -451,6 +458,107 @@ def _test_disable_global_checks():
         test_name,
     ]
 
+def _cc_library_static_generates_clang_tidy_actions_for_srcs_test_impl(ctx):
+    env = analysistest.begin(ctx)
+    actions = analysistest.target_actions(env)
+
+    clang_tidy_actions = [a for a in actions if a.mnemonic == "ClangTidy"]
+    asserts.equals(
+        env,
+        ctx.attr.expected_num_actions,
+        len(clang_tidy_actions),
+        "expected to have %s clang-tidy actions, but got %s; actions: %s" % (
+            ctx.attr.expected_num_actions,
+            len(clang_tidy_actions),
+            clang_tidy_actions,
+        ),
+    )
+
+    for a in clang_tidy_actions:
+        for input in a.inputs.to_list():
+            input_is_expected_header = input.short_path in [f.short_path for f in ctx.files.expected_headers]
+            if input in ctx.files._clang_tidy_tools or input_is_expected_header:
+                continue
+            asserts.true(
+                env,
+                input in ctx.files.srcs,
+                "clang-tidy operated on a file not in srcs: %s; all inputs: %s" % (input, a.inputs.to_list()),
+            )
+            asserts.true(
+                env,
+                input not in ctx.files.disabled_srcs,
+                "clang-tidy operated on a file in disabled_srcs: %s; all inputs: %s" % (input, a.inputs.to_list()),
+            )
+
+    return analysistest.end(env)
+
+_cc_library_static_generates_clang_tidy_actions_for_srcs_test = analysistest.make(
+    impl = _cc_library_static_generates_clang_tidy_actions_for_srcs_test_impl,
+    attrs = {
+        "expected_num_actions": attr.int(mandatory = True),
+        "srcs": attr.label_list(allow_files = True),
+        "disabled_srcs": attr.label_list(allow_files = True),
+        "expected_headers": attr.label_list(allow_files = True),
+        "_clang_tidy_tools": attr.label_list(
+            default = [
+                "@//prebuilts/clang/host/linux-x86:clang-tidy",
+                "@//prebuilts/clang/host/linux-x86:clang-tidy.real",
+                "@//prebuilts/clang/host/linux-x86:clang-tidy.sh",
+            ],
+            allow_files = True,
+        ),
+    },
+    config_settings = {
+        "@//build/bazel/flags/cc/tidy:allow_local_tidy_true": True,
+    },
+)
+
+def _create_cc_library_static_generates_clang_tidy_actions_for_srcs(
+        name,
+        srcs,
+        expected_num_actions,
+        disabled_srcs = None,
+        expected_headers = []):
+    name = "cc_library_static_generates_clang_tidy_actions_for_srcs_" + name
+    test_name = name + "_test"
+
+    cc_library_static(
+        name = name,
+        srcs = srcs,
+        tidy_disabled_srcs = disabled_srcs,
+        tidy = True,
+        tags = ["manual"],
+    )
+
+    _cc_library_static_generates_clang_tidy_actions_for_srcs_test(
+        name = test_name,
+        target_under_test = name,
+        expected_num_actions = expected_num_actions,
+        srcs = srcs,
+        disabled_srcs = disabled_srcs,
+        expected_headers = expected_headers + select({
+            "//build/bazel/platforms/os:android": ["@//bionic/libc:generated_android_ids"],
+            "//conditions:default": [],
+        }),
+    )
+
+    return test_name
+
+def _test_cc_library_static_generates_clang_tidy_actions_for_srcs():
+    return [
+        _create_cc_library_static_generates_clang_tidy_actions_for_srcs(
+            name = "with_srcs",
+            srcs = ["a.cpp", "b.cpp"],
+            expected_num_actions = 2,
+        ),
+        _create_cc_library_static_generates_clang_tidy_actions_for_srcs(
+            name = "with_disabled_srcs",
+            srcs = ["a.cpp", "b.cpp"],
+            disabled_srcs = ["b.cpp", "c.cpp"],
+            expected_num_actions = 1,
+        ),
+    ]
+
 def clang_tidy_test_suite(name):
     native.test_suite(
         name = name,
@@ -460,5 +568,6 @@ def clang_tidy_test_suite(name):
             _test_disabled_checks_are_removed() +
             _test_bad_tidy_checks_fail() +
             _test_bad_tidy_flags_fail() +
-            _test_disable_global_checks(),
+            _test_disable_global_checks() +
+            _test_cc_library_static_generates_clang_tidy_actions_for_srcs(),
     )

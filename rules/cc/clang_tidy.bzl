@@ -259,6 +259,7 @@ def _create_clang_tidy_action(
         execution_requirements = {
             "no-sandbox": "1",
         },
+        mnemonic = "ClangTidy",
     )
 
     return tidy_file
