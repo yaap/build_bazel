@@ -40,6 +40,7 @@ ApexInfo = provider(
         "package_name": "APEX package name.",
         "backing_libs": "File containing libraries used by the APEX.",
         "symbols_used_by_apex": "Symbol list used by this APEX.",
+        "java_symbols_used_by_apex": "Java symbol list used by this APEX.",
         "installed_files": "File containing all files installed by the APEX",
     },
 )
@@ -425,6 +426,7 @@ def _run_apexer(ctx, apex_toolchain):
         provides_native_libs = provides_native_libs,
         backing_libs = _generate_apex_backing_file(ctx, backing_libs),
         symbols_used_by_apex = _generate_symbols_used_by_apex(ctx, apex_toolchain, staging_dir),
+        java_symbols_used_by_apex = _generate_java_symbols_used_by_apex(ctx, apex_toolchain),
         installed_files = _generate_installed_files_list(ctx, file_mapping),
     )
 
@@ -505,6 +507,30 @@ def _generate_symbols_used_by_apex(ctx, apex_toolchain, staging_dir):
     )
     return symbols_used_by_apex
 
+# Generate <module>_using.xml, which contains a list of java API metadata used
+# by this APEX's contents. This is used for coverage checks.
+#
+# TODO(b/257954111): Add JARs and APKs as inputs to this action when we start
+# building Java mainline modules.
+def _generate_java_symbols_used_by_apex(ctx, apex_toolchain):
+    java_symbols_used_by_apex = ctx.actions.declare_file(ctx.attr.name + "_using.xml")
+    ctx.actions.run(
+        outputs = [java_symbols_used_by_apex],
+        inputs = [],
+        tools = [
+            apex_toolchain.dexdeps.files_to_run,
+            apex_toolchain.gen_java_usedby_apex.files_to_run,
+        ],
+        executable = apex_toolchain.gen_java_usedby_apex.files_to_run,
+        arguments = [
+            apex_toolchain.dexdeps.files_to_run.executable.path,
+            java_symbols_used_by_apex.path,
+        ],
+        progress_message = "Generating Java symbol list used by the %s apex" % ctx.attr.name,
+        mnemonic = "ApexUsingJavaSymbolsForCoverage",
+    )
+    return java_symbols_used_by_apex
+
 # See the APEX section in the README on how to use this rule.
 def _apex_rule_impl(ctx):
     apex_toolchain = ctx.toolchains["//build/bazel/rules/apex:apex_toolchain_type"].toolchain_info
@@ -539,9 +565,11 @@ def _apex_rule_impl(ctx):
             backing_libs = apexer_outputs.backing_libs,
             symbols_used_by_apex = apexer_outputs.symbols_used_by_apex,
             installed_files = apexer_outputs.installed_files,
+            java_symbols_used_by_apex = apexer_outputs.java_symbols_used_by_apex,
         ),
         OutputGroupInfo(
             coverage_files = [apexer_outputs.symbols_used_by_apex],
+            java_coverage_files = [apexer_outputs.java_symbols_used_by_apex],
             backing_libs = depset([apexer_outputs.backing_libs]),
             installed_files = depset([apexer_outputs.installed_files]),
         ),
