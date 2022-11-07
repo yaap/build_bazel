@@ -39,6 +39,7 @@ ApexInfo = provider(
         "container_key_info": "Info of the container key provided as AndroidAppCertificateInfo.",
         "package_name": "APEX package name.",
         "backing_libs": "File containing libraries used by the APEX.",
+        "symbols_used_by_apex": "Symbol list used by this APEX.",
     },
 )
 
@@ -302,6 +303,15 @@ def _run_apexer(ctx, apex_toolchain):
     # Arguments
     args = ctx.actions.args()
     args.add(file_mapping_file.path)
+
+    # NOTE: When used as inputs to another sandboxed action, this directory
+    # artifact's inner files will be made up of symlinks. Ensure that the
+    # aforementioned action handles symlinks correctly (e.g. following
+    # symlinks).
+    staging_dir = ctx.actions.declare_directory(ctx.attr.name + "_staging_dir")
+    args.add(staging_dir.path)
+
+    # start of apexer cmd
     args.add(apexer_files.executable.path)
     if ctx.attr._apexer_verbose[BuildSettingInfo].value:
         args.add("--verbose")
@@ -358,7 +368,7 @@ def _run_apexer(ctx, apex_toolchain):
     elif ctx.attr.testonly:
         args.add("--test_only")
 
-    args.add("STAGING_DIR_PLACEHOLDER")
+    args.add(staging_dir.path)
     args.add(apex_output_file)
 
     inputs = [
@@ -387,17 +397,18 @@ def _run_apexer(ctx, apex_toolchain):
     ctx.actions.run(
         inputs = inputs,
         tools = tools,
-        outputs = [apex_output_file],
+        outputs = [apex_output_file, staging_dir],
         executable = ctx.executable._staging_dir_builder,
         arguments = [args],
         mnemonic = "Apexer",
     )
 
-    return (
-        apex_output_file,
-        requires_native_libs,
-        provides_native_libs,
-        _generate_apex_backing_file(ctx, backing_libs),
+    return struct(
+        unsigned_apex = apex_output_file,
+        requires_native_libs = requires_native_libs,
+        provides_native_libs = provides_native_libs,
+        backing_libs = _generate_apex_backing_file(ctx, backing_libs),
+        symbols_used_by_apex = _generate_symbols_used_by_apex(ctx, apex_toolchain, staging_dir),
     )
 
 # Sign a file with signapk.
@@ -454,11 +465,35 @@ def _run_apex_compression_tool(ctx, apex_toolchain, input_file, output_file_name
     )
     return compressed_file
 
+# Generate <module>_using.txt, which contains a list of versioned NDK symbols
+# dynamically linked to by this APEX's contents. This is used for coverage
+# checks.
+def _generate_symbols_used_by_apex(ctx, apex_toolchain, staging_dir):
+    symbols_used_by_apex = ctx.actions.declare_file(ctx.attr.name + "_using.txt")
+    ctx.actions.run(
+        outputs = [symbols_used_by_apex],
+        inputs = [staging_dir],
+        tools = [
+            apex_toolchain.readelf.files_to_run,
+            apex_toolchain.gen_ndk_usedby_apex.files_to_run,
+        ],
+        executable = apex_toolchain.gen_ndk_usedby_apex.files_to_run,
+        arguments = [
+            staging_dir.path,
+            apex_toolchain.readelf.files_to_run.executable.path,
+            symbols_used_by_apex.path,
+        ],
+        progress_message = "Generating dynamic NDK symbol list used by the %s apex" % ctx.attr.name,
+        mnemonic = "ApexUsingNDKSymbolsForCoverage",
+    )
+    return symbols_used_by_apex
+
 # See the APEX section in the README on how to use this rule.
 def _apex_rule_impl(ctx):
     apex_toolchain = ctx.toolchains["//build/bazel/rules/apex:apex_toolchain_type"].toolchain_info
 
-    unsigned_apex, requires_native_libs, provides_native_libs, backing_file = _run_apexer(ctx, apex_toolchain)
+    apexer_outputs = _run_apexer(ctx, apex_toolchain)
+    unsigned_apex = apexer_outputs.unsigned_apex
 
     apex_cert_info = ctx.attr.certificate[AndroidAppCertificateInfo]
     private_key = apex_cert_info.pk8
@@ -473,17 +508,22 @@ def _apex_rule_impl(ctx):
         _run_signapk(ctx, compressed_apex_output_file, signed_capex, private_key, public_key, "BazelCompressedApexSigning")
 
     apex_key_info = ctx.attr.key[ApexKeyInfo]
+
     return [
         DefaultInfo(files = depset([signed_apex])),
         ApexInfo(
             signed_output = signed_apex,
             unsigned_output = unsigned_apex,
-            requires_native_libs = requires_native_libs,
-            provides_native_libs = provides_native_libs,
+            requires_native_libs = apexer_outputs.requires_native_libs,
+            provides_native_libs = apexer_outputs.provides_native_libs,
             bundle_key_info = apex_key_info,
             container_key_info = apex_cert_info,
             package_name = ctx.attr.package_name,
-            backing_libs = backing_file,
+            backing_libs = apexer_outputs.backing_libs,
+            symbols_used_by_apex = apexer_outputs.symbols_used_by_apex,
+        ),
+        OutputGroupInfo(
+            coverage_files = [apexer_outputs.symbols_used_by_apex],
         ),
     ]
 
