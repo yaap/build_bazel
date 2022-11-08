@@ -1412,6 +1412,38 @@ def _test_apex_backing_file():
 
     return test_name
 
+def _apex_symbols_used_by_apex_test(ctx):
+    env = analysistest.begin(ctx)
+    target_under_test = analysistest.target_under_test(env)
+    actual = target_under_test[ApexInfo].symbols_used_by_apex
+
+    asserts.equals(env, ctx.attr.expected_path, actual.short_path)
+
+    return analysistest.end(env)
+
+apex_symbols_used_by_apex_test = analysistest.make(
+    _apex_symbols_used_by_apex_test,
+    attrs = {
+        "expected_path": attr.string(),
+    },
+)
+
+def _test_apex_symbols_used_by_apex():
+    name = "apex_with_symbols_used_by_apex"
+    test_name = name + "_test"
+
+    test_apex(
+        name = name,
+    )
+
+    apex_symbols_used_by_apex_test(
+        name = test_name,
+        target_under_test = name,
+        expected_path = "build/bazel/rules/apex/apex_with_symbols_used_by_apex_using.txt",
+    )
+
+    return test_name
+
 def apex_test_suite(name):
     native.test_suite(
         name = name,
@@ -1445,5 +1477,6 @@ def apex_test_suite(name):
             _test_apex_testonly_with_manifest(),
             _test_apex_testonly_without_manifest(),
             _test_apex_backing_file(),
+            _test_apex_symbols_used_by_apex(),
         ],
     )
