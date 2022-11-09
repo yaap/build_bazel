@@ -19,6 +19,7 @@ load("@bazel_skylib//lib:unittest.bzl", "analysistest", "asserts")
 load(":cc_library_static.bzl", "cc_library_static")
 load(":clang_tidy.bzl", "generate_clang_tidy_actions")
 load("//build/bazel/rules/test_common:rules.bzl", "expect_failure_test")
+load("//build/bazel/rules/test_common:args.bzl", "get_all_args_with_prefix", "get_single_arg_with_prefix")
 
 _PACKAGE_HEADER_FILTER = "^build/bazel/rules/cc/"
 _DEFAULT_GLOBAL_CHECKS = [
@@ -140,29 +141,24 @@ _clang_tidy = rule(
 )
 
 def _get_all_arg(env, actions, argname):
-    args = []
-    for a in actions[0].argv:
-        if a.startswith(argname):
-            args.append(a[len(argname):])
+    args = get_all_args_with_prefix(actions[0].argv, argname)
     asserts.false(env, args == [], "could not arguments that start with `{}`".format(argname))
     return args
 
-def _get_single_arg(env, actions, argname):
-    arg = _get_all_arg(env, actions, argname)
-    asserts.true(env, len(arg) == 1, "too many `%s` arguments. expected 1; got %s" % (argname, len(arg)))
-    return arg[0]
+def _get_single_arg(actions, argname):
+    return get_single_arg_with_prefix(actions[0].argv, argname)
 
 def _checks_test_impl(ctx):
     env = analysistest.begin(ctx)
     actions = analysistest.target_actions(env)
 
-    checks = _get_single_arg(env, actions, "-checks=").split(",")
+    checks = _get_single_arg(actions, "-checks=").split(",")
     asserts.set_equals(env, sets.make(ctx.attr.expected_checks), sets.make(checks))
     if len(ctx.attr.unexpected_checks) > 0:
         for c in ctx.attr.unexpected_checks:
             asserts.false(env, c in checks, "found unexpected check in -checks flag: %s" % c)
 
-    checks_as_errors = _get_single_arg(env, actions, "-warnings-as-errors=").split(",")
+    checks_as_errors = _get_single_arg(actions, "-warnings-as-errors=").split(",")
     asserts.set_equals(env, sets.make(ctx.attr.expected_checks_as_errors), sets.make(checks_as_errors))
 
     return analysistest.end(env)
@@ -230,7 +226,7 @@ def _tidy_flags_test_impl(ctx):
             "expected `%s` not present in flags to clang-tidy" % expected_arg,
         )
 
-    header_filter = _get_single_arg(env, actions, "-header-filter=")
+    header_filter = _get_single_arg(actions, "-header-filter=")
     asserts.true(
         env,
         header_filter == ctx.attr.expected_header_filter,
