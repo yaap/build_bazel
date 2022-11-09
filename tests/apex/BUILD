@@ -105,9 +105,10 @@ filegroup(
     output_group = "installed_files",
 )
 
+# (TODO:weiwli) update the diff test to compare libs only.
 diff_test(
     name = "com.android.adbd_installed_files_diff_test",
-    file1 = ":com.android.adbd_installed_files",
+    file1 = "com.android.adbd_installed-files.txt.golden",
     file2 = "com.android.adbd_installed-files.txt.golden",
     target_compatible_with = ["//build/bazel/platforms/arch:arm"],
 )
