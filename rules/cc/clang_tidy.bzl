@@ -214,7 +214,8 @@ def _create_clang_tidy_action(
         tidy_checks_as_errors,
         tidy_flags,
         clang_flags,
-        headers):
+        headers,
+        tidy_timeout):
     tidy_flags = _add_with_tidy_flags(ctx, tidy_flags)
     tidy_flags = _add_header_filter(ctx, tidy_flags)
     tidy_flags = _add_extra_arg_flags(tidy_flags)
@@ -237,14 +238,18 @@ def _create_clang_tidy_action(
     args.add_all(clang_flags)
 
     tidy_file = ctx.actions.declare_file(paths.join(ctx.label.name, input_file.short_path + ".tidy"))
+    env = {
+        "CLANG_CMD": clang_tool,
+        "TIDY_FILE": tidy_file.path,
+    }
+    if tidy_timeout:
+        env["TIDY_TIMEOUT"] = tidy_timeout
+
     ctx.actions.run(
         inputs = [input_file] + headers,
         outputs = [tidy_file],
         arguments = [args],
-        env = {
-            "CLANG_CMD": clang_tool,
-            "TIDY_FILE": tidy_file.path,
-        },
+        env = env,
         progress_message = "Running clang-tidy on {}".format(input_file.short_path),
         tools = [
             ctx.executable._clang_tidy,
@@ -267,7 +272,8 @@ def generate_clang_tidy_actions(
         language,
         tidy_flags,
         tidy_checks,
-        tidy_checks_as_errors):
+        tidy_checks_as_errors,
+        tidy_timeout):
     """Generates actions for clang tidy
 
     Args:
@@ -284,6 +290,7 @@ def generate_clang_tidy_actions(
         tidy_flags (list[str]): additional flags to pass to the clang-tidy tool
         tidy_checks (list[str]): list of checks for clang-tidy to perform
         tidy_checks_as_errors (list[str]): list of checks to pass as "-warnings-as-errors" to clang-tidy
+        tidy_checks_as_errors (str): timeout to pass to clang-tidy tool
     Returns:
         tidy_file_outputs: (list[File]): list of .tidy files output by the clang-tidy.sh tool
     """
@@ -340,6 +347,7 @@ def generate_clang_tidy_actions(
             tidy_checks_as_errors = tidy_checks_as_errors,
             tidy_flags = tidy_flags,
             clang_flags = args,
+            tidy_timeout = tidy_timeout,
         )
         tidy_file_outputs.append(tidy_file)
 

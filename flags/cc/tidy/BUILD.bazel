@@ -31,3 +31,8 @@ string_flag(
     name = "default_tidy_header_dirs",
     build_setting_default = env.get("DEFAULT_TIDY_HEADER_DIRS", ""),
 )
+
+string_flag(
+    name = "tidy_timeout",
+    build_setting_default = env.get("TIDY_TIMEOUT", ""),
+)
