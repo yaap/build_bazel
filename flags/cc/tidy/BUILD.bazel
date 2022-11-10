@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-load("@bazel_skylib//rules:common_settings.bzl", "string_list_flag")
+load("@bazel_skylib//rules:common_settings.bzl", "string_flag", "string_list_flag")
 load("@env//:env.bzl", "env")
 
 package(default_visibility = ["//visibility:public"])
@@ -25,4 +25,9 @@ _with_tidy_flags = env.get("WITH_TIDY_FLAGS", None)
 string_list_flag(
     name = "with_tidy_flags",
     build_setting_default = _with_tidy_flags.split(" ") if _with_tidy_flags != None else [],
+)
+
+string_flag(
+    name = "default_tidy_header_dirs",
+    build_setting_default = env.get("DEFAULT_TIDY_HEADER_DIRS", ""),
 )
