@@ -49,6 +49,7 @@ def cc_test(
         tidy_checks_as_errors = None,
         tidy_flags = None,
         tidy_disabled_srcs = None,
+        tidy_timeout_srcs = None,
         **kwargs):
     # NOTE: Keep this in sync with cc/test.go#linkerDeps
     if gtest:
