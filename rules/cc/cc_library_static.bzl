@@ -23,7 +23,7 @@ load(
     "system_dynamic_deps_defaults",
 )
 load(":stl.bzl", "stl_info_from_attr")
-load(":clang_tidy.bzl", "generate_clang_tidy_actions")
+load(":clang_tidy.bzl", "ClangTidyInfo", "generate_clang_tidy_actions")
 load("@bazel_skylib//lib:collections.bzl", "collections")
 load("@bazel_tools//tools/cpp:toolchain_utils.bzl", "find_cpp_toolchain")
 load("//build/bazel/product_variables:constants.bzl", "constants")
@@ -340,9 +340,15 @@ def _cc_library_combiner_impl(ctx):
             ctx.attr.tidy_checks,
             ctx.attr.tidy_checks_as_errors,
         )
-        providers.append(OutputGroupInfo(
-            _validation = depset(cpp_tidy_outs + c_tidy_outs),
-        ))
+        tidy_files = depset(cpp_tidy_outs + c_tidy_outs)
+        providers.extend([
+            OutputGroupInfo(
+                _validation = tidy_files,
+            ),
+            ClangTidyInfo(
+                tidy_files = tidy_files,
+            ),
+        ])
 
     return providers
 
