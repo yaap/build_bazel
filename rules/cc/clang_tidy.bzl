@@ -102,8 +102,11 @@ def _add_header_filter(ctx, tidy_flags):
     # Otherwise, there will be too many warnings from generated files in out/...
     # If a module wants to see warnings in the generated source files,
     # it should specify its own -header-filter flag.
-    #TODO(b/255744059) support DEFAULT_TIDY_HEADER_DIRS
-    header_filter = "-header-filter=^" + ctx.label.package + "/"
+    default_dirs = ctx.attr._default_tidy_header_dirs[BuildSettingInfo].value
+    if default_dirs == "":
+        header_filter = "-header-filter=^" + ctx.label.package + "/"
+    else:
+        header_filter = "-header-filter=\"(^%s/|%s)\"" % (ctx.label.package, default_dirs)
     return tidy_flags + [header_filter]
 
 def _add_extra_arg_flags(tidy_flags):
