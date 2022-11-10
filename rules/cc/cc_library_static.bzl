@@ -75,7 +75,8 @@ def cc_library_static(
         tidy = None,
         tidy_checks = None,
         tidy_checks_as_errors = None,
-        tidy_flags = None):
+        tidy_flags = None,
+        tidy_disabled_srcs = None):
     "Bazel macro to correspond with the cc_library_static Soong module."
 
     exports_name = "%s_exports" % name
@@ -215,6 +216,7 @@ def cc_library_static(
         tidy_flags = tidy_flags,
         tidy_checks = tidy_checks,
         tidy_checks_as_errors = tidy_checks_as_errors,
+        tidy_disabled_srcs = tidy_disabled_srcs,
     )
 
 # Returns a CcInfo object which combines one or more CcInfo objects, except that all
@@ -315,8 +317,8 @@ def _cc_library_combiner_impl(ctx):
     ]
 
     if ctx.attr.tidy:
-        cpp_srcs, cpp_hdrs = get_non_header_srcs(ctx.files.srcs_cpp)
-        c_srcs, c_hdrs = get_non_header_srcs(ctx.files.srcs_c)
+        cpp_srcs, cpp_hdrs = get_non_header_srcs(ctx.files.srcs_cpp, ctx.files.tidy_disabled_srcs)
+        c_srcs, c_hdrs = get_non_header_srcs(ctx.files.srcs_c, ctx.files.tidy_disabled_srcs)
         hdrs = ctx.attr.hdrs + cpp_hdrs + c_hdrs
         cpp_tidy_outs = generate_clang_tidy_actions(
             ctx,
@@ -393,6 +395,7 @@ _cc_library_combiner = rule(
         "tidy_checks": attr.string_list(),
         "tidy_checks_as_errors": attr.string_list(),
         "tidy_flags": attr.string_list(),
+        "tidy_disabled_srcs": attr.label_list(allow_files = True),
         "_clang_tidy_sh": attr.label(
             default = Label("@//prebuilts/clang/host/linux-x86:clang-tidy.sh"),
             allow_single_file = True,
