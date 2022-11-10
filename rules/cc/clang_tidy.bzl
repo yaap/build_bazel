@@ -24,6 +24,13 @@ load(
 load("@soong_injection//product_config:product_variables.bzl", "product_vars")
 load("@soong_injection//cc_toolchain:constants.bzl", "constants")
 
+ClangTidyInfo = provider(
+    "Info provided from clang-tidy actions",
+    fields = {
+        "tidy_files": "Outputs from the clang-tidy tool",
+    },
+)
+
 TIDY_GLOBAL_NO_CHECKS = constants.TidyGlobalNoChecks.split(",")
 TIDY_GLOBAL_NO_ERROR_CHECKS = constants.TidyGlobalNoErrorChecks.split(",")
 
