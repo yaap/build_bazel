@@ -223,7 +223,9 @@ def cc_library_static(
     )
 
 def _generate_tidy_actions(ctx):
-    if not ctx.attr.tidy:
+    with_tidy = ctx.attr._with_tidy[BuildSettingInfo].value
+    allow_local_tidy_true = ctx.attr._allow_local_tidy_true[BuildSettingInfo].value
+    if not with_tidy and not (allow_local_tidy_true and ctx.attr.tidy):
         return []
 
     disabled_srcs = [] + ctx.files.tidy_disabled_srcs
@@ -431,6 +433,12 @@ _cc_library_combiner = rule(
             allow_single_file = True,
             executable = True,
             cfg = "exec",
+        ),
+        "_with_tidy": attr.label(
+            default = "//build/bazel/flags/cc/tidy:with_tidy",
+        ),
+        "_allow_local_tidy_true": attr.label(
+            default = "//build/bazel/flags/cc/tidy:allow_local_tidy_true",
         ),
         "_with_tidy_flags": attr.label(
             default = "//build/bazel/flags/cc/tidy:with_tidy_flags",

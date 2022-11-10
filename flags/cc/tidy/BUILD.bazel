@@ -15,10 +15,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-load("@bazel_skylib//rules:common_settings.bzl", "string_flag", "string_list_flag")
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag", "string_flag", "string_list_flag")
 load("@env//:env.bzl", "env")
+load("//build/bazel/flags:common.bzl", "is_env_true")
 
 package(default_visibility = ["//visibility:public"])
+
+bool_flag(
+    name = "with_tidy",
+    build_setting_default = is_env_true(env.get("WITH_TIDY")),
+)
+
+bool_flag(
+    name = "allow_local_tidy_true",
+    build_setting_default = is_env_true(env.get("ALLOW_LOCAL_TIDY_TRUE")),
+)
 
 _with_tidy_flags = env.get("WITH_TIDY_FLAGS", None)
 
