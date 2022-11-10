@@ -15,9 +15,11 @@ limitations under the License.
 """
 
 _CAPTURED_ENV_VARS = [
-    "WITH_TIDY_FLAGS",
+    "ALLOW_LOCAL_TIDY_TRUE",
     "DEFAULT_TIDY_HEADER_DIRS",
     "TIDY_TIMEOUT",
+    "WITH_TIDY",
+    "WITH_TIDY_FLAGS",
 ]
 
 _ALLOWED_SPECIAL_CHARACTERS = [
