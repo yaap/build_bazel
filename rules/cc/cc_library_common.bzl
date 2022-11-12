@@ -188,13 +188,14 @@ def get_non_header_srcs(input_srcs, exclude_srcs, source_extensions = None, head
     """get_non_header_srcs returns a list of srcs that do not have header extensions and aren't in the exclude srcs list
 
     Args:
-        input_srcs (list[File]): list of file to filter
+        input_srcs (list[File]): list of files to filter
         exclude_srcs (list[File]): list of files that should be excluded from the returned list
         source_extensions (list[str]): list of extensions that designate sources.
             If None, all extensions are valid. Otherwise only source with these extensions are returned
         header_extensions (list[str]): list of extensions that designate headers
     Returns:
-        list[File]: files that have non-header extension and are not excluded
+        srcs, hdrs (list[File], list[File]): tuple of lists of files; srcs have non-header extension and are not excluded,
+            and hdrs are files with header extensions
     """
     srcs = []
     hdrs = []
@@ -202,6 +203,6 @@ def get_non_header_srcs(input_srcs, exclude_srcs, source_extensions = None, head
         is_source = not source_extensions or s.extension in source_extensions
         if s.extension in header_extensions:
             hdrs.append(s)
-        elif s not in exclude_srcs and is_source:
+        elif is_source and s not in exclude_srcs:
             srcs.append(s)
     return srcs, hdrs
