@@ -20,8 +20,10 @@ load(
     "C_EXTENSIONS",
     "check_absolute_include_dirs_disabled",
     "create_ccinfo_for_includes",
+    "future_version",
     "get_non_header_srcs",
     "is_external_directory",
+    "parse_apex_sdk_version",
     "parse_sdk_version",
     "system_dynamic_deps_defaults",
 )
@@ -31,8 +33,29 @@ load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 load("@bazel_skylib//lib:collections.bzl", "collections")
 load("@bazel_tools//tools/cpp:toolchain_utils.bzl", "find_cpp_toolchain")
 load("//build/bazel/product_variables:constants.bzl", "constants")
+load("@soong_injection//api_levels:api_levels.bzl", "api_levels")
 
 CcStaticLibraryInfo = provider(fields = ["root_static_archive", "objects"])
+
+_APEX_MIN_SDK_VERSION_FLAG = "-D__ANDROID_APEX_MIN_SDK_VERSION__="
+
+def _create_sdk_version_number_map():
+    version_number_map = {}
+    for api in api_levels.values():
+        version_number_map["//build/bazel/rules/apex:min_sdk_version_" + str(api)] = [_APEX_MIN_SDK_VERSION_FLAG + str(api)]
+    version_number_map["//conditions:default"] = [_APEX_MIN_SDK_VERSION_FLAG + future_version]
+
+    return version_number_map
+
+sdk_version_numbers = select(_create_sdk_version_number_map())
+
+def android_apex_sdk_version_opt(version):
+    if version == "apex_inherit":
+        return sdk_version_numbers
+
+    return select({
+        "//conditions:default": [_APEX_MIN_SDK_VERSION_FLAG + parse_apex_sdk_version(version)],
+    })
 
 def cc_library_static(
         name,
@@ -169,13 +192,13 @@ def cc_library_static(
         ],
     )
 
+    copts += android_apex_sdk_version_opt(min_sdk_version)
+
     # TODO(b/231574899): restructure this to handle other images
     copts += select({
         "//build/bazel/rules/apex:non_apex": [],
         "//conditions:default": [
             "-D__ANDROID_APEX__",
-            # TODO(b/231322772): sdk_version/min_sdk_version if not finalized
-            "-D__ANDROID_APEX_MIN_SDK_VERSION__=10000",
         ],
     })
 
