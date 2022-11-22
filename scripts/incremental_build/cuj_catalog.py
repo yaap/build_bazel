@@ -92,10 +92,9 @@ class CujGroup:
   def __str__(self) -> str:
     if len(self.steps) < 2:
       return f'{self.steps[0].verb} {self.description}'
-    steps_str = ' '.join(
-        [f'({chr(ord("a") + i)}) {step.verb}' for i, step in
+    return ' '.join(
+        [f'({chr(ord("a") + i)}) {step.verb} {self.description}' for i, step in
          enumerate(self.steps)])
-    return f'{steps_str} {self.description}'
 
 
 def mtime(p: Path) -> str:
@@ -269,6 +268,28 @@ def delete_restore(original: Path, ws: InWorkspace) -> CujGroup:
   ])
 
 
+def replace_link_with_dir(p: Path):
+  """Create a file, replace it with a non-empty directory, delete it"""
+  cd = create_delete(p, InWorkspace.SYMLINK)
+  create_file, delete_file, *tail = cd.steps
+  assert len(tail) == 0
+
+  create_dir, delete_dir, *tail = create_delete_android_bp(p).steps
+  assert len(tail) == 0
+
+  def replace_it():
+    delete_file.action()
+    create_dir.action()
+
+  return CujGroup(cd.description, [
+      create_file,
+      CujStep(f'{de_src(p)}/Android.bp instead of',
+              replace_it,
+              create_dir.verify),
+      delete_dir
+  ])
+
+
 def _sequence(a: Verify, b: Verify) -> Verify:
   def f(user_input: UserInput):
     a(user_input)
@@ -280,7 +301,7 @@ def _sequence(a: Verify, b: Verify) -> Verify:
 def _with_kept_build_file_verifications(
     template: CujGroup, curated_file: Path, curated_content) -> CujGroup:
   ws_file = util.get_out_dir().joinpath('soong/workspace').joinpath(
-      curated_file)
+      curated_file.with_name('BUILD.bazel'))
 
   def verify_merged(user_input: UserInput):
     if user_input.build_type == BuildType.SOONG_ONLY:
@@ -321,10 +342,11 @@ def modify_revert_kept_build_file(curated_file: Path) -> CujGroup:
                                              curated_content)
 
 
-def create_delete_kept_build_file(curated_file: Path) -> CujGroup:
+def create_delete_kept_build_file(curated_file: Path,
+    ws: InWorkspace) -> CujGroup:
   curated_content = f'//BOGUS {uuid.uuid4()}\n'
   template: CujGroup = create_delete(curated_file,
-                                     InWorkspace.NOT_UNDER_SYMLINK,
+                                     ws,
                                      curated_content)
   return _with_kept_build_file_verifications(template,
                                              curated_file,
@@ -379,17 +401,10 @@ def get_cujgroups() -> list[CujGroup]:
         ]],
 
       *[create_delete(d.joinpath('unreferenced.txt'), InWorkspace.SYMLINK) for
-        d in [
-            ancestor,
-            pkg,
-            leaf_pkg,
-        ]],
+        d in [ancestor, pkg, leaf_pkg]],
       *[create_delete(d.joinpath('unreferenced.txt'), InWorkspace.UNDER_SYMLINK)
         for d
-        in [
-            pkg_free,
-            leaf_pkg_free
-        ]],
+        in [pkg_free, leaf_pkg_free]],
 
       create_delete(src('bionic/libc/tzcode/globbed.c'),
                     InWorkspace.UNDER_SYMLINK),
@@ -399,17 +414,19 @@ def get_cujgroups() -> list[CujGroup]:
           util.any_file('AndroidManifest.xml')]],
       # TODO (usta): find targets that should be affected
 
+      delete_restore(leaf_pkg, InWorkspace.NOT_UNDER_SYMLINK),
+
       modify_revert(src('Android.bp')),
 
       *[create_delete_android_bp(d) for d in
         [ancestor, pkg_free, leaf_pkg_free]],
 
+      # needs ShouldKeepExistingBuildFileForDir(pkg_free) = false
       *[create_delete(d.joinpath('BUILD.bazel'), InWorkspace.OMISSION) for d in
-        [
-            ancestor,
-            pkg_free,
-            leaf_pkg_free
-        ]],
+        [ancestor,
+         pkg_free,
+         leaf_pkg_free
+         ]],
       # for pkg and leaf_pkg, BUILD.bazel will be created
       # but BUILD will be either merged or ignored
       *[create_delete(d.joinpath('BUILD'), InWorkspace.OMISSION) for d in [
@@ -420,12 +437,24 @@ def get_cujgroups() -> list[CujGroup]:
       # external/guava Bp2BuildKeepExistingBuildFile set True(recursive)
       create_delete_kept_build_file(
           util.any_dir_under(src('external/guava'), '!BUILD', '!BUILD.bazel')
-            .joinpath('BUILD')),
+            .joinpath('BUILD'),
+          InWorkspace.SYMLINK),
+      create_delete_kept_build_file(
+          util.any_dir_under(src('external/guava'), 'Android.bp',
+                             '!BUILD.bazel')
+            .joinpath('BUILD.bazel'),
+          InWorkspace.NOT_UNDER_SYMLINK),
+      create_delete_kept_build_file(
+          util.get_top_dir().joinpath('external/guava/bogus/BUILD'),
+          InWorkspace.UNDER_SYMLINK),
       modify_revert_kept_build_file(
           util.any_file_under(src('external/guava'), 'BUILD')),
       # bionic doesn't have Bp2BuildKeepExistingBuildFile set True
+      create_delete(util.get_top_dir().joinpath('bionic/bogus/BUILD'),
+                    InWorkspace.OMISSION),
       modify_revert(util.any_file_under(src('bionic'), 'BUILD')),
 
-      # TODO(usta): add a file and then replace it with a directory
+      *[replace_link_with_dir(d.joinpath('bogus.txt')) for d in
+        [pkg, leaf_pkg]],
       # TODO(usta): add a dangling symlink
   ]
