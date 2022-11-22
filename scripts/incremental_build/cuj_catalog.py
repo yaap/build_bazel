@@ -382,45 +382,13 @@ def get_cujgroups() -> list[CujGroup]:
        leaf package: {de_src(leaf_pkg)} has {lp_why} but no sub-dirs
   leaf package free: {de_src(leaf_pkg_free)} has neither Android.bp nor sub-dirs
   '''))
-  return [
-      CujGroup('', [CujStep('no change', lambda: None)]),
-
-      modify_revert(src('bionic/libc/tzcode/asctime.c')),
-      modify_revert(src('bionic/libc/stdio/stdio.cpp')),
-      modify_revert(src('packages/modules/adb/daemon/main.cpp')),
-      modify_revert(src('frameworks/base/core/java/android/view/View.java')),
-
-      *[create_delete(d.joinpath('unreferenced/t.txt'),
-                      InWorkspace.UNDER_SYMLINK) for
-        d in [
-            pkg,
-            ancestor,
-            pkg_free,
-            leaf_pkg,
-            leaf_pkg_free
-        ]],
-
-      *[create_delete(d.joinpath('unreferenced.txt'), InWorkspace.SYMLINK) for
-        d in [ancestor, pkg, leaf_pkg]],
-      *[create_delete(d.joinpath('unreferenced.txt'), InWorkspace.UNDER_SYMLINK)
-        for d
-        in [pkg_free, leaf_pkg_free]],
-
-      create_delete(src('bionic/libc/tzcode/globbed.c'),
-                    InWorkspace.UNDER_SYMLINK),
-
-      *[delete_restore(f, InWorkspace.SYMLINK) for f in [
-          util.any_file('version_script.txt'),
-          util.any_file('AndroidManifest.xml')]],
-      # TODO (usta): find targets that should be affected
-
-      delete_restore(leaf_pkg, InWorkspace.NOT_UNDER_SYMLINK),
-
+  android_bp_cujs = [
       modify_revert(src('Android.bp')),
 
       *[create_delete_android_bp(d) for d in
-        [ancestor, pkg_free, leaf_pkg_free]],
-
+        [ancestor, pkg_free, leaf_pkg_free]]
+  ]
+  bazel_file_cujs = [
       # needs ShouldKeepExistingBuildFileForDir(pkg_free) = false
       *[create_delete(d.joinpath('BUILD.bazel'), InWorkspace.OMISSION) for d in
         [ancestor,
@@ -433,6 +401,9 @@ def get_cujgroups() -> list[CujGroup]:
           pkg,
           leaf_pkg,
       ]],
+
+      *[create_delete(d.joinpath('BUILD/bogus-under-build-dir.txt'), InWorkspace.UNDER_SYMLINK) for
+        d in [pkg, leaf_pkg, ancestor, pkg_free, leaf_pkg_free]],
 
       # external/guava Bp2BuildKeepExistingBuildFile set True(recursive)
       create_delete_kept_build_file(
@@ -452,8 +423,44 @@ def get_cujgroups() -> list[CujGroup]:
       # bionic doesn't have Bp2BuildKeepExistingBuildFile set True
       create_delete(util.get_top_dir().joinpath('bionic/bogus/BUILD'),
                     InWorkspace.OMISSION),
-      modify_revert(util.any_file_under(src('bionic'), 'BUILD')),
+      modify_revert(util.any_file_under(src('bionic'), 'BUILD'))
+  ]
+  mixed_build_launch_cujs = [
+      modify_revert(src('bionic/libc/tzcode/asctime.c')),
+      modify_revert(src('bionic/libc/stdio/stdio.cpp')),
+      modify_revert(src('packages/modules/adb/daemon/main.cpp')),
+      modify_revert(src('frameworks/base/core/java/android/view/View.java')),
+  ]
+  unreferenced_file_cujs = [
+      *[create_delete(d.joinpath('unreferenced/t.txt'),
+                      InWorkspace.UNDER_SYMLINK) for
+        d in [
+            pkg,
+            ancestor,
+            pkg_free,
+            leaf_pkg,
+            leaf_pkg_free
+        ]],
 
+      *[create_delete(d.joinpath('unreferenced.txt'), InWorkspace.SYMLINK) for
+        d in [ancestor, pkg, leaf_pkg]],
+      *[create_delete(d.joinpath('unreferenced.txt'), InWorkspace.UNDER_SYMLINK)
+        for d
+        in [pkg_free, leaf_pkg_free]]
+  ]
+  return [
+      CujGroup('', [CujStep('no change', lambda: None)]),
+      create_delete(src('bionic/libc/tzcode/globbed.c'),
+                    InWorkspace.UNDER_SYMLINK),
+      *[delete_restore(f, InWorkspace.SYMLINK) for f in [
+          util.any_file('version_script.txt'),
+          util.any_file('AndroidManifest.xml')]],
+      # TODO (usta): find targets that should be affected
+      delete_restore(leaf_pkg, InWorkspace.NOT_UNDER_SYMLINK),
+      *unreferenced_file_cujs,
+      *mixed_build_launch_cujs,
+      *android_bp_cujs,
+      *bazel_file_cujs,
       *[replace_link_with_dir(d.joinpath('bogus.txt')) for d in
         [pkg, leaf_pkg]],
       # TODO(usta): add a dangling symlink
