@@ -98,7 +98,7 @@ def _cc_object_impl(ctx):
 
     compilation_contexts = []
     deps_objects = []
-    for obj in ctx.attr.deps:
+    for obj in ctx.attr.objs:
         compilation_contexts.append(obj[CcInfo].compilation_context)
         deps_objects.append(obj[CcObjectInfo].objects)
     for includes_dep in ctx.attr.includes_deps:
@@ -184,7 +184,7 @@ _cc_object = rule(
         "copts": attr.string_list(),
         "asflags": attr.string_list(),
         "linkopts": attr.string_list(),
-        "deps": attr.label_list(providers = [CcInfo, CcObjectInfo]),
+        "objs": attr.label_list(providers = [CcInfo, CcObjectInfo]),
         "includes_deps": attr.label_list(providers = [CcInfo]),
         "linker_script": attr.label(allow_single_file = True),
         "sdk_version": attr.string(),
@@ -206,6 +206,7 @@ def cc_object(
         linkopts = [],
         srcs = [],
         srcs_as = [],
+        objs = [],
         deps = [],
         native_bridge_supported = False,  # TODO: not supported yet.
         stl = "",
@@ -229,8 +230,8 @@ def cc_object(
         copts = _CC_OBJECT_COPTS + copts,
         linkopts = linkopts,
         srcs = srcs + srcs_as,
-        deps = deps,
-        includes_deps = stl_info.static_deps + stl_info.shared_deps + system_dynamic_deps,
+        objs = objs,
+        includes_deps = stl_info.static_deps + stl_info.shared_deps + system_dynamic_deps + deps,
         sdk_version = sdk_version,
         min_sdk_version = min_sdk_version,
         **kwargs
