@@ -1268,7 +1268,7 @@ def _test_min_sdk_version_apex_inherit():
     name = "min_sdk_version_apex_inherit"
     test_name = name + "_test"
     cc_name = name + "_lib_cc"
-    apex_min = "28"
+    apex_min = "29"
 
     cc_library_shared(
         name = cc_name,
