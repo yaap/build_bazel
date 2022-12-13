@@ -107,7 +107,7 @@ def _cc_object_impl(ctx):
     product_variables = ctx.attr._android_product_variables[platform_common.TemplateVariableInfo]
     asflags = [ctx.expand_make_variables("asflags", flag, product_variables.variables) for flag in ctx.attr.asflags]
 
-    srcs_c, srcs_as, private_hdrs = split_srcs_hdrs(ctx.files.srcs)
+    srcs_c, srcs_as, private_hdrs = split_srcs_hdrs(ctx.files.srcs + ctx.files.srcs_as)
 
     (compilation_context, compilation_outputs_c) = cc_common.compile(
         name = ctx.label.name,
@@ -178,6 +178,7 @@ _cc_object = rule(
     implementation = _cc_object_impl,
     attrs = {
         "srcs": attr.label_list(allow_files = constants.all_dot_exts),
+        "srcs_as": attr.label_list(allow_files = constants.all_dot_exts),
         "hdrs": attr.label_list(allow_files = constants.hdr_dot_exts),
         "absolute_includes": attr.string_list(),
         "local_includes": attr.string_list(),
@@ -229,7 +230,9 @@ def cc_object(
         asflags = asflags,
         copts = _CC_OBJECT_COPTS + copts,
         linkopts = linkopts,
-        srcs = srcs + srcs_as,
+        # TODO(b/261996812): we shouldn't need to have both srcs and srcs_as as inputs here
+        srcs = srcs,
+        srcs_as = srcs_as,
         objs = objs,
         includes_deps = stl_info.static_deps + stl_info.shared_deps + system_dynamic_deps + deps,
         sdk_version = sdk_version,
