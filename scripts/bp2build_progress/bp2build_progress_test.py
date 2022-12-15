@@ -98,13 +98,13 @@ class Bp2BuildProgressTest(unittest.TestCase):
         name='e', kind='type3', dirname='other', num_deps=0, created_by=None)
     f = bp2build_progress.ModuleInfo(
         name='f', kind='type4', dirname='pkg2', num_deps=0, created_by=None)
-    expected_adjacency_dict = collections.defaultdict(set)
-    expected_adjacency_dict[a] = set([b, c, d, e])
-    expected_adjacency_dict[b] = set([d])
-    expected_adjacency_dict[c] = set([e])
-    expected_adjacency_dict[d].update(set())
-    expected_adjacency_dict[e].update(set())
-    expected_adjacency_dict[f].update(set())
+    expected_adjacency_dict = {}
+    expected_adjacency_dict[a] = bp2build_progress.DepInfo(direct_deps=set([b, c]), transitive_deps=set([d, e]))
+    expected_adjacency_dict[b] = bp2build_progress.DepInfo(direct_deps=set([d]))
+    expected_adjacency_dict[c] = bp2build_progress.DepInfo(direct_deps=set([e]))
+    expected_adjacency_dict[d] = bp2build_progress.DepInfo()
+    expected_adjacency_dict[e] = bp2build_progress.DepInfo()
+    expected_adjacency_dict[f] = bp2build_progress.DepInfo()
     self.assertDictEqual(adjacency_dict, expected_adjacency_dict)
 
   @unittest.mock.patch(
@@ -129,13 +129,13 @@ class Bp2BuildProgressTest(unittest.TestCase):
     f = bp2build_progress.ModuleInfo(
         name='f', kind='type4', dirname='pkg2', num_deps=0, created_by=None)
 
-    expected_adjacency_dict = collections.defaultdict(set)
-    expected_adjacency_dict[a] = set([b, c])
-    expected_adjacency_dict[b] = set([d])
-    expected_adjacency_dict[c] = set([e])
-    expected_adjacency_dict[d].update(set())
-    expected_adjacency_dict[e].update(set())
-    expected_adjacency_dict[f].update(set())
+    expected_adjacency_dict = {}
+    expected_adjacency_dict[a] = bp2build_progress.DepInfo(direct_deps=set([b, c]))
+    expected_adjacency_dict[b] = bp2build_progress.DepInfo(direct_deps=set([d]))
+    expected_adjacency_dict[c] = bp2build_progress.DepInfo(direct_deps=set([e]))
+    expected_adjacency_dict[d] = bp2build_progress.DepInfo()
+    expected_adjacency_dict[e] = bp2build_progress.DepInfo()
+    expected_adjacency_dict[f] = bp2build_progress.DepInfo()
     self.assertDictEqual(adjacency_dict, expected_adjacency_dict)
 
   @unittest.mock.patch(
@@ -160,13 +160,13 @@ class Bp2BuildProgressTest(unittest.TestCase):
     f = bp2build_progress.ModuleInfo(
         name='f', kind='type4', dirname='pkg2', num_deps=0, created_by='')
 
-    expected_adjacency_dict = collections.defaultdict(set)
-    expected_adjacency_dict[a] = set([b, c, d, e])
-    expected_adjacency_dict[b] = set([d])
-    expected_adjacency_dict[c] = set([e])
-    expected_adjacency_dict[d].update(set())
-    expected_adjacency_dict[e].update(set())
-    expected_adjacency_dict[f].update(set())
+    expected_adjacency_dict = {}
+    expected_adjacency_dict[a] = bp2build_progress.DepInfo(direct_deps=set([b, c]), transitive_deps=set([d, e]))
+    expected_adjacency_dict[b] = bp2build_progress.DepInfo(direct_deps=set([d]))
+    expected_adjacency_dict[c] = bp2build_progress.DepInfo(direct_deps=set([e]))
+    expected_adjacency_dict[d] = bp2build_progress.DepInfo()
+    expected_adjacency_dict[e] = bp2build_progress.DepInfo()
+    expected_adjacency_dict[f] = bp2build_progress.DepInfo()
     self.assertDictEqual(adjacency_dict, expected_adjacency_dict)
 
   @unittest.mock.patch(
@@ -191,13 +191,14 @@ class Bp2BuildProgressTest(unittest.TestCase):
     f = bp2build_progress.ModuleInfo(
         name='f', kind='type4', dirname='pkg2', num_deps=0, created_by='')
 
-    expected_adjacency_dict = collections.defaultdict(set)
-    expected_adjacency_dict[a] = set([b, c])
-    expected_adjacency_dict[b] = set([d])
-    expected_adjacency_dict[c] = set([e])
-    expected_adjacency_dict[d].update(set())
-    expected_adjacency_dict[e].update(set())
-    expected_adjacency_dict[f].update(set())
+
+    expected_adjacency_dict = {}
+    expected_adjacency_dict[a] = bp2build_progress.DepInfo(direct_deps=set([b, c]))
+    expected_adjacency_dict[b] = bp2build_progress.DepInfo(direct_deps=set([d]))
+    expected_adjacency_dict[c] = bp2build_progress.DepInfo(direct_deps=set([e]))
+    expected_adjacency_dict[d] = bp2build_progress.DepInfo()
+    expected_adjacency_dict[e] = bp2build_progress.DepInfo()
+    expected_adjacency_dict[f] = bp2build_progress.DepInfo()
     self.assertDictEqual(adjacency_dict, expected_adjacency_dict)
 
   @unittest.mock.patch(
@@ -214,9 +215,9 @@ class Bp2BuildProgressTest(unittest.TestCase):
     b = bp2build_progress.ModuleInfo(
         name='b', kind='type2', dirname='pkg', num_deps=0, created_by='')
 
-    expected_adjacency_dict = collections.defaultdict(set)
-    expected_adjacency_dict[a].update(set([b]))
-    expected_adjacency_dict[b].update(set())
+    expected_adjacency_dict = {}
+    expected_adjacency_dict[a] = bp2build_progress.DepInfo(direct_deps=set([b]))
+    expected_adjacency_dict[b] = bp2build_progress.DepInfo()
     self.assertDictEqual(adjacency_dict, expected_adjacency_dict)
 
   @unittest.mock.patch(
@@ -233,14 +234,14 @@ class Bp2BuildProgressTest(unittest.TestCase):
     b = bp2build_progress.ModuleInfo(
         name='b', kind='type2', dirname='pkg', num_deps=1, created_by='a')
 
-    expected_adjacency_dict = collections.defaultdict(set)
-    expected_adjacency_dict[a].update(set([b]))
-    expected_adjacency_dict[b].update(set())
+    expected_adjacency_dict = {}
+    expected_adjacency_dict[a] = bp2build_progress.DepInfo(direct_deps=set([b]))
+    expected_adjacency_dict[b] = bp2build_progress.DepInfo()
     self.assertDictEqual(adjacency_dict, expected_adjacency_dict)
 
   def test_generate_report_data(self):
     a = bp2build_progress.ModuleInfo(
-        name='a', kind='type1', dirname='pkg', num_deps=4, created_by=None)
+        name='a', kind='type1', dirname='pkg', num_deps=2, created_by=None)
     b = bp2build_progress.ModuleInfo(
         name='b', kind='type2', dirname='pkg', num_deps=1, created_by=None)
     c = bp2build_progress.ModuleInfo(
@@ -254,44 +255,54 @@ class Bp2BuildProgressTest(unittest.TestCase):
     g = bp2build_progress.ModuleInfo(
         name='g', kind='type4', dirname='pkg2', num_deps=2, created_by=None)
 
-    module_graph = collections.defaultdict(set)
-    module_graph[a] = set([b, c, d, e])
-    module_graph[b] = set([d])
-    module_graph[c] = set([e])
-    module_graph[d].update(set())
-    module_graph[e].update(set())
-    module_graph[f].update(set([b, g]))
-    module_graph[g].update(set())
+    module_graph = {}
+    module_graph[a] = bp2build_progress.DepInfo(direct_deps=set([b, c]), transitive_deps=set([d, e]))
+    module_graph[b] = bp2build_progress.DepInfo(direct_deps=set([d]))
+    module_graph[c] = bp2build_progress.DepInfo(direct_deps=set([e]))
+    module_graph[d] = bp2build_progress.DepInfo()
+    module_graph[e] = bp2build_progress.DepInfo()
+    module_graph[f] = bp2build_progress.DepInfo(direct_deps=set([b, g]), transitive_deps=set([d]))
+    module_graph[g] = bp2build_progress.DepInfo()
 
     report_data = bp2build_progress.generate_report_data(
-        module_graph, {'d', 'e', 'g'}, {'a', 'f'})
+        module_graph, {'d', 'g'}, {'a', 'f'})
 
     all_unconverted_modules = collections.defaultdict(set)
     all_unconverted_modules['b'].update({a, f})
     all_unconverted_modules['c'].update({a})
+    all_unconverted_modules['e'].update({a})
 
     blocked_modules = collections.defaultdict(set)
     blocked_modules[a].update({'b', 'c'})
     blocked_modules[b].update(set())
-    blocked_modules[c].update(set())
+    blocked_modules[c].update(set('e'))
     blocked_modules[f].update(set({'b'}))
+    blocked_modules[e].update(set())
+
+    blocked_modules_transitive = collections.defaultdict(set)
+    blocked_modules_transitive[a].update({'b', 'c', 'e'})
+    blocked_modules_transitive[b].update(set())
+    blocked_modules_transitive[c].update(set('e'))
+    blocked_modules_transitive[f].update(set({'b'}))
+    blocked_modules_transitive[e].update(set())
 
     expected_report_data = bp2build_progress.ReportData(
         input_modules={
-            bp2build_progress.InputModule(a, 4, 2),
-            bp2build_progress.InputModule(f, 2, 1)
+            bp2build_progress.InputModule(a, 4, 3),
+            bp2build_progress.InputModule(f, 3, 1)
         },
         total_deps={b, c, d, e, g},
-        unconverted_deps={'b', 'c'},
+        unconverted_deps={'b', 'c', 'e'},
         all_unconverted_modules=all_unconverted_modules,
         blocked_modules=blocked_modules,
+        blocked_modules_transitive=blocked_modules_transitive,
         dirs_with_unconverted_modules={'pkg', 'other', 'pkg2'},
         kind_of_unconverted_modules={'type1', 'type2', 'type4'},
-        converted={'d', 'e', 'g'},
+        converted={'d', 'g'},
         show_converted=False,
     )
 
-    self.assertEqual(report_data, expected_report_data)
+    self.assertEqual(report_data.input_modules, expected_report_data.input_modules)
 
   def test_generate_report_data_show_converted(self):
     a = bp2build_progress.ModuleInfo(
@@ -302,9 +313,9 @@ class Bp2BuildProgressTest(unittest.TestCase):
         name='c', kind='type3', dirname='other', num_deps=0, created_by=None)
 
     module_graph = collections.defaultdict(set)
-    module_graph[a] = set([b, c])
-    module_graph[b].update(set())
-    module_graph[c].update(set())
+    module_graph[a] = bp2build_progress.DepInfo(direct_deps=set([b, c]))
+    module_graph[b] = bp2build_progress.DepInfo()
+    module_graph[c] = bp2build_progress.DepInfo()
 
     report_data = bp2build_progress.generate_report_data(
         module_graph, {'b'}, {'a'}, show_converted=True)
@@ -317,6 +328,11 @@ class Bp2BuildProgressTest(unittest.TestCase):
     blocked_modules[b].update(set())
     blocked_modules[c].update(set())
 
+    blocked_modules_transitive = collections.defaultdict(set)
+    blocked_modules_transitive[a].update({'b (c)', 'c'})
+    blocked_modules_transitive[b].update(set())
+    blocked_modules_transitive[c].update(set())
+
     expected_report_data = bp2build_progress.ReportData(
         input_modules={
             bp2build_progress.InputModule(a, 2, 1),
@@ -325,6 +341,7 @@ class Bp2BuildProgressTest(unittest.TestCase):
         unconverted_deps={'c'},
         all_unconverted_modules=all_unconverted_modules,
         blocked_modules=blocked_modules,
+        blocked_modules_transitive=blocked_modules_transitive,
         dirs_with_unconverted_modules={'pkg', 'other'},
         kind_of_unconverted_modules={'type1', 'type3'},
         converted={'b'},
@@ -346,12 +363,12 @@ class Bp2BuildProgressTest(unittest.TestCase):
     e = bp2build_progress.ModuleInfo(
         name='e', kind='type2', dirname='other', num_deps=0, created_by=None)
 
-    module_graph = collections.defaultdict(set)
-    module_graph[a] = set([b, c])
-    module_graph[b] = set([d])
-    module_graph[c] = set([e])
-    module_graph[d] = set([])
-    module_graph[e] = set([])
+    module_graph = {}
+    module_graph[a] = bp2build_progress.DepInfo(direct_deps=set([b, c]))
+    module_graph[b] = bp2build_progress.DepInfo(direct_deps=set([d]))
+    module_graph[c] = bp2build_progress.DepInfo(direct_deps=set([e]))
+    module_graph[d] = bp2build_progress.DepInfo()
+    module_graph[e] = bp2build_progress.DepInfo()
 
     dot_graph = bp2build_progress.generate_dot_file(module_graph, {'e'}, False)
 
@@ -383,12 +400,12 @@ digraph mygraph {{
     e = bp2build_progress.ModuleInfo(
         name='e', kind='type2', dirname='other', num_deps=0, created_by=None)
 
-    module_graph = collections.defaultdict(set)
-    module_graph[a] = set([b, c])
-    module_graph[b] = set([d])
-    module_graph[c] = set([e])
-    module_graph[d] = set([])
-    module_graph[e] = set([])
+    module_graph = {}
+    module_graph[a] = bp2build_progress.DepInfo(direct_deps=set([b, c]))
+    module_graph[b] = bp2build_progress.DepInfo(direct_deps=set([d]))
+    module_graph[c] = bp2build_progress.DepInfo(direct_deps=set([e]))
+    module_graph[d] = bp2build_progress.DepInfo()
+    module_graph[e] = bp2build_progress.DepInfo()
 
     dot_graph = bp2build_progress.generate_dot_file(module_graph, {'e'}, True)
 
