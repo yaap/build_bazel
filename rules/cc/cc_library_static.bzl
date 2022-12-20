@@ -105,7 +105,8 @@ def cc_library_static(
         tidy_checks_as_errors = None,
         tidy_flags = None,
         tidy_disabled_srcs = None,
-        tidy_timeout_srcs = None):
+        tidy_timeout_srcs = None,
+        native_coverage = True):
     "Bazel macro to correspond with the cc_library_static Soong module."
 
     exports_name = "%s_exports" % name
@@ -139,6 +140,9 @@ def cc_library_static(
     if min_sdk_version:
         toolchain_features += parse_sdk_version(min_sdk_version) + ["-sdk_version_default"]
     toolchain_features += features
+
+    if not native_coverage:
+        toolchain_features += ["-coverage"]
 
     if system_dynamic_deps == None:
         system_dynamic_deps = system_dynamic_deps_defaults
