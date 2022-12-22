@@ -94,6 +94,12 @@ def cc_library_shared(
         native_coverage = True,
         tags = [],
         fdo_profile = None,
+        tidy = None,
+        tidy_checks = None,
+        tidy_checks_as_errors = None,
+        tidy_flags = None,
+        tidy_disabled_srcs = None,
+        tidy_timeout_srcs = None,
         **kwargs):
     "Bazel macro to correspond with the cc_library_shared Soong module."
 
@@ -185,6 +191,12 @@ def cc_library_shared(
         target_compatible_with = target_compatible_with,
         tags = ["manual"],
         native_coverage = native_coverage,
+        tidy = tidy,
+        tidy_checks = tidy_checks,
+        tidy_checks_as_errors = tidy_checks_as_errors,
+        tidy_flags = tidy_flags,
+        tidy_disabled_srcs = tidy_disabled_srcs,
+        tidy_timeout_srcs = tidy_timeout_srcs,
     )
 
     sanitizer_deps_name = name + "_sanitizer_deps"
