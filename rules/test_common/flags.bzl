@@ -109,11 +109,7 @@ def _action_flags_test_impl(ctx):
                 )
     return analysistest.end(env)
 
-def create_action_flags_test_for_config(config_settings):
-    return analysistest.make(
-        _action_flags_test_impl,
-        attrs = _action_flags_test_attrs,
-        config_settings = config_settings,
-    )
-
-action_flags_test = create_action_flags_test_for_config({})
+action_flags_test = analysistest.make(
+    _action_flags_test_impl,
+    attrs = _action_flags_test_attrs,
+)
