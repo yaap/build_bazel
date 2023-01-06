@@ -223,6 +223,7 @@ CC_ATTR_ASPECTS = ["dynamic_deps", "deps", "shared", "src", "runtime_deps"]
 # This aspect is intended to be applied on a apex.native_shared_libs attribute
 apex_cc_aspect = aspect(
     implementation = _apex_cc_aspect_impl,
+    provides = [ApexCcInfo],
     attrs = {
         "_apex_name": attr.label(default = "//build/bazel/rules/apex:apex_name"),
         "_apex_direct_deps": attr.label(default = "//build/bazel/rules/apex:apex_direct_deps"),
