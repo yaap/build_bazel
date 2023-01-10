@@ -118,7 +118,12 @@ def _create_file_mapping(ctx):
             else:
                 _add_lib_files("lib", [dep])
 
-    return file_mapping, requires.keys(), provides.keys(), backing_libs
+    return (
+        file_mapping,
+        sorted(requires.keys(), key = lambda x: x.name),  # sort on just the name of the target, not package
+        sorted(provides.keys(), key = lambda x: x.name),
+        backing_libs,
+    )
 
 def _add_so(label):
     return label.name + ".so"
