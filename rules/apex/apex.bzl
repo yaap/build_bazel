@@ -603,7 +603,9 @@ def _apex_rule_impl(ctx):
     apex_cert_info = ctx.attr.certificate[AndroidAppCertificateInfo]
     private_key = apex_cert_info.pk8
     public_key = apex_cert_info.pem
+
     signed_apex = ctx.outputs.apex_output
+    signed_capex = None
 
     _run_signapk(ctx, unsigned_apex, signed_apex, private_key, public_key, "BazelApexSigning")
 
@@ -628,6 +630,7 @@ def _apex_rule_impl(ctx):
         DefaultInfo(files = depset([signed_apex])),
         ApexInfo(
             signed_output = signed_apex,
+            signed_compressed_output = signed_capex,
             unsigned_output = unsigned_apex,
             requires_native_libs = apexer_outputs.requires_native_libs,
             provides_native_libs = apexer_outputs.provides_native_libs,
