@@ -43,6 +43,9 @@ _unchecked_apexes = [
     "com.android.media.swcodec",
 ]
 
+# Validates if a target is made available as a transitive dependency of an APEX. The return
+# value is tri-state: True, False, string. Strings are used when a target is _not checked_
+# and the string itself contains the reason.
 def _validate_apex_available(target, ctx, *, apex_available_tags, apex_name, base_apex_name):
     # testonly apexes aren't checked.
     if ctx.attr.testonly:
