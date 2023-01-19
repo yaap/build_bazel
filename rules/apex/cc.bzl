@@ -209,6 +209,7 @@ CC_ATTR_ASPECTS = [
     "src",
     "runtime_deps",
     "static_deps",
+    "whole_archive_deps",
 ]
 
 # This aspect is intended to be applied on a apex.native_shared_libs attribute

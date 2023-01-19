@@ -83,7 +83,7 @@ def _abi_dump_aspect_impl(target, ctx):
 
 abi_dump_aspect = aspect(
     implementation = _abi_dump_aspect_impl,
-    attr_aspects = ["static_deps"],
+    attr_aspects = ["static_deps", "whole_archive_deps"],
     attrs = {
         "_skip_abi_checks": attr.label(
             default = "//build/bazel/flags/cc/abi:skip_abi_checks",
