@@ -261,11 +261,15 @@ def delete_restore(original: Path, ws: InWorkspace) -> CujGroup:
 def replace_link_with_dir(p: Path):
   """Create a file, replace it with a non-empty directory, delete it"""
   cd = create_delete(p, InWorkspace.SYMLINK)
+  create_file: CujStep
+  delete_file: CujStep
   create_file, delete_file, *tail = cd.steps
   assert len(tail) == 0
 
   # an Android.bp is always a symlink in the workspace and thus its parent
   # will be a directory in the workspace
+  create_dir: CujStep
+  delete_dir: CujStep
   create_dir, delete_dir, *tail = create_delete_bp(
     p.joinpath('Android.bp')).steps
   assert len(tail) == 0
@@ -313,6 +317,8 @@ def _with_kept_build_file_verifications(
         if line == curated_content:
           raise AssertionError(f'{curated_file} still merged in {ws_file}')
 
+  step1: CujStep
+  step2: CujStep
   step1, step2, *tail = template.steps
   assert len(tail) == 0
 
@@ -348,6 +354,8 @@ def create_delete_unkept_build_file(buildfile) -> CujGroup:
   sibling_bp = buildfile.with_name('Android.bp')
   if sibling_bp.exists():
     raise AssertionError('for simplicity, try BUILD without sibling Android.bp')
+  create_bp: CujStep
+  delete_bp: CujStep
   create_bp, delete_bp, *tail = create_delete_bp(sibling_bp).steps
   assert len(tail) == 0
   curated_content = '//gibberish'
