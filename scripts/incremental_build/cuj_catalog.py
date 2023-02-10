@@ -357,7 +357,7 @@ def create_delete_unkept_build_file(buildfile) -> CujGroup:
   curated_content = '//gibberish'
 
   def create_files():
-    create_bp.action()
+    create_bp.apply_change()
     with open(buildfile, mode="w") as f:
       f.write(curated_content)
 
