@@ -17,13 +17,14 @@
 #
 # Gather and print top-line performance metrics for the android build
 #
+readonly TOP="$(realpath "$(dirname "$0")/../../../..")"
+
 usage() {
     cat <<EOF
-usage: canonical_perf.sh [-a] LOG_DIR
-Must be run from root of tree.
-LOG_DIR directory should be outside of tree, including not in out/,
-because the whole tree will be cleaned during testing.
-  -a: analysis only, i.e. runs `m nothing` equivalent
+usage: canonical_perf.sh [-a] [LOG_DIR]
+  -a:      analysis only, i.e. runs "m nothing" equivalent
+  LOG_DIR: directory should be outside of tree, including not in out/,
+           because the whole tree will be cleaned during testing.
 EOF
     exit 1
 }
@@ -35,8 +36,12 @@ while getopts "a" opt; do
     esac
 done
 shift $((OPTIND-1))
-readonly log_dir=${1:-"../canonical-$(date +%b%d)"}
-echo "$log_dir"
+
+readonly log_dir=${1:-"$TOP/../canonical-$(date +%b%d)"}
+if [[ -e "$log_dir" ]]; then
+  echo "$log_dir already exists, please specify a different LOG_DIR"
+  usage
+fi
 
 # Pretty print the results
 function pretty() {
@@ -48,10 +53,9 @@ function clean_tree() {
   rm -rf out
 }
 
-rm -rf "$log_dir"
 mkdir -p "$log_dir"
 
-source build/envsetup.sh
+source "$TOP/build/envsetup.sh"
 
 # TODO: Switch to oriole when it works
 if [[ -e vendor/google/build ]]; then
@@ -65,7 +69,7 @@ export TARGET_BUILD_VARIANT=eng
 function build() {
   date
   set -x
-  ./build/bazel/scripts/incremental_build/incremental_build.py \
+  "$TOP/build/bazel/scripts/incremental_build/incremental_build.py" \
     --ignore-repo-diff \
     --log-dir="$log_dir" \
     "$@"
@@ -74,7 +78,6 @@ function build() {
 
 function run() {
   local -r bazel_mode="${1:-}"
-
   clean_tree
   date
   file="$log_dir/output${bazel_mode:+"$bazel_mode"}.txt"
