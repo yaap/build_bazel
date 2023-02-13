@@ -261,7 +261,8 @@ def main():
   options = p.parse_args()
 
   if options.add_manual_build:
-    build_info = {'build_type': 'MANUAL', 'description': options.description}
+    build_info = {'build_type': 'MANUAL',
+                  'description': options.add_manual_build}
     run_dir = next(util.next_path(options.log_dir.joinpath('run')))
     run_dir.mkdir(parents=True, exist_ok=False)
     archive_run(run_dir, build_info)
