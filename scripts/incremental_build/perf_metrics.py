@@ -249,7 +249,7 @@ def main():
     formatter_class=argparse.RawTextHelpFormatter,
     description='read archived perf metrics from [LOG_DIR] and '
                 f'summarize them into {util.SUMMARY_CSV}')
-  default_log_dir = util.get_out_dir().joinpath(util.DEFAULT_TIMING_LOGS_DIR)
+  default_log_dir = util.get_default_log_dir()
   p.add_argument('-l', '--log-dir', type=Path, default=default_log_dir,
                  help=textwrap.dedent('''
                  Directory for timing logs. Defaults to %(default)s
