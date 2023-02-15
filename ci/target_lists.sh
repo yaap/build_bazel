@@ -52,6 +52,8 @@ TEST_TARGETS_LIST=(
 TEST_TARGETS="${TEST_TARGETS_LIST[@]}"
 
 HOST_ONLY_TEST_TARGETS_LIST=(
+  //tools/trebuchet:AnalyzerKt
+  //tools/metalava:metalava
   # Test both unstripped and stripped versions of a host native unit test
   //system/core/libcutils:libcutils_test
   //system/core/libcutils:libcutils_test__test_binary_unstripped
