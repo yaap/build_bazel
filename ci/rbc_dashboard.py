@@ -190,7 +190,7 @@ def get_branch() -> str:
     default_tag = tree.getroot().find('default')
     return default_tag.get('remote') + '/' + default_tag.get('revision')
   except Exception as e:  # pylint: disable=broad-except
-    print(f"Couldn't detect branch name: {e}", file=sys.stderr)
+    # Most likely happens due to .repo not existing on CI
     return 'Unknown'
 
 
