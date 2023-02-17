@@ -30,6 +30,9 @@ BUILD_TARGETS_LIST=(
   -//external/e2fsprogs/debugfs:all
   -//external/e2fsprogs/e2fsck:all
 
+  # TODO(b/215230098): remove after handling sdk_version for aidl
+  -//frameworks/av:av-types-aidl-java
+
   # TODO(b/266459895): remove these after re-enabling libunwindstack
   -//bionic/libc/malloc_debug:libc_malloc_debug
   -//bionic/libfdtrack:libfdtrack
