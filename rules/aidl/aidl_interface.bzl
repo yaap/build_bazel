@@ -14,8 +14,6 @@
 
 load("//build/bazel/rules/aidl:aidl_library.bzl", "aidl_library")
 load("//build/bazel/rules/cc:cc_aidl_library.bzl", "cc_aidl_library")
-load("//build/bazel/rules/cc:cc_library_shared.bzl", "cc_library_shared")
-load("//build/bazel/rules/cc:cc_library_static.bzl", "cc_library_static")
 load("//build/bazel/rules/java:java_aidl_library.bzl", "java_aidl_library")
 
 JAVA = "java"
@@ -96,7 +94,7 @@ def _is_config_enabled(config):
 
 def aidl_interface(
         name,
-        deps = None,
+        deps = [],
         strip_import_prefix = "",
         srcs = None,
         flags = None,
@@ -104,7 +102,7 @@ def aidl_interface(
         cpp_config = None,
         ndk_config = None,
         stability = None,
-        versions_with_info = None,
+        versions_with_info = [],
         unstable = False,
         tags = [],
         # TODO(b/261208761): Support frozen attr
@@ -133,10 +131,10 @@ def aidl_interface(
 
     # When versions_with_info is set, versions is no-op.
     # TODO(b/244349745): Modify bp2build to skip convert versions if versions_with_info is set
-    if (versions_with_info == None and srcs == None):
+    if (len(versions_with_info) == 0 and srcs == None):
         fail("must specify at least versions_with_info or srcs")
 
-    if versions_with_info == None:
+    if len(versions_with_info) == 0:
         if frozen == True:
             fail("frozen cannot be set without versions_with_info attr being set")
     elif unstable == True:
@@ -173,17 +171,16 @@ def aidl_interface(
     # https://cs.android.com/android/platform/superproject/+/master:system/tools/aidl/build/aidl_interface.go;l=791?q=system%2Ftools%2Faidl%2Fbuild%2Faidl_interface.go
     next_version = None
 
-    if versions_with_info != None and len(versions_with_info) > 0:
+    if len(versions_with_info) > 0:
         _check_versions_with_info(versions_with_info)
         next_version = _next_version(versions_with_info, False)
 
         for version_with_info in versions_with_info:
             deps_for_version = version_with_info.get("deps", [])
-            hash_file = _hash_file(name, version_with_info["version"])
+
             create_aidl_binding_for_backends(
                 name = name,
                 version = version_with_info["version"],
-                hash_file = hash_file,
                 deps = deps_for_version,
                 aidl_flags = aidl_flags,
                 backend_configs = enabled_backend_configs,
@@ -219,7 +216,6 @@ def aidl_interface(
 def create_aidl_binding_for_backends(
         name,
         version = None,
-        hash_file = None,
         srcs = None,
         strip_import_prefix = "",
         deps = None,
@@ -249,16 +245,20 @@ def create_aidl_binding_for_backends(
     if version != "":
         aidl_flags = aidl_flags + ["--version=" + version]
 
+    hash_file = None
+
     if srcs == None:
         if version == "":
             fail("need srcs for unversioned interface")
         strip_import_prefix = "aidl_api/{}/{}".format(name, version)
         srcs = native.glob([strip_import_prefix + "/**/*.aidl"])
+        hash_file = _hash_file(name, version)
 
     aidl_library(
         name = aidl_library_name,
         deps = deps,
         hash_file = hash_file,
+        version = version,
         strip_import_prefix = strip_import_prefix,
         srcs = srcs,
         flags = aidl_flags,
