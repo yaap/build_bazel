@@ -21,14 +21,17 @@ PREVIEW_API_LEVEL_BASE = 9000
 
 def _api_levels_with_previews():
     ret = dict(api_levels_released_versions)
-    for i, codename in enumerate(product_vars["Platform_version_active_codenames"]):
+    active_codenames = product_vars.get("Platform_version_active_codenames", [])
+    for i, codename in enumerate(active_codenames):
         ret[codename] = PREVIEW_API_LEVEL_BASE + i
     return ret
 
 def _api_levels_with_final_codenames():
     ret = dict(api_levels_released_versions)
-    if product_vars["Platform_sdk_final"]:
-        ret["current"] = product_vars["Platform_sdk_version"]
+    if product_vars.get("Platform_sdk_final"):
+        platform_sdk_version = product_vars.get("Platform_sdk_version")
+        if platform_sdk_version != None:
+            ret["current"] = platform_sdk_version
     return ret
 
 api_levels_with_previews = _api_levels_with_previews()
