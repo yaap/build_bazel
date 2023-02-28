@@ -202,7 +202,7 @@ def main():
     for counter, cuj_index in enumerate(user_input.chosen_cujgroups):
       cujgroup = cuj_catalog.get_cujgroups()[cuj_index]
       for cujstep in cujgroup.steps:
-        desc = f'{cujstep.verb} {cujgroup.description}'
+        desc = ' '.join([cujstep.verb, cujgroup.description])
         logging.info('START %s %s [%s]', build_type.name,
                      ' '.join(user_input.targets), desc)
         cujstep.apply_change()

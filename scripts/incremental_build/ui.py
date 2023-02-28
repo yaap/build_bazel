@@ -136,7 +136,7 @@ def get_user_input() -> UserInput:
                  help='Skip "repo status" check')
   p.add_argument('targets', nargs='*', default=['nothing'],
                  help='Targets to run, e.g. "libc adbd". '
-                      'Defaults to (%default)s')
+                      'Defaults to %(default)s')
 
   options = p.parse_args()
 
