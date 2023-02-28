@@ -139,7 +139,7 @@ def _build(build_type: ui.BuildType, logfile: Path) -> (int, BuildInfo):
     'log': str(logfile.relative_to(ui.get_user_input().log_dir)),
     'ninja_explains': util.count_explanations(logfile),
     'actions': action_count_after - action_count_before,
-    'time': str(datetime.timedelta(microseconds=elapsed_ns / 1000))
+    'time': util.hhmmss(datetime.timedelta(microseconds=elapsed_ns / 1000))
   })
 
 
