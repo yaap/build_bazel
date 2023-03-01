@@ -26,7 +26,7 @@ The following commands are available:
 * `properties`: returns the properties set in the input module, includes
   properties set via defaults
 * `transitiveDeps` prints the names of the transitive dependencies of the given
-  module
+  module. $arg can be comma-separated module names
 * `usedVariations` returns a map that shows which variations are used in the
   input and what values they take
 * `variantTransitions`  summarizes the variant transitions in the transitive
