@@ -42,6 +42,7 @@ load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 load("@soong_injection//apex_toolchain:constants.bzl", "default_manifest_version")
 load("@soong_injection//product_config:product_variables.bzl", "product_vars")
 load("//build/bazel/rules/apex:sdk_versions.bzl", "maybe_override_min_sdk_version")
+load("//build/bazel/rules/common:api.bzl", "default_app_target_sdk")
 
 def _create_file_mapping(ctx):
     """Create a file mapping for the APEX filesystem image.
@@ -383,8 +384,7 @@ def _run_apexer(ctx, apex_toolchain):
         args.add_all(["--logging_parent", ctx.attr.logging_parent])
 
     # TODO(b/243393960): Support API fingerprinting for APEXes for pre-release SDKs.
-    # TODO(b/269574334): target_sdk_version should be the default Platform SDK version of the branch.
-    args.add_all(["--target_sdk_version", "10000"])
+    args.add_all(["--target_sdk_version", default_app_target_sdk()])
 
     # TODO(b/215339575): This is a super rudimentary way to convert "current" to a numerical number.
     # Generalize this to API level handling logic in a separate Starlark utility, preferably using
