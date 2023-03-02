@@ -1,4 +1,4 @@
-# CMD: Returns the names of the transitive dependencies of the comma-separated module names, $arg
+# CMD: Returns the names of the transitive dependencies of the module(s) $arg, splits on ","
 
 include "library";
 
