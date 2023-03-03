@@ -11,12 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import datetime
 import os
 import unittest
 
 from util import _next_path_helper
 from util import any_match
 from util import get_top_dir
+from util import hhmmss
 
 
 class UtilTest(unittest.TestCase):
@@ -73,3 +75,13 @@ class UtilTest(unittest.TestCase):
     for _, dirs, files in os.walk(path):
       self.assertFalse('BUILD' in dirs)
       self.assertFalse('BUILD' in files)
+
+  def test_hhmmss(self):
+    examples = [
+        (datetime.timedelta(seconds=(2 * 60 + 5)), '00:02:05.000'),
+        (datetime.timedelta(seconds=(3600 + 23 * 60 + 45.897898)),
+         '01:23:45.898'),
+    ]
+    for (ts, expected) in examples:
+      self.subTest(ts=ts, expected=expected)
+      self.assertEqual(hhmmss(ts), expected)
