@@ -18,6 +18,7 @@ load("//build/bazel/rules/cc:cc_library_shared.bzl", "CcStubLibrariesInfo")
 load("//build/bazel/rules/cc:cc_stub_library.bzl", "CcStubLibrarySharedInfo")
 load("//build/bazel/rules/cc:cc_library_common.bzl", "parse_apex_sdk_version")
 load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
+load("@soong_injection//product_config:product_variables.bzl", "product_vars")
 
 ApexCcInfo = provider(
     "Info needed to use CC targets in APEXes",
@@ -169,18 +170,20 @@ def _apex_cc_aspect_impl(target, ctx):
             # this list.
             provides.append(target.label)
         else:
-            # If this is not a direct dep, and stubs are available, don't
-            # propagate the libraries. Mark this target as required from the
-            # system either via the system partition, or another APEX, and
-            # propagate this list.
+            # If this is not a direct dep and the build is in not unbundled mode,
+            # and stubs are available, don't propagate the libraries.
+
+            # Mark this target as required from the system either via
+            # the system partition, or another APEX, and propagate this list.
             source_library = target[CcStubLibrarySharedInfo].source_library
 
             # If a stub library is in the "provides" of the apex, it doesn't need to be in the "requires"
             if not is_apex_direct_dep(source_library, ctx):
                 requires.append(source_library.label)
-                if not _installed_to_bootstrap(source_library.label):
+                if not ctx.attr._unbundled_build[BuildSettingInfo].value and not _installed_to_bootstrap(source_library.label):
                     # It's sufficient to pass the make module name, not the fully qualified bazel label.
                     make_modules_to_install.append(source_library.label.name)
+
             return [
                 ApexCcInfo(
                     transitive_shared_libs = depset(),
@@ -272,6 +275,7 @@ apex_cc_aspect = aspect(
         "_apex_name": attr.label(default = "//build/bazel/rules/apex:apex_name"),
         "_apex_direct_deps": attr.label(default = "//build/bazel/rules/apex:apex_direct_deps"),
         "_min_sdk_version": attr.label(default = "//build/bazel/rules/apex:min_sdk_version"),
+        "_unbundled_build": attr.label(default = "//build/bazel/rules/apex:unbundled_build"),
         # This is propagated from the apex
         "testonly": attr.bool(default = False),
     },
