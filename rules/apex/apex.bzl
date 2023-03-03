@@ -495,6 +495,14 @@ def _run_signapk(ctx, unsigned_file, signed_file, private_key, public_key, mnemo
 
     return signed_file
 
+# https://cs.android.com/android/platform/superproject/+/master:build/soong/android/config.go;drc=5ca657189aac546af0aafaba11bbc9c5d889eab3;l=1501
+# In Soong, we don't check whether the current apex is part of Unbundled_apps.
+# Hence, we might simplify the logic by just checking product_vars["Unbundled_build"]
+# TODO(b/271474456): Eventually we might default to unbundled mode in bazel-only mode
+# so that we don't need to check Unbundled_apps.
+def compression_enabled():
+    return product_vars.get("CompressedApex", False) and len(product_vars.get("Unbundled_apps", [])) == 0
+
 # Compress a file with apex_compression_tool.
 def _run_apex_compression_tool(ctx, apex_toolchain, input_file, output_file_name):
     avbtool_files = apex_toolchain.avbtool[DefaultInfo].files_to_run
@@ -635,7 +643,7 @@ def _apex_rule_impl(ctx):
 
     _run_signapk(ctx, unsigned_apex, signed_apex, private_key, public_key, "BazelApexSigning")
 
-    if ctx.attr.compressible:
+    if ctx.attr.compressible and ctx.attr._compression_enabled[BuildSettingInfo].value:
         compressed_apex_output_file = _run_apex_compression_tool(ctx, apex_toolchain, signed_apex, ctx.attr.name + ".capex.unsigned")
         signed_capex = ctx.outputs.capex_output
         _run_signapk(ctx, compressed_apex_output_file, signed_capex, private_key, public_key, "BazelCompressedApexSigning")
@@ -819,6 +827,10 @@ When not set, defaults to 10000 (or "current").""",
             default = "//build/bazel/rules/apex:device_secondary_arch",
             doc = "If specified, also include the libraries from the secondary arch.",
         ),
+        "_compression_enabled": attr.label(
+            default = "//build/bazel/rules/apex:compression_enabled",
+            doc = "If specified along with compressible attribute, run compression tool.",
+        ),
     },
     # The apex toolchain is not mandatory so that we don't get toolchain resolution errors even
     # when the apex is not compatible with the current target (via target_compatible_with).
@@ -863,7 +875,8 @@ def apex(
 
     apex_output = name + ".apex"
     capex_output = None
-    if compressible:
+
+    if compressible and compression_enabled():
         capex_output = name + ".capex"
 
     if certificate and certificate_name:
