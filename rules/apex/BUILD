@@ -34,6 +34,13 @@ string_setting(
     visibility = ["//visibility:public"],
 )
 
+string_setting(
+    name = "device_secondary_arch",
+    # TODO(b/269577299): Make this read from //build/bazel/product_config:product_vars instead.
+    build_setting_default = product_vars.get("DeviceSecondaryArch", ""),
+    visibility = ["//visibility:public"],
+)
+
 bool_setting(
     name = "within_apex",
     build_setting_default = False,
