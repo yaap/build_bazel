@@ -25,3 +25,10 @@ def cc_prebuilt_library_shared(
         alwayslink = alwayslink,
         **kwargs
     )
+
+    native.cc_import(
+        name = name + "_alwayslink",
+        shared_library = shared_library,
+        alwayslink = True,
+        **kwargs
+    )
