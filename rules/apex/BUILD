@@ -128,6 +128,13 @@ bool_flag(
     visibility = ["//visibility:public"],
 )
 
+bool_setting(
+    name = "unbundled_build",
+    # TODO(b/269577299): Make this read from //build/bazel/product_config:product_vars instead.
+    build_setting_default = product_vars.get("Unbundled_build", False),
+    visibility = ["//visibility:public"],
+)
+
 toolchain_type(name = "apex_toolchain_type")
 
 apex_toolchain(
