@@ -136,6 +136,12 @@ bool_flag(
     visibility = ["//visibility:public"],
 )
 
+bool_flag(
+    name = "unbundled_build_target_sdk_with_api_fingerprint",
+    build_setting_default = is_env_true(env.get("UNBUNDLED_BUILD_TARGET_SDK_WITH_API_FINGERPRINT")),
+    visibility = ["//visibility:public"],
+)
+
 bool_setting(
     name = "unbundled_build",
     # TODO(b/269577299): Make this read from //build/bazel/product_config:product_vars instead.
@@ -146,6 +152,20 @@ bool_setting(
 bool_setting(
     name = "compression_enabled",
     build_setting_default = compression_enabled(),
+    visibility = ["//visibility:public"],
+)
+
+bool_setting(
+    name = "always_use_prebuilt_sdks",
+    # TODO(b/269577299): Make this read from //build/bazel/product_config:product_vars instead.
+    build_setting_default = product_vars.get("Always_use_prebuilt_sdks", False),
+    visibility = ["//visibility:public"],
+)
+
+string_setting(
+    name = "platform_sdk_codename",
+    # TODO(b/269577299): Make this read from //build/bazel/product_config:product_vars instead.
+    build_setting_default = product_vars.get("Platform_sdk_codename", ""),
     visibility = ["//visibility:public"],
 )
 
