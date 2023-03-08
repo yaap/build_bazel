@@ -2363,6 +2363,75 @@ def _test_apex_in_bundled_build():
 
     return test_name
 
+def _apex_compression_test(ctx):
+    env = analysistest.begin(ctx)
+
+    target = analysistest.target_under_test(env)
+    asserts.true(
+        env,
+        target[ApexInfo].signed_compressed_output != None,
+        "ApexInfo.signed_compressed_output should exist from compressible apex",
+    )
+
+    return analysistest.end(env)
+
+apex_compression_test = analysistest.make(
+    _apex_compression_test,
+    config_settings = {
+        "@//build/bazel/rules/apex:compression_enabled": True,
+    },
+)
+
+def _test_apex_compression():
+    name = "apex_compression"
+    test_name = name + "_test"
+
+    test_apex(
+        name = name,
+        compressible = True,
+    )
+
+    apex_compression_test(
+        name = test_name,
+        target_under_test = name,
+    )
+
+    return test_name
+
+def _apex_no_compression_test(ctx):
+    env = analysistest.begin(ctx)
+
+    target = analysistest.target_under_test(env)
+    asserts.true(
+        env,
+        target[ApexInfo].signed_compressed_output == None,
+        "ApexInfo.signed_compressed_output should not exist when compression_enabled is not specified",
+    )
+
+    return analysistest.end(env)
+
+apex_no_compression_test = analysistest.make(
+    _apex_no_compression_test,
+    config_settings = {
+        "@//build/bazel/rules/apex:compression_enabled": False,
+    },
+)
+
+def _test_apex_no_compression():
+    name = "apex_no_compression"
+    test_name = name + "_test"
+
+    test_apex(
+        name = name,
+    )
+
+    apex_no_compression_test(
+        name = test_name,
+        target_under_test = name,
+    )
+
+    return test_name
+
 def apex_test_suite(name):
     native.test_suite(
         name = name,
@@ -2412,5 +2481,7 @@ def apex_test_suite(name):
             _test_directly_included_stubs_lib_with_indirectly_static_variant(),
             _test_apex_in_unbundled_build(),
             _test_apex_in_bundled_build(),
+            _test_apex_compression(),
+            _test_apex_no_compression(),
         ] + _test_apex_transition(),
     )
