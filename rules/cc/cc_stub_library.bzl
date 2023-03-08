@@ -227,6 +227,10 @@ _cc_stub_library_shared = rule(
 )
 
 def cc_stub_suite(name, source_library, versions, symbol_file, export_includes = [], soname = "", deps = [], data = [], target_compatible_with = [], features = [], tags = ["manual"]):
+    # Implicitly add "current" to versions. This copies the behavior from Soong (aosp/1641782)
+    if "current" not in versions:
+        versions.append("current")
+
     for version in versions:
         cc_stub_library_shared(
             # Use - as the seperator of name and version. "current" might be the version of some libraries.
@@ -254,6 +258,6 @@ def cc_stub_suite(name, source_library, versions, symbol_file, export_includes =
         # Use _ as the seperator of name and version in alias. So there is no
         # duplicated name if "current" is one of the versions of a library.
         name = name + "_current",
-        actual = name + "-" + versions[-1],
+        actual = name + "-" + "current",
         tags = tags,
     )
