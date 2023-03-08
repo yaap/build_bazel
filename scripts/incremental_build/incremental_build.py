@@ -200,8 +200,10 @@ def main():
   '''))
 
   run_dir_gen = util.next_path(user_input.log_dir.joinpath(util.RUN_DIR_PREFIX))
+  warmed_up = False  # empirically this reduced the variation on the first build
+  # probably attributable to OS caches. While we may want a warm-up run for each
+  # build type, i.e. inside the following loop, this seems to be sufficient.
   for build_type in user_input.build_types:
-    warmed_up = False
     for cuj_index in [cuj_catalog.warmup_index(), *user_input.chosen_cujgroups]:
       cujgroup = cuj_catalog.get_cujgroups()[cuj_index]
       for cujstep in cujgroup.steps:
