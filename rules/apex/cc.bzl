@@ -13,7 +13,6 @@
 # limitations under the License.
 
 load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
-load("@soong_injection//product_config:product_variables.bzl", "product_vars")
 load("//build/bazel/rules/cc:cc_library_common.bzl", "parse_apex_sdk_version")
 load("//build/bazel/rules/cc:cc_library_shared.bzl", "CcStubLibrariesInfo")
 load("//build/bazel/rules/cc:cc_stub_library.bzl", "CcStubLibrarySharedInfo")
