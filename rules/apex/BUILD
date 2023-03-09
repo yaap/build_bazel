@@ -1,14 +1,14 @@
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag", "bool_setting", "string_list_setting", "string_setting")
+load("@env//:env.bzl", "env")
+load("@soong_injection//product_config:product_variables.bzl", "product_vars")
 load("//build/bazel/flags:common.bzl", "is_env_true")
 load("//build/bazel/product_variables:constants.bzl", "constants")
 load("//build/bazel/rules/apex:toolchain.bzl", "apex_toolchain")
-load("@bazel_skylib//rules:common_settings.bzl", "bool_flag", "bool_setting", "string_list_setting", "string_setting")
-load("@soong_injection//product_config:product_variables.bzl", "product_vars")
 load("//build/bazel/rules/common:api.bzl", api_levels = "api_levels_with_previews")
 load(":apex.bzl", "compression_enabled")
-load(":apex_test.bzl", "apex_test_suite")
 load(":apex_aab_test.bzl", "apex_aab_test_suite")
 load(":apex_key_test.bzl", "apex_key_test_suite")
-load("@env//:env.bzl", "env")
+load(":apex_test.bzl", "apex_test_suite")
 
 string_setting(
     name = "apex_name",
