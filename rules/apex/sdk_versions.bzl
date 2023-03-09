@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("//build/bazel/rules/common:api.bzl", api_levels = "api_levels_with_previews")
+load("//build/bazel/rules/common:api.bzl", "api")
 
 def maybe_override_min_sdk_version(min_sdk_version, override_min_sdk_version):
     """
@@ -38,7 +38,7 @@ def maybe_override_min_sdk_version(min_sdk_version, override_min_sdk_version):
     if str(override_min_sdk_version).isdigit():
         override_api_level = int(override_min_sdk_version)
     else:
-        override_api_level = api_levels.get(override_min_sdk_version, -1)
+        override_api_level = api.api_levels.get(override_min_sdk_version, -1)
 
     # Only override version numbers upwards.
     if override_api_level > min_api_level:
