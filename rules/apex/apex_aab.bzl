@@ -189,11 +189,12 @@ def _sign_bundle(ctx, aapt2, avbtool, module_name, bundle_file, apex_info):
         is_executable = False,
     )
 
+    java_runtime = ctx.attr._java_runtime[java_common.JavaRuntimeInfo]
+
     # Tools
     tools = [
         ctx.executable.dev_sign_bundle,
         ctx.executable._deapexer,
-        ctx.executable._java,
         ctx.executable._sign_apex,
         ctx.executable._openssl,
         ctx.executable._zip2zip,
@@ -206,6 +207,7 @@ def _sign_bundle(ctx, aapt2, avbtool, module_name, bundle_file, apex_info):
         bundletool_jarfile,
         signapk_jar,
         libconscrypt_openjdk_jni_so,
+        java_runtime.files,
     ]
 
     # Inputs
@@ -221,6 +223,7 @@ def _sign_bundle(ctx, aapt2, avbtool, module_name, bundle_file, apex_info):
     outputs = [output_dir, tmp_dir]
 
     # Arguments
+    java_bin = paths.join(java_runtime.java_home, "bin")
     args = ctx.actions.args()
     args.add_all(["--input_dir", input_bundle_file.dirname])
     args.add_all(["--output_dir", output_dir.path])
@@ -230,7 +233,7 @@ def _sign_bundle(ctx, aapt2, avbtool, module_name, bundle_file, apex_info):
     args.add_all(["--deapexer_path", ctx.executable._deapexer.path])
     args.add_all(["--blkid_path", ctx.executable._blkid.path])
     args.add_all(["--debugfs_path", ctx.executable._debugfs.path])
-    args.add_all(["--java_binary_path", ctx.executable._java.path])
+    args.add_all(["--java_binary_path", paths.join(java_bin, "java")])
     args.add_all(["--apex_signer_path", ctx.executable._sign_apex])
 
     ctx.actions.run(
@@ -246,7 +249,7 @@ def _sign_bundle(ctx, aapt2, avbtool, module_name, bundle_file, apex_info):
                     ctx.executable._deapexer.dirname,
                     avbtool.files_to_run.executable.dirname,
                     ctx.executable._openssl.dirname,
-                    ctx.executable._java.dirname,
+                    java_bin,
                 ],
             ),
             # necessary for dev_sign_bundle.
@@ -406,15 +409,10 @@ _apex_aab = rule(
             executable = False,
             default = "//external/conscrypt:libconscrypt_openjdk_jni",
         ),
-        "_java": attr.label(
+        "_java_runtime": attr.label(
+            default = Label("@bazel_tools//tools/jdk:current_java_runtime"),
             cfg = "exec",
-            executable = True,
-            default = "@local_jdk//:java",
-        ),
-        "_jdk_bin": attr.label(
-            cfg = "exec",
-            executable = False,
-            default = "@local_jdk//:jdk-bin",
+            providers = [java_common.JavaRuntimeInfo],
         ),
         "_openssl": attr.label(
             allow_single_file = True,
