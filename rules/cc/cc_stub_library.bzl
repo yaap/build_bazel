@@ -13,10 +13,10 @@
 # limitations under the License.
 
 load("//build/bazel/platforms:platform_utils.bzl", "platforms")
-load(":cc_library_static.bzl", "cc_library_static")
+load("//build/bazel/rules/common:api.bzl", "parse_api_level_from_version")
 load(":cc_library_shared.bzl", "CcStubLibrariesInfo")
+load(":cc_library_static.bzl", "cc_library_static")
 load(":fdo_profile_transitions.bzl", "drop_fdo_profile_transition")
-load("//build/bazel/rules/common:api.bzl", "parse_api_level_from_version", api_levels = "api_levels_with_previews")
 
 # This file contains the implementation for the cc_stub_library rule.
 #

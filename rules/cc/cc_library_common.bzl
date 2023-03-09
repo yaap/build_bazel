@@ -13,10 +13,10 @@
 # limitations under the License.
 
 load("@bazel_tools//tools/cpp:toolchain_utils.bzl", "find_cpp_toolchain")
-load("//build/bazel/rules/common:api.bzl", api_levels = "api_levels_with_previews")
-load("@soong_injection//product_config:product_variables.bzl", "product_vars")
 load("@soong_injection//android:constants.bzl", android_constants = "constants")
+load("@soong_injection//product_config:product_variables.bzl", "product_vars")
 load("//build/bazel/rules:common.bzl", "strip_bp2build_label_suffix")
+load("//build/bazel/rules/common:api.bzl", api_levels = "api_levels_with_previews")
 
 _bionic_targets = ["//bionic/libc", "//bionic/libdl", "//bionic/libm"]
 _static_bionic_targets = ["//bionic/libc:libc_bp2build_cc_library_static", "//bionic/libdl:libdl_bp2build_cc_library_static", "//bionic/libm:libm_bp2build_cc_library_static"]
