@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@soong_injection//product_config:product_variables.bzl", "product_vars")
 load("@soong_injection//api_levels:api_levels.bzl", "api_levels_released_versions")
+load("@soong_injection//product_config:product_variables.bzl", "product_vars")
 
 PREVIEW_API_LEVEL_BASE = 9000
 FUTURE_API_LEVEL_INT = 10000  # API Level associated with an arbitrary future release
