@@ -1,5 +1,5 @@
 load("@bazel_skylib//lib:unittest.bzl", "asserts", "unittest")
-load("//build/bazel/rules/common:api.bzl", "api_final_or_future", "is_preview", "parse_api_level_from_version")
+load("//build/bazel/rules/common:api.bzl", "api")
 
 def _api_levels_test_impl(ctx):
     env = unittest.begin(ctx)
@@ -32,8 +32,8 @@ def _api_levels_test_impl(ctx):
     }
 
     for level, expected in _LEVELS_UNDER_TEST.items():
-        asserts.equals(env, expected[0], parse_api_level_from_version(level), "unexpected api level parsed for %s" % level)
-        asserts.equals(env, expected[1], is_preview(level), "unexpected is_preview value for %s" % level)
+        asserts.equals(env, expected[0], api.parse_api_level_from_version(level), "unexpected api level parsed for %s" % level)
+        asserts.equals(env, expected[1], api.is_preview(level), "unexpected is_preview value for %s" % level)
 
     return unittest.end(env)
 
@@ -61,7 +61,7 @@ def _final_or_future_test_impl(ctx):
         asserts.equals(
             env,
             expected,
-            api_final_or_future(parse_api_level_from_version(level)),
+            api.final_or_future(api.parse_api_level_from_version(level)),
             "unexpected final or future api for %s" % level,
         )
 
