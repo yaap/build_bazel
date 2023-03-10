@@ -24,7 +24,7 @@ CORE_PLATFORM_API = "core_platformapi"
 
 # VENDOR_API is API surface provided by system to vendor
 # Also known as LLNDK.
-VENDOR_API = "vendor-api"
+VENDOR_API = "vendorapi"
 
 # TOOLCHAIN_API is a special API surface provided by ART to compile other API domains
 # (e.g. core-lambda-stubs required to compile java files containing lambdas)
