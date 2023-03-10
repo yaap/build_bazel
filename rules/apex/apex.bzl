@@ -27,7 +27,7 @@ load("//build/bazel/rules/apex:sdk_versions.bzl", "maybe_override_min_sdk_versio
 load("//build/bazel/rules/apex:transition.bzl", "apex_transition", "shared_lib_transition_32", "shared_lib_transition_64")
 load("//build/bazel/rules/cc:clang_tidy.bzl", "collect_deps_clang_tidy_info")
 load("//build/bazel/rules/cc:stripped_cc_common.bzl", "StrippedCcBinaryInfo")
-load("//build/bazel/rules/common:api.bzl", "default_app_target_sdk")
+load("//build/bazel/rules/common:api.bzl", "api_final_or_future", "default_app_target_sdk")
 load(
     "//build/bazel/rules/license:license_aspect.bzl",
     "RuleLicensedDependenciesInfo",
@@ -391,7 +391,7 @@ def _run_apexer(ctx, apex_toolchain):
 
     use_api_fingerprint = _use_api_fingerprint(ctx)
 
-    target_sdk_version = default_app_target_sdk()
+    target_sdk_version = api_final_or_future(default_app_target_sdk())
     if use_api_fingerprint:
         api_fingerprint_file = ctx.file._api_fingerprint_txt
         sdk_version_suffix = ".$$(cat {})".format(api_fingerprint_file.path)
