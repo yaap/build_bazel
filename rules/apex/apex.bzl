@@ -12,15 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@bazel_skylib//lib:paths.bzl", "paths")
+load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
+load("@soong_injection//apex_toolchain:constants.bzl", "default_manifest_version")
+load("@soong_injection//product_config:product_variables.bzl", "product_vars")
 load("//build/bazel/platforms:platform_utils.bzl", "platforms")
-load("//build/bazel/rules/android:android_app_certificate.bzl", "AndroidAppCertificateInfo", "android_app_certificate_with_default_cert")
-load("//build/bazel/rules/apex:cc.bzl", "ApexCcInfo", "ApexCcMkInfo", "apex_cc_aspect")
-load("//build/bazel/rules/apex:transition.bzl", "apex_transition", "shared_lib_transition_32", "shared_lib_transition_64")
-load("//build/bazel/rules/cc:stripped_cc_common.bzl", "StrippedCcBinaryInfo")
-load("//build/bazel/rules/cc:clang_tidy.bzl", "collect_deps_clang_tidy_info")
+load("//build/bazel/rules:common.bzl", "get_dep_targets")
 load("//build/bazel/rules:prebuilt_file.bzl", "PrebuiltFileInfo")
 load("//build/bazel/rules:sh_binary.bzl", "ShBinaryInfo")
 load("//build/bazel/rules:toolchain_utils.bzl", "verify_toolchain_exists")
+load("//build/bazel/rules/android:android_app_certificate.bzl", "AndroidAppCertificateInfo", "android_app_certificate_with_default_cert")
+load("//build/bazel/rules/apex:cc.bzl", "ApexCcInfo", "ApexCcMkInfo", "apex_cc_aspect")
+load("//build/bazel/rules/apex:sdk_versions.bzl", "maybe_override_min_sdk_version")
+load("//build/bazel/rules/apex:transition.bzl", "apex_transition", "shared_lib_transition_32", "shared_lib_transition_64")
+load("//build/bazel/rules/cc:clang_tidy.bzl", "collect_deps_clang_tidy_info")
+load("//build/bazel/rules/cc:stripped_cc_common.bzl", "StrippedCcBinaryInfo")
+load("//build/bazel/rules/common:api.bzl", "default_app_target_sdk")
 load(
     "//build/bazel/rules/license:license_aspect.bzl",
     "RuleLicensedDependenciesInfo",
@@ -29,18 +36,11 @@ load(
     "license_map_notice_files",
     "license_map_to_json",
 )
-load("//build/bazel/rules:common.bzl", "get_dep_targets")
 load(":apex_available.bzl", "ApexAvailableInfo", "apex_available_aspect")
-load(":apex_key.bzl", "ApexKeyInfo")
-load(":apex_info.bzl", "ApexInfo", "ApexMkInfo")
-load(":bundle.bzl", "apex_zip_files")
 load(":apex_deps_validation.bzl", "ApexDepsInfo", "apex_deps_validation_aspect", "validate_apex_deps")
-load("@bazel_skylib//lib:paths.bzl", "paths")
-load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
-load("@soong_injection//apex_toolchain:constants.bzl", "default_manifest_version")
-load("@soong_injection//product_config:product_variables.bzl", "product_vars")
-load("//build/bazel/rules/apex:sdk_versions.bzl", "maybe_override_min_sdk_version")
-load("//build/bazel/rules/common:api.bzl", "default_app_target_sdk")
+load(":apex_info.bzl", "ApexInfo", "ApexMkInfo")
+load(":apex_key.bzl", "ApexKeyInfo")
+load(":bundle.bzl", "apex_zip_files")
 
 def _create_file_mapping(ctx):
     """Create a file mapping for the APEX filesystem image.
@@ -212,14 +212,10 @@ def _generate_canned_fs_config(ctx, filepaths):
             for i in range(1, len(dirs) + 1):
                 apex_subdirs_set["/".join(dirs[:i])] = True
 
-    # The order of entries is significant. Later entries are preferred over
-    # earlier entries. Keep this consistent with Soong.
     config_lines = []
-    config_lines += ["/ 1000 1000 0755"]
-    config_lines += ["/apex_manifest.json 1000 1000 0644"]
-    config_lines += ["/apex_manifest.pb 1000 1000 0644"]
-
-    filepaths = sorted(filepaths)
+    config_lines.append("/ 1000 1000 0755")
+    config_lines.append("/apex_manifest.json 1000 1000 0644")
+    config_lines.append("/apex_manifest.pb 1000 1000 0644")
 
     # Readonly if not executable.
     config_lines += ["/" + f + " 1000 1000 0644" for f in filepaths if not f.startswith("bin/")]
@@ -231,6 +227,8 @@ def _generate_canned_fs_config(ctx, filepaths):
     config_lines += ["/" + d + " 0 2000 0755" for d in sorted(apex_subdirs_set.keys())]
 
     file = ctx.actions.declare_file(ctx.attr.name + "_canned_fs_config.txt")
+
+    # Soong also sorts the config lines to be consistent with bazel
     ctx.actions.write(file, "\n".join(sorted(config_lines)) + "\n")
 
     return file
@@ -257,14 +255,13 @@ def _mark_manifest_as_test_only(ctx, apex_toolchain):
     if ctx.file.android_manifest == None:
         return None
 
-    args = ctx.actions.args()
-    args.add("--test-only")
-
     android_manifest = ctx.file.android_manifest
     dir_name = android_manifest.dirname
     base_name = android_manifest.basename
     android_manifest_fixed = ctx.actions.declare_file(paths.join(dir_name, "manifest_fixer", base_name))
 
+    args = ctx.actions.args()
+    args.add("--test-only")
     args.add(android_manifest)
     args.add(android_manifest_fixed)
 
@@ -309,6 +306,7 @@ def _generate_notices(ctx, apex_toolchain):
     # Run HTML notice file generator.
     notice_file = ctx.actions.declare_file(ctx.attr.name + "_notice_dir/NOTICE.html.gz")
     notice_generator = apex_toolchain.notice_generator[DefaultInfo].files_to_run
+
     args = ctx.actions.args()
     args.add_all(["-o", notice_file, licenses_file])
 
@@ -325,6 +323,15 @@ def _generate_notices(ctx, apex_toolchain):
     )
     return notice_file
 
+def _use_api_fingerprint(ctx):
+    if not ctx.attr._unbundled_build[BuildSettingInfo].value:
+        return False
+    if ctx.attr._always_use_prebuilt_sdks[BuildSettingInfo].value:
+        return False
+    if not ctx.attr._unbundled_build_target_sdk_with_api_fingerprint[BuildSettingInfo].value:
+        return False
+    return True
+
 # apexer - generate the APEX file.
 def _run_apexer(ctx, apex_toolchain):
     # Inputs
@@ -339,6 +346,7 @@ def _run_apexer(ctx, apex_toolchain):
     full_apex_manifest_json = _add_apex_manifest_information(ctx, apex_toolchain, requires_native_libs, provides_native_libs)
     apex_manifest_pb = _convert_apex_manifest_json_to_pb(ctx, apex_toolchain, full_apex_manifest_json)
     notices_file = _generate_notices(ctx, apex_toolchain)
+    api_fingerprint_file = None
 
     file_mapping_file = ctx.actions.declare_file(ctx.attr.name + "_apex_file_mapping.json")
     ctx.actions.write(file_mapping_file, json.encode({k: v.path for k, v in file_mapping.items()}))
@@ -381,8 +389,15 @@ def _run_apexer(ctx, apex_toolchain):
     if ctx.attr.logging_parent:
         args.add_all(["--logging_parent", ctx.attr.logging_parent])
 
-    # TODO(b/243393960): Support API fingerprinting for APEXes for pre-release SDKs.
-    args.add_all(["--target_sdk_version", default_app_target_sdk()])
+    use_api_fingerprint = _use_api_fingerprint(ctx)
+
+    target_sdk_version = default_app_target_sdk()
+    if use_api_fingerprint:
+        api_fingerprint_file = ctx.file._api_fingerprint_txt
+        sdk_version_suffix = ".$$(cat {})".format(api_fingerprint_file.path)
+        target_sdk_version = ctx.attr._platform_sdk_codename[BuildSettingInfo].value + sdk_version_suffix
+        args.add(api_fingerprint_file.path)
+    args.add_all(["--target_sdk_version", target_sdk_version])
 
     # TODO(b/215339575): This is a super rudimentary way to convert "current" to a numerical number.
     # Generalize this to API level handling logic in a separate Starlark utility, preferably using
@@ -394,7 +409,9 @@ def _run_apexer(ctx, apex_toolchain):
     override_min_sdk_version = ctx.attr._apex_global_min_sdk_version_override[BuildSettingInfo].value
     min_sdk_version = maybe_override_min_sdk_version(min_sdk_version, override_min_sdk_version)
 
-    # TODO(b/243393960): Support API fingerprinting for APEXes for pre-release SDKs.
+    if use_api_fingerprint:
+        min_sdk_version = ctx.attr._platform_sdk_codename[BuildSettingInfo].value + sdk_version_suffix
+        args.add(api_fingerprint_file.path)
     args.add_all(["--min_sdk_version", min_sdk_version])
 
     # apexer needs the list of directories containing all auxilliary tools invoked during
@@ -437,6 +454,8 @@ def _run_apexer(ctx, apex_toolchain):
         pubkey,
         android_jar,
     ] + file_mapping.values()
+    if use_api_fingerprint:
+        inputs.append(api_fingerprint_file)
 
     if android_manifest != None:
         inputs.append(android_manifest)
@@ -471,8 +490,9 @@ def _run_apexer(ctx, apex_toolchain):
         make_modules_to_install = make_modules_to_install,
     )
 
-# Sign a file with signapk.
 def _run_signapk(ctx, unsigned_file, signed_file, private_key, public_key, mnemonic):
+    """Sign a file with signapk."""
+
     # Arguments
     args = ctx.actions.args()
     args.add_all(["-a", 4096])
@@ -830,6 +850,24 @@ When not set, defaults to 10000 (or "current").""",
         "_compression_enabled": attr.label(
             default = "//build/bazel/rules/apex:compression_enabled",
             doc = "If specified along with compressible attribute, run compression tool.",
+        ),
+
+        # Api_fingerprint
+        "_unbundled_build": attr.label(
+            default = "//build/bazel/rules/apex:unbundled_build",
+        ),
+        "_always_use_prebuilt_sdks": attr.label(
+            default = "//build/bazel/rules/apex:always_use_prebuilt_sdks",
+        ),
+        "_unbundled_build_target_sdk_with_api_fingerprint": attr.label(
+            default = "//build/bazel/rules/apex:unbundled_build_target_sdk_with_api_fingerprint",
+        ),
+        "_platform_sdk_codename": attr.label(
+            default = "//build/bazel/rules/apex:platform_sdk_codename",
+        ),
+        "_api_fingerprint_txt": attr.label(
+            default = "//frameworks/base/api:api_fingerprint",
+            allow_single_file = True,
         ),
     },
     # The apex toolchain is not mandatory so that we don't get toolchain resolution errors even
