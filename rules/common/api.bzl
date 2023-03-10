@@ -117,10 +117,10 @@ def _default_app_target_sdk():
 
     return _parse_api_level_from_version(codename)
 
-# TODO(jingwen): refactor all callers to use an exported struct instead of individual functions
-is_preview = _is_preview
-api_final_or_future = _final_or_future
-default_app_target_sdk = _default_app_target_sdk
-parse_api_level_from_version = _parse_api_level_from_version
-api_levels_with_previews = _api_levels_with_previews
-api_levels_with_final_codenames = _api_levels_with_final_codenames
+api = struct(
+    is_preview = _is_preview,
+    final_or_future = _final_or_future,
+    default_app_target_sdk = _default_app_target_sdk,
+    parse_api_level_from_version = _parse_api_level_from_version,
+    api_levels = _api_levels_with_previews,
+)
