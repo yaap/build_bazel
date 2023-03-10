@@ -24,6 +24,21 @@ apex_compression_test(
 )
 
 genrule(
+    name = "build.bazel.examples.apex.minimal_android_manifest",
+    testonly = True,
+    srcs = ["//build/bazel/examples/apex/minimal:build.bazel.examples.apex.minimal.apex"],
+    outs = ["minimal_apex_android_manifest.txt"],
+    cmd = "$(location //frameworks/base/tools/aapt2) dump xmltree --file AndroidManifest.xml $< > $@",
+    tools = ["//frameworks/base/tools/aapt2"],
+)
+
+diff_test(
+    name = "minimal_apex_android_manifest_test",
+    file1 = "minimal_apex_android_manifest.txt",
+    file2 = "minimal_apex_android_manifest.golden",
+)
+
+genrule(
     name = "adbd_aab_zipinfo",
     testonly = True,
     srcs = ["//build/bazel/vendor/google:com.android.adbd_apex_aab"],
