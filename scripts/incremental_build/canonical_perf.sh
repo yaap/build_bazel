@@ -50,10 +50,6 @@ function pretty() {
   python3 "$(dirname "$0")/pretty.py" "$1"
 }
 
-function clean_tree() {
-  rm -rf out
-}
-
 # TODO: Switch to oriole when it works
 if [[ -e vendor/google/build ]]; then
   export TARGET_PRODUCT=cf_x86_64_phone
@@ -81,27 +77,14 @@ else
     echo "you must specify cujs as well"
     usage
   fi
-  # Clear the cache by doing a build. There are probably better ways of clearing the
-  # cache, but this does reduce the variance of the first full build.
-  clean_tree
-  source "$TOP/build/envsetup.sh"
-  if [[ -n "$log_dir" ]]; then
-    file="$log_dir/output.txt"
-  else
-    file=/dev/stdout
-  fi
-  echo "logging to $file"
-  m droid >"$file"
 fi
-
-clean_tree
 
 if [[ ${#cujs[@]} -ne "0" ]]; then
   build -c "${cujs[@]}" -- "${targets[*]}"
 else
-  build -c 'clean' 'no change' 'create bionic/unreferenced.txt' 'modify Android.bp' -- droid
-  build -c 'clean' 'modify bionic/.*/stdio.cpp' -- libc
-  build -c 'clean' 'modify .*/adb/daemon/main.cpp' -- adbd
+  build -c 'clean' 'create bionic/unreferenced.txt' 'modify Android.bp' -- droid
+  build -c 'modify bionic/.*/stdio.cpp' --append-csv libc
+  build -c 'modify .*/adb/daemon/main.cpp' --append-csv adbd
 fi
 
 pretty ${$log_dir:"$log_dir/metrics.csv"}
