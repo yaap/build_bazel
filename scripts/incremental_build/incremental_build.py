@@ -221,7 +221,7 @@ def main():
 
   perf_metrics.tabulate_metrics_csv(user_input.log_dir)
   perf_metrics.display_tabulated_metrics(user_input.log_dir)
-  pretty.pretty(str(user_input.log_dir.joinpath(util.METRICS_TABLE)), True)
+  pretty.pretty(user_input.log_dir, False)
 
 
 if __name__ == '__main__':

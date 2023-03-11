@@ -45,16 +45,6 @@ shift $((OPTIND - 1))
 
 readonly -a cujs=("$@")
 
-log_dir=${log_dir:-"$TOP/../canonical-$(date +%b%d)"}
-if [[ -e "$log_dir" ]]; then
-  read -r -n 1 -p "$log_dir already exists, add more build results there? Y/N: " response
-  echo ""
-  if [[ ! "$response" =~ ^[yY]$ ]]; then
-    usage
-  fi
-fi
-mkdir -p "$log_dir"
-
 # Pretty print the results
 function pretty() {
   python3 "$(dirname "$0")/pretty.py" "$1"
@@ -77,9 +67,7 @@ function build() {
   date
   set -x
   if ! "$TOP/build/bazel/scripts/incremental_build/incremental_build.py" \
-    --ignore-repo-diff \
-    --log-dir="$log_dir" \
-    "$@"; then
+    --ignore-repo-diff ${log_dir:+--log-dir="$log_dir"} "$@"; then
     echo "See logs for errors"
     exit 1
   fi
@@ -95,10 +83,14 @@ else
   fi
   # Clear the cache by doing a build. There are probably better ways of clearing the
   # cache, but this does reduce the variance of the first full build.
-  file="$log_dir/output.txt"
-  echo "logging to $file"
   clean_tree
   source "$TOP/build/envsetup.sh"
+  if [[ -n "$log_dir" ]]; then
+    file="$log_dir/output.txt"
+  else
+    file=/dev/stdout
+  fi
+  echo "logging to $file"
   m droid >"$file"
 fi
 
@@ -112,4 +104,4 @@ else
   build -c 'clean' 'modify .*/adb/daemon/main.cpp' -- adbd
 fi
 
-pretty "$log_dir/metrics.csv"
+pretty ${$log_dir:"$log_dir/metrics.csv"}
