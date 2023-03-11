@@ -127,8 +127,8 @@ def get_user_input() -> UserInput:
                  Directory for timing logs. Defaults to %(default)s
                  TIPS:
                   1 Specify a directory outside of the source tree
-                  2 To view key metrics in summary.csv:
-                    {util.get_summary_cmd(default_log_dir)}
+                  2 To view key metrics in metrics.csv:
+                    {util.get_cmd_to_display_tabulated_metrics(default_log_dir)}
                   3 To view column headers:
                     {util.get_csv_columns_cmd(default_log_dir)}''').strip())
   p.add_argument('-b', '--build-types', nargs='+',
