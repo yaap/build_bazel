@@ -219,9 +219,9 @@ def main():
         logging.info(' DONE %s %s [%s]', build_type.name,
                      ' '.join(user_input.targets), desc)
 
-  perf_metrics.write_summary_csv(user_input.log_dir)
-  perf_metrics.show_summary(user_input.log_dir)
-  pretty.pretty(str(user_input.log_dir.joinpath(util.SUMMARY_CSV)), True)
+  perf_metrics.tabulate_metrics_csv(user_input.log_dir)
+  perf_metrics.display_tabulated_metrics(user_input.log_dir)
+  pretty.pretty(str(user_input.log_dir.joinpath(util.METRICS_TABLE)), True)
 
 
 if __name__ == '__main__':
