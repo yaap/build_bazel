@@ -491,3 +491,7 @@ def get_cujgroups() -> list[CujGroup]:
     replace_link_with_dir(pkg.joinpath('bogus.txt')),
     # TODO(usta): add a dangling symlink
   ]
+
+
+def warmup_index() -> int:
+  return 1
