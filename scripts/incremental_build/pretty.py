@@ -30,13 +30,6 @@ import util
 NA = "   --:--"
 
 
-def mark_if_clean(line: dict) -> dict:
-  if line['build_type'].startswith("CLEAN "):
-    line["description"] = "CLEAN " + line["description"]
-    line["build_type"] = line["build_type"].replace("CLEAN ", "", 1)
-  return line
-
-
 def normalize_rebuild(line: dict) -> dict:
   line['description'] = re.sub(r'^(rebuild)-[\d+](.*)$', '\\1\\2',
                                line['description'])
@@ -115,7 +108,7 @@ def _get_build_types(xs: list[dict]) -> list[str]:
 def pretty(log_dir: Path, include_rebuilds: bool):
   filename = log_dir if log_dir.is_file() else log_dir.joinpath(util.METRICS_TABLE)
   with open(filename) as f:
-    csv_lines = [mark_if_clean(normalize_rebuild(line)) for line in
+    csv_lines = [normalize_rebuild(line) for line in
                  csv.DictReader(f) if
                  include_rebuilds or not line['description'].startswith(
                      'rebuild-')]
