@@ -154,7 +154,7 @@ def pretty(filename: str, include_rebuilds: bool):
 if __name__ == "__main__":
   p = argparse.ArgumentParser()
   p.add_argument('--include-rebuilds', default=False, action='store_true')
-  default_summary_file = util.get_default_log_dir().joinpath(util.SUMMARY_CSV)
-  p.add_argument('summary_file', nargs='?', default=default_summary_file)
+  default_csv_file = util.get_default_log_dir().joinpath(util.METRICS_TABLE)
+  p.add_argument('csv_file', nargs='?', default=default_csv_file)
   options = p.parse_args()
-  pretty(options.summary_file, options.include_rebuilds)
+  pretty(options.csv_file, options.include_rebuilds)

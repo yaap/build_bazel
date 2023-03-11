@@ -112,4 +112,4 @@ else
   build -c 'clean' 'modify .*/adb/daemon/main.cpp' -- adbd
 fi
 
-pretty "$log_dir/summary.csv"
+pretty "$log_dir/metrics.csv"
