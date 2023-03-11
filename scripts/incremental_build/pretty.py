@@ -20,6 +20,7 @@ import re
 import statistics
 import sys
 from decimal import Decimal
+from pathlib import Path
 from typing import Callable
 
 from typing.io import TextIO
@@ -111,7 +112,8 @@ def _get_build_types(xs: list[dict]) -> list[str]:
   return build_types
 
 
-def pretty(filename: str, include_rebuilds: bool):
+def pretty(log_dir: Path, include_rebuilds: bool):
+  filename = log_dir if log_dir.is_file() else log_dir.joinpath(util.METRICS_TABLE)
   with open(filename) as f:
     csv_lines = [mark_if_clean(normalize_rebuild(line)) for line in
                  csv.DictReader(f) if
@@ -154,7 +156,7 @@ def pretty(filename: str, include_rebuilds: bool):
 if __name__ == "__main__":
   p = argparse.ArgumentParser()
   p.add_argument('--include-rebuilds', default=False, action='store_true')
-  default_csv_file = util.get_default_log_dir().joinpath(util.METRICS_TABLE)
-  p.add_argument('csv_file', nargs='?', default=default_csv_file)
+  p.add_argument('log_dir', nargs='?', type=Path,
+                 default=util.get_default_log_dir())
   options = p.parse_args()
-  pretty(options.csv_file, options.include_rebuilds)
+  pretty(options.log_dir, options.include_rebuilds)
