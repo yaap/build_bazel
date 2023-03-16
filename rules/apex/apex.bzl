@@ -299,7 +299,7 @@ def _generate_installed_files_list(ctx, file_mapping):
     return installed_files
 
 def _generate_notices(ctx, apex_toolchain):
-    licensees = license_map(ctx, ctx.attr.binaries + ctx.attr.prebuilts + ctx.attr.native_shared_libs_32 + ctx.attr.native_shared_libs_64)
+    licensees = license_map(ctx.attr.binaries + ctx.attr.prebuilts + ctx.attr.native_shared_libs_32 + ctx.attr.native_shared_libs_64)
     licenses_file = ctx.actions.declare_file(ctx.attr.name + "_licenses.json")
     ctx.actions.write(licenses_file, "[\n%s\n]\n" % ",\n".join(license_map_to_json(licensees)))
 
