@@ -110,6 +110,7 @@ def cc_test(
         template_test_config = select({
             "//build/bazel/rules/tradefed:android_host_driven_tradefed_test": "//build/make/core:native_test_config_template.xml",
             "//build/bazel/rules/tradefed:linux_host_driven_tradefed_test": "//build/make/core:native_host_test_config_template.xml",
+            "//conditions:default": "//build/make/core:native_test_config_template.xml",
         })
     tradefed_host_driven_test(
         name = tradefed_host_driven_test_name,
