@@ -54,7 +54,7 @@ def cc_test(
         deps = [],
         dynamic_deps = [],
         gtest = True,
-        isolated = True,  # TODO(b/244432609): currently no-op.
+        isolated = True,  # TODO(b/244432609): currently no-op. @unused
         tags = [],
         tidy = None,
         tidy_checks = None,
