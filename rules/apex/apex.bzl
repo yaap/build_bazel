@@ -120,8 +120,7 @@ def _create_file_mapping(ctx):
     if is_target_64_bit:
         _add_lib_files("lib64", ctx.attr.native_shared_libs_64, arch)
 
-        # TODO(b/269577299): Make this read from //build/bazel/product_config:product_vars instead.
-        secondary_arch = ctx.attr._device_secondary_arch[BuildSettingInfo].value
+        secondary_arch = platforms.get_target_secondary_arch(ctx.attr._platform_utils)
         if secondary_arch:
             _add_lib_files("lib", ctx.attr.native_shared_libs_32, secondary_arch)
     else:
@@ -733,7 +732,7 @@ def _apex_rule_impl(ctx):
         ),
         apex_file = signed_apex,
         arch = arch,
-        secondary_arch = ctx.attr._device_secondary_arch[BuildSettingInfo].value,
+        secondary_arch = platforms.get_target_secondary_arch(ctx.attr._platform_utils),
     )
 
     transitive_apex_deps, transitive_unvalidated_targets_output_file, apex_deps_validation_files = _validate_apex_deps(ctx)
@@ -896,10 +895,6 @@ When not set, defaults to 10000 (or "current").""",
         "_apex_global_min_sdk_version_override": attr.label(
             default = "//build/bazel/rules/apex:apex_global_min_sdk_version_override",
             doc = "If specified, override the min_sdk_version of this apex and in the transition and checks for dependencies.",
-        ),
-        "_device_secondary_arch": attr.label(
-            default = "//build/bazel/rules/apex:device_secondary_arch",
-            doc = "If specified, also include the libraries from the secondary arch.",
         ),
         "_compression_enabled": attr.label(
             default = "//build/bazel/rules/apex:compression_enabled",
