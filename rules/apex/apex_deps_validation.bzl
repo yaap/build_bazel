@@ -51,6 +51,7 @@ _IGNORED_RULE_KINDS = [
     # within the transitive deps of an apex and impact the apex contents, this
     # is safe.
     "aidl_library",
+    "hidl_library",
     "sysprop_library",
 
     # Build settings, these have no built artifact and thus will not be
