@@ -154,30 +154,6 @@ def android_product(name, soong_variables):
                 actual = ":" + name,
             )
 
-        if arch.arch == "arm64" or arch.arch == "x86_64":
-            # Apexes need to transition their native_shared_libs to 32 bit.
-            # Bazel currently cannot transition on arch directly, and instead
-            # requires transitioning on a command line option like --platforms instead.
-            # Create a 32 bit variant of the product so that apexes can transition on it.
-            if arch == "arm64":
-                newarch = struct(
-                    arch = "arm",
-                    arch_variant = "armv7-a-neon",
-                    cpu_variant = "",
-                )
-            else:
-                newarch = struct(
-                    arch = "x86",
-                    arch_variant = "",
-                    cpu_variant = "",
-                )
-            _define_platform_for_arch(name + "__internal_32_bit", common_constraints, newarch)
-        else:
-            native.alias(
-                name = name + "__internal_32_bit",
-                actual = ":" + name,
-            )
-
         # These variants are mostly for mixed builds, which may request a
         # module with a certain arch
         for arch, variants in arch_to_variants.items():
