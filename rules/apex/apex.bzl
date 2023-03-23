@@ -696,9 +696,24 @@ def _validate_apex_deps(ctx):
     )
     return transitive_deps, transitive_unvalidated_targets_output_file, validation_files
 
+def _verify_updatability(ctx):
+    # TODO(b/274732759): Add these checks as more APEXes are converted to Bazel.
+    #
+    # Keep this in sync with build/soong/apex/apex.go#checkUpdatable.
+    #
+    # - Cannot use platform APIs.
+    # - Cannot use external VNDK libs.
+    # - Does not set future_updatable.
+
+    if not ctx.attr.min_sdk_version:
+        fail("updatable APEXes must set min_sdk_version.")
+
 # See the APEX section in the README on how to use this rule.
 def _apex_rule_impl(ctx):
     verify_toolchain_exists(ctx, "//build/bazel/rules/apex:apex_toolchain_type")
+    if ctx.attr.updatable:
+        _verify_updatability(ctx)
+
     apex_toolchain = ctx.toolchains["//build/bazel/rules/apex:apex_toolchain_type"].toolchain_info
 
     apexer_outputs = _run_apexer(ctx, apex_toolchain)
@@ -800,7 +815,10 @@ the SDK version that the APEX was first introduced.
 
 When not set, defaults to 10000 (or "current").""",
         ),
-        "updatable": attr.bool(default = True),
+        "updatable": attr.bool(default = True, doc = """Whether this APEX is considered updatable or not.
+
+When set to true, this will enforce additional rules for making sure that the
+APEX is truly updatable. To be updatable, min_sdk_version should be set as well."""),
         "installable": attr.bool(default = True),
         "compressible": attr.bool(default = False),
         "base_apex_name": attr.string(
