@@ -36,7 +36,7 @@ import ui
 import util
 import pretty
 
-MAX_RUN_COUNT: Final[int] = 5
+MAX_RUN_COUNT: int = 5
 
 
 @functools.cache
@@ -47,6 +47,8 @@ def _prepare_env() -> (Mapping[str, str], str):
       ninja_args += ' '
     ninja_args += '-d explain --quiet'
     if util.is_ninja_dry_run(ninja_args):
+      global MAX_RUN_COUNT
+      MAX_RUN_COUNT = 1
       logging.warning(f'Running dry ninja runs NINJA_ARGS={ninja_args}')
     return ninja_args
 
