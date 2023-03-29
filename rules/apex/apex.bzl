@@ -17,6 +17,7 @@ load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 load("@soong_injection//apex_toolchain:constants.bzl", "default_manifest_version")
 load("@soong_injection//product_config:product_variables.bzl", "product_vars")
 load("//build/bazel/platforms:platform_utils.bzl", "platforms")
+load("//build/bazel/product_config:product_variables_providing_rule.bzl", "ProductVariablesInfo")
 load("//build/bazel/rules:common.bzl", "get_dep_targets")
 load("//build/bazel/rules:prebuilt_file.bzl", "PrebuiltFileInfo")
 load("//build/bazel/rules:sh_binary.bzl", "ShBinaryInfo")
@@ -570,8 +571,10 @@ def _run_signapk(ctx, unsigned_file, signed_file, private_key, public_key, mnemo
 # Hence, we might simplify the logic by just checking product_vars["Unbundled_build"]
 # TODO(b/271474456): Eventually we might default to unbundled mode in bazel-only mode
 # so that we don't need to check Unbundled_apps.
-def compression_enabled():
-    return product_vars.get("CompressedApex", False) and len(product_vars.get("Unbundled_apps", [])) == 0
+def _compression_enabled(ctx):
+    product_vars = ctx.attr._product_variables[ProductVariablesInfo]
+
+    return product_vars.CompressedApex and len(product_vars.Unbundled_apps) == 0
 
 # Compress a file with apex_compression_tool.
 def _run_apex_compression_tool(ctx, apex_toolchain, input_file, output_file_name):
@@ -723,14 +726,14 @@ def _apex_rule_impl(ctx):
     private_key = apex_cert_info.pk8
     public_key = apex_cert_info.pem
 
-    signed_apex = ctx.outputs.apex_output
+    signed_apex = ctx.actions.declare_file(ctx.attr.name + ".apex")
     signed_capex = None
 
     _run_signapk(ctx, unsigned_apex, signed_apex, private_key, public_key, "BazelApexSigning")
 
-    if ctx.attr.compressible and ctx.attr._compression_enabled[BuildSettingInfo].value:
+    if ctx.attr.compressible and _compression_enabled(ctx):
         compressed_apex_output_file = _run_apex_compression_tool(ctx, apex_toolchain, signed_apex, ctx.attr.name + ".capex.unsigned")
-        signed_capex = ctx.outputs.capex_output
+        signed_capex = ctx.actions.declare_file(ctx.attr.name + ".capex")
         _run_signapk(ctx, compressed_apex_output_file, signed_capex, private_key, public_key, "BazelCompressedApexSigning")
 
     apex_key_info = ctx.attr.key[ApexKeyInfo]
@@ -751,6 +754,10 @@ def _apex_rule_impl(ctx):
     )
 
     transitive_apex_deps, transitive_unvalidated_targets_output_file, apex_deps_validation_files = _validate_apex_deps(ctx)
+
+    optional_output_groups = {}
+    if signed_capex:
+        optional_output_groups["signed_compressed_output"] = [signed_capex]
 
     return [
         DefaultInfo(files = depset([signed_apex])),
@@ -777,6 +784,7 @@ def _apex_rule_impl(ctx):
             installed_files = depset([apexer_outputs.installed_files]),
             transitive_unvalidated_targets = depset([transitive_unvalidated_targets_output_file]),
             _validation = apex_deps_validation_files,
+            **optional_output_groups
         ),
         ApexDepsInfo(transitive_deps = transitive_apex_deps),
         ApexMkInfo(
@@ -854,10 +862,6 @@ APEX is truly updatable. To be updatable, min_sdk_version should be set as well.
             aspects = STANDARD_PAYLOAD_ASPECTS,
         ),
 
-        # APEX predefined outputs.
-        "apex_output": attr.output(doc = "signed .apex output"),
-        "capex_output": attr.output(doc = "signed .capex output"),
-
         # Required to use apex_transition. This is an acknowledgement to the risks of memory bloat when using transitions.
         "_allowlist_function_transition": attr.label(default = "@bazel_tools//tools/allowlists/function_transition_allowlist"),
 
@@ -914,9 +918,8 @@ APEX is truly updatable. To be updatable, min_sdk_version should be set as well.
             default = "//build/bazel/rules/apex:apex_global_min_sdk_version_override",
             doc = "If specified, override the min_sdk_version of this apex and in the transition and checks for dependencies.",
         ),
-        "_compression_enabled": attr.label(
-            default = "//build/bazel/rules/apex:compression_enabled",
-            doc = "If specified along with compressible attribute, run compression tool.",
+        "_product_variables": attr.label(
+            default = "//build/bazel/product_config:product_vars",
         ),
 
         # Api_fingerprint
@@ -978,12 +981,6 @@ def apex(
     elif tests:
         fail("Apex with tests attribute needs to be testonly.")
 
-    apex_output = name + ".apex"
-    capex_output = None
-
-    if compressible and compression_enabled():
-        capex_output = name + ".capex"
-
     if certificate and certificate_name:
         fail("Cannot use both certificate_name and certificate attributes together. Use only one of them.")
     app_cert_name = name + "_app_certificate"
@@ -1020,13 +1017,6 @@ def apex(
         prebuilts = prebuilts,
         package_name = package_name,
         logging_parent = logging_parent,
-
-        # Enables predeclared output builds from command line directly, e.g.
-        #
-        # $ bazel build //path/to/module:com.android.module.apex
-        # $ bazel build //path/to/module:com.android.module.capex
-        apex_output = apex_output,
-        capex_output = capex_output,
         testonly = testonly,
         target_compatible_with = target_compatible_with,
         **kwargs
