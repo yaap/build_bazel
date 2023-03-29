@@ -239,7 +239,6 @@ def _convert_apex_manifest_json_to_pb(ctx, apex_toolchain, apex_manifest_json):
 
     return apex_manifest_pb
 
-# TODO(b/236683936): Add support for custom canned_fs_config concatenation.
 def _generate_canned_fs_config(ctx, filepaths):
     """Generate filesystem config.
 
@@ -250,7 +249,9 @@ def _generate_canned_fs_config(ctx, filepaths):
 
     # Ensure all paths don't start with / and are normalized
     filepaths = [paths.normalize(f).lstrip("/") for f in filepaths]
-    filepaths = [f for f in filepaths if f]
+
+    # Soong also sorts the config lines to be consistent with bazel
+    filepaths = sorted([f for f in filepaths if f])
 
     # First, collect a set of all the directories in the apex
     apex_subdirs_set = {}
@@ -267,21 +268,36 @@ def _generate_canned_fs_config(ctx, filepaths):
     config_lines.append("/apex_manifest.json 1000 1000 0644")
     config_lines.append("/apex_manifest.pb 1000 1000 0644")
 
-    # Readonly if not executable.
+    # Readonly if not executable. filepaths is already sorted.
     config_lines += ["/" + f + " 1000 1000 0644" for f in filepaths if not f.startswith("bin/")]
 
-    # Mark all binaries as executable.
+    # Mark all binaries as executable. filepaths is already sorted.
     config_lines += ["/" + f + " 0 2000 0755" for f in filepaths if f.startswith("bin/")]
 
     # All directories have the same permission.
     config_lines += ["/" + d + " 0 2000 0755" for d in sorted(apex_subdirs_set.keys())]
 
-    file = ctx.actions.declare_file(ctx.attr.name + "_canned_fs_config.txt")
+    output = ctx.actions.declare_file(ctx.attr.name + "_canned_fs_config.txt")
 
-    # Soong also sorts the config lines to be consistent with bazel
-    ctx.actions.write(file, "\n".join(sorted(config_lines)) + "\n")
+    config_lines = "\n".join(config_lines) + "\n"
+    ctx.actions.write(output, config_lines)
 
-    return file
+    if ctx.attr.canned_fs_config:
+        # Append the custom fs config content to the existing file
+        combined_output = ctx.actions.declare_file(ctx.attr.name + "_combined_canned_fs_config.txt")
+        ctx.actions.run_shell(
+            inputs = [ctx.file.canned_fs_config, output],
+            outputs = [combined_output],
+            mnemonic = "AppendCustomFsConfig",
+            command = "cat {i} {canned_fs_config} > {o}".format(
+                i = output.path,
+                o = combined_output.path,
+                canned_fs_config = ctx.file.canned_fs_config.path,
+            ),
+        )
+        output = combined_output
+
+    return output
 
 # Append an entry for apex_manifest.pb to the file_contexts file for this APEX,
 # which is either from /system/sepolicy/apex/<apexname>-file_contexts (set in
@@ -811,6 +827,17 @@ _apex = rule(
         "package_name": attr.string(),
         "logging_parent": attr.string(),
         "file_contexts": attr.label(allow_single_file = True, mandatory = True),
+        "canned_fs_config": attr.label(
+            allow_single_file = True,
+            doc = """Path to the canned fs config file for customizing file's
+uid/gid/mod/capabilities. The content of this file is appended to the
+default config, so that the custom entries are preferred.
+
+The format is /<path_or_glob> <uid> <gid> <mode> [capabilities=0x<cap>], where
+path_or_glob is a path or glob pattern for a file or set of files, uid/gid
+are numerial values of user ID and group ID, mode is octal value for the
+file mode, and cap is hexadecimal value for the capability.""",
+        ),
         "key": attr.label(providers = [ApexKeyInfo], mandatory = True),
         "certificate": attr.label(
             providers = [AndroidAppCertificateInfo],
@@ -964,6 +991,7 @@ def apex(
         prebuilts = [],
         package_name = None,
         logging_parent = None,
+        canned_fs_config = None,
         testonly = False,
         # TODO(b/255400736): tests are not fully supported yet.
         tests = [],
@@ -1017,6 +1045,7 @@ def apex(
         prebuilts = prebuilts,
         package_name = package_name,
         logging_parent = logging_parent,
+        canned_fs_config = canned_fs_config,
         testonly = testonly,
         target_compatible_with = target_compatible_with,
         **kwargs
