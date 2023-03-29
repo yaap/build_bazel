@@ -2380,7 +2380,7 @@ def _apex_compression_test(ctx):
 apex_compression_test = analysistest.make(
     _apex_compression_test,
     config_settings = {
-        "@//build/bazel/rules/apex:compression_enabled": True,
+        "//command_line_option:platforms": "@soong_injection//product_config_platforms/products/aosp_arm64_for_testing",
     },
 )
 
@@ -2415,7 +2415,7 @@ def _apex_no_compression_test(ctx):
 apex_no_compression_test = analysistest.make(
     _apex_no_compression_test,
     config_settings = {
-        "@//build/bazel/rules/apex:compression_enabled": False,
+        "//command_line_option:platforms": "@soong_injection//product_config_platforms/products/aosp_arm64_for_testing_no_compression",
     },
 )
 
