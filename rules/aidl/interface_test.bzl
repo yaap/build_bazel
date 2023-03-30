@@ -327,6 +327,71 @@ def _test_aidl_interface_generated_header_filter():
         static_test_name,
     ]
 
+def _cc_library_has_flags_test_impl(ctx):
+    env = analysistest.begin(ctx)
+    target = analysistest.target_under_test(env)
+    actions = [a for a in target.actions if a.mnemonic == "CppCompile"]
+
+    asserts.true(
+        env,
+        len(actions) == 1,
+        "There should be one cc compile action: %s" % actions,
+    )
+
+    action = actions[0]
+    for flag in ctx.attr.expected_flags:
+        if flag not in action.argv:
+            fail("{} is not in list of flags for linking {}".format(flag, action.argv))
+
+    return analysistest.end(env)
+
+cc_library_has_flags_test = analysistest.make(
+    _cc_library_has_flags_test_impl,
+    attrs = {
+        "expected_flags": attr.string_list(),
+    },
+)
+
+def _test_aidl_interface_sets_flags_to_cc_libraries():
+    name = "aidl_interface_sets_flags_to_cc_libraries"
+    test_name = name + "_test"
+    aidl_library_target = name + "-ndk"
+    shared_target_under_test = aidl_library_target + "__internal_root_cpp"
+    shared_test_name = test_name + "_shared"
+    static_target_under_test = aidl_library_target + "_bp2build_cc_library_static_cpp"
+    static_test_name = test_name + "_static"
+
+    aidl_interface(
+        name = name,
+        ndk_config = {
+            "enabled": True,
+        },
+        srcs = ["Foo.aidl"],
+        unstable = True,
+        tags = ["manual"],
+    )
+
+    cc_library_has_flags_test(
+        name = shared_test_name,
+        target_under_test = shared_target_under_test,
+        expected_flags = [
+            "-DBINDER_STABILITY_SUPPORT",
+        ],
+    )
+
+    cc_library_has_flags_test(
+        name = static_test_name,
+        target_under_test = static_target_under_test,
+        expected_flags = [
+            "-DBINDER_STABILITY_SUPPORT",
+        ],
+    )
+
+    return [
+        shared_test_name,
+        static_test_name,
+    ]
+
 def aidl_interface_test_suite(name):
     native.test_suite(
         name = name,
@@ -340,6 +405,7 @@ def aidl_interface_test_suite(name):
                 _next_version_for_versioned_stable_interface_test(),
             ] +
             _test_aidl_interface_generated_header_filter() +
-            _test_aidl_interface_passes_flags_to_aidl_libraries()
+            _test_aidl_interface_passes_flags_to_aidl_libraries() +
+            _test_aidl_interface_sets_flags_to_cc_libraries()
         ),
     )
