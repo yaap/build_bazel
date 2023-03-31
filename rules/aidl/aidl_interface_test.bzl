@@ -16,8 +16,8 @@ limitations under the License.
 load("@bazel_skylib//lib:new_sets.bzl", "sets")
 load("@bazel_skylib//lib:paths.bzl", "paths")
 load("@bazel_skylib//lib:unittest.bzl", "analysistest", "asserts")
-load("//build/bazel/rules/aidl:interface.bzl", "aidl_interface")
-load("//build/bazel/rules/aidl:library.bzl", "AidlGenInfo")
+load("//build/bazel/rules/aidl:aidl_interface.bzl", "aidl_interface")
+load("//build/bazel/rules/aidl:aidl_library.bzl", "AidlGenInfo")
 load("//build/bazel/rules/test_common:rules.bzl", "target_under_test_exist_test")
 
 def _ndk_backend_test_impl(ctx):
