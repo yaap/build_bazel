@@ -64,7 +64,7 @@ class ModuleInfo:
 
   def short_string(self, converted: Set[str]):
     converted = " (c)" if self.is_converted(converted) else ""
-    return f"{self.name}{converted}"
+    return f"{self.name} [{self.kind}]{converted}"
 
   def is_converted(self, converted: Set[str]):
     return self.name in converted
@@ -198,7 +198,7 @@ def generate_report_data(modules: Dict[ModuleInfo, DepInfo],
   for module, dep_info in sorted(modules.items()):
     deps = dep_info.direct_deps
     unconverted_deps = set(
-        dep.name for dep in deps if not dep.is_converted_or_skipped(converted))
+        dep.short_string(converted) for dep in deps if not dep.is_converted_or_skipped(converted))
 
     unconverted_transitive_deps = get_transitive_unconverted_deps(transitive_deps_by_dep_info, module, modules, converted)
 

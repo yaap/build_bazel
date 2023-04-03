@@ -452,12 +452,12 @@ class Bp2BuildProgressTest(unittest.TestCase):
     all_unconverted_modules['c'].update({a})
 
     blocked_modules = collections.defaultdict(set)
-    blocked_modules[a].update({'b (c)', 'c'})
+    blocked_modules[a].update({'b [type2] (c)', 'c [type3]'})
     blocked_modules[b].update(set())
     blocked_modules[c].update(set())
 
     blocked_modules_transitive = collections.defaultdict(set)
-    blocked_modules_transitive[a].update({'b (c)', 'c'})
+    blocked_modules_transitive[a].update({'b [type2] (c)', 'c [type3]'})
     blocked_modules_transitive[b].update(set())
     blocked_modules_transitive[c].update(set())
 
