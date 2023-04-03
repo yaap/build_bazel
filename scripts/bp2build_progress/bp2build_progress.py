@@ -44,6 +44,10 @@ from typing import Dict, List, Set, Optional
 import bp2build_pb2
 import dependency_analysis
 
+@dataclasses.dataclass(frozen=True, order=True)
+class GraphFilterInfo:
+  module_names: Set[str] = dataclasses.field(default_factory=set)
+  module_types: Set[str] = dataclasses.field(default_factory=set)
 
 @dataclasses.dataclass(frozen=True, order=True)
 class ModuleInfo:
@@ -99,7 +103,6 @@ class InputModule:
 
 @dataclasses.dataclass(frozen=True)
 class ReportData:
-  input_modules: Set[InputModule]
   total_deps: Set[ModuleInfo]
   unconverted_deps: Set[str]
   all_unconverted_modules: Dict[str, Set[ModuleInfo]]
@@ -109,6 +112,8 @@ class ReportData:
   kind_of_unconverted_modules: Set[str]
   converted: Set[str]
   show_converted: bool
+  input_modules: Set[InputModule] = dataclasses.field(default_factory=set)
+  input_types: Set[str] = dataclasses.field(default_factory=set)
 
 
 # Generate a dot file containing the transitive closure of the module.
@@ -170,7 +175,7 @@ def get_transitive_unconverted_deps(
 # Generate a report for each module in the transitive closure, and the blockers for each module
 def generate_report_data(modules: Dict[ModuleInfo, DepInfo],
                          converted: Set[str],
-                         input_modules_names: Set[str],
+                         graph_filter: GraphFilterInfo,
                          show_converted: bool = False) -> ReportData:
   # Map of [number of unconverted deps] to list of entries,
   # with each entry being the string: "<module>: <comma separated list of unconverted modules>"
@@ -225,7 +230,7 @@ def generate_report_data(modules: Dict[ModuleInfo, DepInfo],
       dirs_with_unconverted_modules.add(module.dirname)
       kind_of_unconverted_modules.add(module.kind)
 
-    if module.name in input_modules_names:
+    if module.name in graph_filter.module_names or module.kind in graph_filter.module_types:
       transitive_deps = dep_info.all_deps()
       input_modules.add(InputModule(module, len(transitive_deps), len(unconverted_transitive_deps)))
       input_all_deps.update(transitive_deps)
@@ -233,6 +238,7 @@ def generate_report_data(modules: Dict[ModuleInfo, DepInfo],
 
   return ReportData(
       input_modules=input_modules,
+      input_types = graph_filter.module_types,
       total_deps=input_all_deps,
       unconverted_deps=input_unconverted_deps,
       all_unconverted_modules=all_unconverted_modules,
@@ -265,8 +271,12 @@ def generate_proto(report_data, file_name):
 
 def generate_report(report_data):
   report_lines = []
-  input_module_str = ", ".join(
-      str(i) for i in sorted(report_data.input_modules))
+  if len(report_data.input_types) > 0:
+    input_module_str = ", ".join(
+        str(i) for i in sorted(report_data.input_types))
+  else:
+    input_module_str = ", ".join(
+        str(i) for i in sorted(report_data.input_modules))
 
   report_lines.append("# bp2build progress report for: %s\n" % input_module_str)
 
@@ -278,7 +288,10 @@ def generate_report(report_data):
   total = len(report_data.total_deps)
   unconverted = len(report_data.unconverted_deps)
   converted = total - unconverted
-  percent = converted / total * 100
+  if total > 0:
+    percent = converted / total * 100
+  else:
+    percent = 100
   report_lines.append(f"Percent converted: {percent:.2f} ({converted}/{total})")
   report_lines.append(f"Total unique unconverted dependencies: {unconverted}")
 
@@ -331,11 +344,11 @@ def adjacency_list_from_json(
     module_graph: ...,
     ignore_by_name: List[str],
     ignore_java_auto_deps: bool,
-    top_level_modules: List[str],
+    graph_filter: GraphFilterInfo,
     collect_transitive_dependencies: bool = True,
 ) -> Dict[ModuleInfo, Set[ModuleInfo]]:
-  def filter_by_name(json):
-    return json["Name"] in top_level_modules
+  def filtering(json):
+    return json["Name"] in graph_filter.module_names or json["Type"] in graph_filter.module_types
 
   module_adjacency_list = {}
   name_to_info = {}
@@ -369,20 +382,20 @@ def adjacency_list_from_json(
         module_adjacency_list[module_info].transitive_deps.update(transitive_dep_info.all_deps())
 
   dependency_analysis.visit_json_module_graph_post_order(
-      module_graph, ignore_by_name, ignore_java_auto_deps, filter_by_name, collect_dependencies)
+      module_graph, ignore_by_name, ignore_java_auto_deps, filtering, collect_dependencies)
 
   return module_adjacency_list
 
 
 def adjacency_list_from_queryview_xml(
     module_graph: xml.etree.ElementTree,
+    graph_filter: GraphFilterInfo,
     ignore_by_name: List[str],
-    top_level_modules: List[str],
     collect_transitive_dependencies: bool = True
 ) -> Dict[ModuleInfo, DepInfo]:
 
-  def filter_by_name(module):
-    return module.name in top_level_modules
+  def filtering(module):
+    return module.name in graph_filter.module_names  or module.kind in graph_filter.module_types
 
   module_adjacency_list = collections.defaultdict(set)
   name_to_info = {}
@@ -411,13 +424,13 @@ def adjacency_list_from_queryview_xml(
         module_adjacency_list[module_info].transitive_deps.update(transitive_dep_info.all_deps())
 
   dependency_analysis.visit_queryview_xml_module_graph_post_order(
-      module_graph, ignore_by_name, filter_by_name, collect_dependencies)
+      module_graph, ignore_by_name, filtering, collect_dependencies)
 
   return module_adjacency_list
 
 
 def get_module_adjacency_list(
-    top_level_modules: List[str],
+    graph_filter: GraphFilterInfo,
     use_queryview: bool,
     ignore_by_name: List[str],
     ignore_java_auto_deps: bool = False,
@@ -427,10 +440,15 @@ def get_module_adjacency_list(
   # and the list of converted modules.
   try:
     if use_queryview:
-      module_graph = dependency_analysis.get_queryview_module_info(
-          top_level_modules, banchan_mode)
+      if len(graph_filter.module_names) > 0:
+          module_graph = dependency_analysis.get_queryview_module_info(
+              graph_filter.module_names, banchan_mode)
+      else:
+          module_graph = dependency_analysis.get_queryview_module_info_by_type(
+              graph_filter.module_types, banchan_mode)
+
       module_adjacency_list = adjacency_list_from_queryview_xml(
-          module_graph, ignore_by_name, top_level_modules,
+          module_graph, graph_filter, ignore_by_name,
           collect_transitive_dependencies)
     else:
       module_graph = dependency_analysis.get_json_module_info(banchan_mode)
@@ -438,7 +456,7 @@ def get_module_adjacency_list(
           module_graph,
           ignore_by_name,
           ignore_java_auto_deps,
-          top_level_modules,
+          graph_filter,
           collect_transitive_dependencies,
       )
   except subprocess.CalledProcessError as err:
@@ -483,8 +501,13 @@ def main():
       "--module",
       "-m",
       action="append",
-      required=True,
       help="name(s) of Soong module(s). Multiple modules only supported for report"
+  )
+  parser.add_argument(
+      "--type",
+      "-t",
+      action="append",
+      help="type(s) of Soong module(s). Multiple modules only supported for report"
   )
   parser.add_argument(
       "--use-queryview",
@@ -528,8 +551,6 @@ def main():
   )
   args = parser.parse_args()
 
-  if len(args.module) > 1 and args.mode == "graph":
-    sys.exit(f"Can only support one module with mode {args.mode}")
   if args.proto_file and args.mode == "graph":
     sys.exit(f"Proto file only supported for report mode, not {args.mode}")
 
@@ -537,12 +558,21 @@ def main():
   use_queryview = args.use_queryview
   ignore_by_name = args.ignore_by_name.split(",")
   banchan_mode = args.banchan
-  modules = set(args.module)
+  modules = set(args.module) if args.module is not None else set()
+  types = set(args.type) if args.type is not None else set()
+  graph_filter = GraphFilterInfo(modules,types)
+
+  if len(modules) > 0 and len(types) > 0 and args.use_queryview:
+    sys.exit(f"Can only support either of modules or types with use-queryview")
+  if len(modules) > 1 and args.mode == "graph":
+    sys.exit(f"Can only support one module with mode {args.mode}")
+  if len(types) and args.mode == "graph":
+    sys.exit(f"Cannot support --type with mode {args.mode}")
 
   converted = dependency_analysis.get_bp2build_converted_modules()
 
   module_adjacency_list = get_module_adjacency_list(
-      modules,
+      graph_filter,
       use_queryview,
       ignore_by_name,
       collect_transitive_dependencies=mode != "graph",
@@ -557,7 +587,7 @@ def main():
     output_file.write(dot_file)
   elif mode == "report":
     report_data = generate_report_data(module_adjacency_list, converted,
-                                       modules, args.show_converted)
+                                       graph_filter, args.show_converted)
     report = generate_report(report_data)
     output_file.write(report)
     if args.proto_file:
