@@ -3,6 +3,7 @@
 source "$(dirname $0)/target_lists.sh"
 cd "$(dirname $0)/../../.."
 OUT_DIR=$(realpath ${OUT_DIR:-out})
+DIST_DIR=$(realpath ${DIST_DIR:-out/dist})
 
 
 read -ra PRODUCTS <<<"$(build/soong/soong_ui.bash --dumpvar-mode all_named_products)"
@@ -23,7 +24,7 @@ function report {
     # exit 1
   fi
   if (( ${#PRODUCTS_WITH_BP2BUILD_DIFFS[@]} )); then
-    printf "Products that produced different bp2build files from aosp_arm64:\n"
+    printf "\n\nProducts that produced different bp2build files from aosp_arm64:\n"
     printf '%s\n' "${PRODUCTS_WITH_BP2BUILD_DIFFS[@]}"
 
     # TODO(b/261023967): Don't fail the build until every product is OK and we want to prevent backsliding.
@@ -33,11 +34,16 @@ function report {
 
 trap report EXIT
 
+rm -rf "${DIST_DIR}/multiproduct_analysis"
+mkdir -p "${DIST_DIR}/multiproduct_analysis"
+
 # Create zip of the bp2build files for aosp_arm64. We'll check that all other products produce
-# identical bp2build files
+# identical bp2build files.
+# We have to run tar and gzip as separate commands because tar with -z doesn't provide an option
+# to not include a timestamp in the gzip header. (--mtime is only for the tar parts, not gzip)
 export TARGET_PRODUCT="aosp_arm64"
 build/soong/soong_ui.bash --make-mode --skip-soong-tests bp2build
-tar --mtime='1970-01-01' -czf "out/multiproduct_analysis_reference_bp2build_files.tar.gz" -C out/soong/bp2build .
+tar c --mtime='1970-01-01' -C out/soong/bp2build . | gzip -n > "${DIST_DIR}/multiproduct_analysis/reference_bp2build_files_aosp_arm64.tar.gz"
 
 total=${#PRODUCTS[@]}
 count=1
@@ -55,9 +61,12 @@ for product in "${PRODUCTS[@]}"; do
   rm -f out/ninja_build
 
   rm -f out/multiproduct_analysis_current_bp2build_files.tar.gz
-  tar --mtime='1970-01-01' -czf "out/multiproduct_analysis_current_bp2build_files.tar.gz" -C out/soong/bp2build .
-  diff -q out/multiproduct_analysis_current_bp2build_files.tar.gz out/multiproduct_analysis_reference_bp2build_files.tar.gz || \
+  tar c --mtime='1970-01-01' -C out/soong/bp2build . | gzip -n > "${DIST_DIR}/multiproduct_analysis/bp2build_files_${product}.tar.gz"
+  if diff -q "${DIST_DIR}/multiproduct_analysis/bp2build_files_${product}.tar.gz" "${DIST_DIR}/multiproduct_analysis/reference_bp2build_files_aosp_arm64.tar.gz"; then
+    rm -f "${DIST_DIR}/multiproduct_analysis/bp2build_files_${product}.tar.gz"
+  else
     PRODUCTS_WITH_BP2BUILD_DIFFS+=("${product}")
+  fi
 
   STARTUP_FLAGS=(
     # Keep the Bazel server alive, package cache hot and reduce excessive I/O
