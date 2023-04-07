@@ -471,7 +471,7 @@ class Bp2BuildProgressTest(unittest.TestCase):
         blocked_modules=blocked_modules,
         blocked_modules_transitive=blocked_modules_transitive,
         dirs_with_unconverted_modules={'pkg', 'other'},
-        kind_of_unconverted_modules={'type1', 'type3'},
+        kind_of_unconverted_modules={'type1: 1', 'type3: 1'},
         converted={'b'},
         show_converted=True,
     )

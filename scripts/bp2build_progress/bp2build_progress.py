@@ -187,7 +187,7 @@ def generate_report_data(modules: Dict[ModuleInfo, DepInfo],
   all_unconverted_modules = collections.defaultdict(set)
 
   dirs_with_unconverted_modules = set()
-  kind_of_unconverted_modules = set()
+  kind_of_unconverted_modules = collections.defaultdict(int)
 
   input_all_deps = set()
   input_unconverted_deps = set()
@@ -228,13 +228,15 @@ def generate_report_data(modules: Dict[ModuleInfo, DepInfo],
 
     if not module.is_converted_or_skipped(converted):
       dirs_with_unconverted_modules.add(module.dirname)
-      kind_of_unconverted_modules.add(module.kind)
+      kind_of_unconverted_modules[module.kind] += 1
 
     if module.name in graph_filter.module_names or module.kind in graph_filter.module_types:
       transitive_deps = dep_info.all_deps()
       input_modules.add(InputModule(module, len(transitive_deps), len(unconverted_transitive_deps)))
       input_all_deps.update(transitive_deps)
       input_unconverted_deps.update(unconverted_transitive_deps)
+
+    kinds = set(f"{k}: {kind_of_unconverted_modules[k]}" for k in kind_of_unconverted_modules.keys())
 
   return ReportData(
       input_modules=input_modules,
@@ -245,7 +247,7 @@ def generate_report_data(modules: Dict[ModuleInfo, DepInfo],
       blocked_modules=blocked_modules,
       blocked_modules_transitive=blocked_modules_transitive,
       dirs_with_unconverted_modules=dirs_with_unconverted_modules,
-      kind_of_unconverted_modules=kind_of_unconverted_modules,
+      kind_of_unconverted_modules=kinds,
       converted=converted,
       show_converted=show_converted,
   )
