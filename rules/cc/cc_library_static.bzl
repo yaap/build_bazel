@@ -35,6 +35,13 @@ load(":clang_tidy.bzl", "ClangTidyInfo", "clang_tidy_for_dir", "generate_clang_t
 load(":lto_transitions.bzl", "lto_deps_transition")
 load(":stl.bzl", "stl_info_from_attr")
 
+_ALLOWED_MANUAL_INTERFACE_PATHS = [
+    "vendor/",
+    "hardware/",
+    # for testing
+    "build/bazel/rules/cc",
+]
+
 CcStaticLibraryInfo = provider(fields = ["root_static_archive", "objects"])
 
 def cc_library_static(
@@ -115,6 +122,11 @@ def cc_library_static(
         toolchain_features += [cpp_std, "-cpp_std_default"]
     if c_std:
         toolchain_features += [c_std, "-c_std_default"]
+
+    for path in _ALLOWED_MANUAL_INTERFACE_PATHS:
+        if native.package_name().startswith(path):
+            toolchain_features += ["do_not_check_manual_binder_interfaces"]
+            break
 
     if min_sdk_version:
         toolchain_features += parse_sdk_version(min_sdk_version) + ["-sdk_version_default"]
