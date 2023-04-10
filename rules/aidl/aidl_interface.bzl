@@ -26,25 +26,32 @@ NDK = "ndk"
 def _hash_file(name, version):
     return "aidl_api/{}/{}/.hash".format(name, version)
 
-def _check_versions(versions):
-    sorted_versions = sorted([int(i) for i in versions])  # ensure that all versions are ints
-
-    for i, v in enumerate(sorted_versions):
-        if i > 0:
-            if v == sorted_versions[i - 1]:
-                fail("duplicate version found:", v)
-            if v < sorted_versions[i - 1]:
-                fail("versions should be sorted")
-        if v <= 0:
-            fail("all versions should be > 0, but found version:", v)
-    return [str(i) for i in sorted_versions]
-
 def _check_versions_with_info(versions_with_info):
     for version_with_info in versions_with_info:
         for dep in version_with_info.get("deps", []):
             parts = dep.split("-V")
             if len(parts) < 2 or not parts[-1].isdigit():
                 fail("deps in versions_with_info must specify its version, but", dep)
+
+    versions = []
+
+    # ensure that all versions are ints
+    for info in versions_with_info:
+        version = info["version"]
+        if version.isdigit() == False:
+            fail("version %s is not an integer".format(version))
+
+        versions.append(int(version))
+
+    if versions != sorted(versions):
+        fail("versions should be sorted")
+
+    for i, v in enumerate(versions):
+        if i > 0:
+            if v == versions[i - 1]:
+                fail("duplicate version found:", v)
+        if v <= 0:
+            fail("all versions should be > 0, but found version:", v)
 
 def _create_latest_version_aliases(name, last_version_name, backend_configs, **kwargs):
     latest_name = name + "-latest"
@@ -68,14 +75,14 @@ def _versioned_name(name, version):
     return name + "-V" + version
 
 # https://cs.android.com/android/platform/superproject/+/master:system/tools/aidl/build/aidl_interface.go;l=782-799;drc=5390d9a42f5e4f99ccb3a84068f554d948cb62b9
-def _next_version(versions, unstable):
+def _next_version(versions_with_info, unstable):
     if unstable:
         return ""
 
-    if versions == None or len(versions) == 0:
+    if versions_with_info == None or len(versions_with_info) == 0:
         return "1"
 
-    return str(int(versions[-1]) + 1)
+    return str(int(versions_with_info[-1]["version"]) + 1)
 
 def _is_config_enabled(config):
     if config == None:
@@ -97,9 +104,6 @@ def aidl_interface(
         cpp_config = None,
         ndk_config = None,
         stability = None,
-        # TODO: Remove versions after aidl_interface module type deprecates
-        # versions prop in favor of versions_with_info prop
-        versions = None,
         versions_with_info = None,
         unstable = False,
         tags = [],
@@ -116,7 +120,6 @@ def aidl_interface(
 
     Arguments:
         name:                   string, base name of generated targets: <module-name>-V<version number>-<language-type>
-        versions:               List[str], list of version labels with associated source directories
         deps:                   List[AidlGenInfo], a list of other aidl_libraries that all versions of this interface depend on
         strip_import_prefix:    str, a local directory to pass to the AIDL compiler to satisfy imports
         srcs:                   List[file], a list of files to include in the development (unversioned) version of the aidl_interface
@@ -130,12 +133,12 @@ def aidl_interface(
 
     # When versions_with_info is set, versions is no-op.
     # TODO(b/244349745): Modify bp2build to skip convert versions if versions_with_info is set
-    if (versions == None and versions_with_info == None and srcs == None):
-        fail("must specify at least versions, versions_with_info, or srcs")
+    if (versions_with_info == None and srcs == None):
+        fail("must specify at least versions_with_info or srcs")
 
-    if versions == None and versions_with_info == None:
+    if versions_with_info == None:
         if frozen == True:
-            fail("frozen cannot be set without versions or versions_with_info attr being set")
+            fail("frozen cannot be set without versions_with_info attr being set")
     elif unstable == True:
         # https://cs.android.com/android/platform/superproject/+/master:system/tools/aidl/build/aidl_interface.go;l=872;drc=5390d9a42f5e4f99ccb3a84068f554d948cb62b9
         fail("cannot have versions for unstable interface")
@@ -170,59 +173,33 @@ def aidl_interface(
     # https://cs.android.com/android/platform/superproject/+/master:system/tools/aidl/build/aidl_interface.go;l=791?q=system%2Ftools%2Faidl%2Fbuild%2Faidl_interface.go
     next_version = None
 
-    # versions will be deprecated after all migrated to versions_with_info
     if versions_with_info != None and len(versions_with_info) > 0:
-        versions = _check_versions([
-            version_with_info["version"]
-            for version_with_info in versions_with_info
-        ])
         _check_versions_with_info(versions_with_info)
-        next_version = _next_version(versions, False)
+        next_version = _next_version(versions_with_info, False)
+
         for version_with_info in versions_with_info:
+            deps_for_version = version_with_info.get("deps", [])
             hash_file = _hash_file(name, version_with_info["version"])
             create_aidl_binding_for_backends(
                 name = name,
                 version = version_with_info["version"],
                 hash_file = hash_file,
-                deps = version_with_info.get("deps"),
+                deps = deps_for_version,
                 aidl_flags = aidl_flags,
                 backend_configs = enabled_backend_configs,
                 tags = tags,
                 **kwargs
             )
-        if len(versions_with_info) > 0:
-            _create_latest_version_aliases(
-                name,
-                _versioned_name(name, versions[-1]),
-                enabled_backend_configs,
-                tags = tags,
-                **kwargs
-            )
-    elif versions != None and len(versions) > 0:
-        versions = _check_versions(versions)
-        next_version = _next_version(versions, False)
-        for version in versions:
-            hash_file = _hash_file(name, version)
-            create_aidl_binding_for_backends(
-                name = name,
-                version = version,
-                hash_file = hash_file,
-                deps = deps,
-                aidl_flags = aidl_flags,
-                backend_configs = enabled_backend_configs,
-                tags = tags,
-                **kwargs
-            )
-        if len(versions) > 0:
-            _create_latest_version_aliases(
-                name,
-                _versioned_name(name, versions[-1]),
-                enabled_backend_configs,
-                tags = tags,
-                **kwargs
-            )
+
+        _create_latest_version_aliases(
+            name,
+            _versioned_name(name, versions_with_info[-1]["version"]),
+            enabled_backend_configs,
+            tags = tags,
+            **kwargs
+        )
     else:
-        next_version = _next_version(None, unstable)
+        next_version = _next_version(versions_with_info, unstable)
 
     # https://cs.android.com/android/platform/superproject/+/master:system/tools/aidl/build/aidl_interface.go;l=941;drc=5390d9a42f5e4f99ccb3a84068f554d948cb62b9
     # Create aidl binding for next_version with srcs
