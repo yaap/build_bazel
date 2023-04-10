@@ -46,6 +46,7 @@ CcStaticLibraryInfo = provider(fields = ["root_static_archive", "objects"])
 
 def cc_library_static(
         name,
+        shared_linking = True,
         deps = [],
         implementation_deps = [],
         dynamic_deps = [],
@@ -125,7 +126,7 @@ def cc_library_static(
 
     for path in _ALLOWED_MANUAL_INTERFACE_PATHS:
         if native.package_name().startswith(path):
-            toolchain_features += ["do_not_check_manual_binder_interfaces"]
+            toolchain_features.append("do_not_check_manual_binder_interfaces")
             break
 
     if min_sdk_version:
@@ -223,6 +224,7 @@ def cc_library_static(
     # Root target to handle combining of the providers of the language-specific targets.
     _cc_library_combiner(
         name = name,
+        shared_linking = shared_linking,
         roots = [cpp_name, c_name, asm_name],
         deps = whole_archive_deps + implementation_whole_archive_deps,
         additional_sanitizer_deps = (
@@ -396,6 +398,8 @@ def _archive_with_prebuilt_libs(ctx, prebuilt_deps, linking_outputs, cc_toolchai
 # may expect they are depending directly on a target which generates linker inputs,
 # as opposed to a proxy target which is a level of indirection to such a target.
 def _cc_library_combiner_impl(ctx):
+    sanitizer_lib_info = get_sanitizer_lib_info(ctx.attr.features, ctx.attr.deps + ctx.attr.additional_sanitizer_deps)
+
     old_owner_labels = []
     cc_infos = []
     for dep in ctx.attr.deps:
@@ -410,9 +414,24 @@ def _cc_library_combiner_impl(ctx):
         old_owner_labels.append(dep.label)
         cc_infos.append(dep[CcInfo])
 
+    direct_owner_labels = []
+    if not ctx.attr.shared_linking:
+        for dep in ctx.attr.static_deps:
+            if dep.label in old_owner_labels:
+                continue
+            direct_owner_labels.append(dep.label)
+            cc_info = dep[CcInfo]
+
+            # do not propagate includes, hdrs, etc, already handled by roots
+            cc_infos.append(CcInfo(linking_context = cc_info.linking_context))
+        if sanitizer_lib_info.propagate_ubsan_deps:
+            direct_owner_labels.append(ctx.attr._ubsan_library.label)
+            cc_infos.append(CcInfo(linking_context = ctx.attr._ubsan_library[CcInfo].linking_context))
+
     combined_info = cc_common.merge_cc_infos(cc_infos = cc_infos)
 
     objects_to_link = []
+    extra_linker_inputs = []
 
     prebuilt_deps = []
 
@@ -426,11 +445,14 @@ def _cc_library_combiner_impl(ctx):
                 # This is a prebuilt library, we have to handle it separately
                 if not lib.objects and lib.static_library:
                     prebuilt_deps.append(lib.static_library)
+        elif not ctx.attr.shared_linking:
+            if old_linker_input.owner in direct_owner_labels:
+                extra_linker_inputs.append(old_linker_input)
         else:
             # Android macros don't handle transitive linker dependencies because
             # it's unsupported in legacy. We may want to change this going forward,
             # but for now it's good to validate that this invariant remains.
-            fail("cc_static_library %s given transitive linker dependency from %s" % (ctx.label, old_linker_input.owner))
+            fail("cc_static_library %s given transitive linker dependency from %s %s" % (ctx.label, old_linker_input.owner, old_owner_labels))
 
     cc_toolchain = find_cpp_toolchain(ctx)
 
@@ -457,24 +479,31 @@ def _cc_library_combiner_impl(ctx):
     output_file = _archive_with_prebuilt_libs(ctx, prebuilt_deps, linking_outputs, cc_toolchain)
     linker_input = cc_common.create_linker_input(
         owner = ctx.label,
-        libraries = depset(direct = [
-            cc_common.create_library_to_link(
-                actions = ctx.actions,
-                feature_configuration = feature_configuration,
-                cc_toolchain = cc_toolchain,
-                static_library = output_file,
-                objects = objects_to_link,
-                alwayslink = ctx.attr.alwayslink,
-            ),
-        ]),
+        libraries = depset(
+            direct = [
+                cc_common.create_library_to_link(
+                    actions = ctx.actions,
+                    feature_configuration = feature_configuration,
+                    cc_toolchain = cc_toolchain,
+                    static_library = output_file,
+                    objects = objects_to_link,
+                    alwayslink = ctx.attr.alwayslink,
+                ),
+            ],
+        ),
     )
-    linking_context = cc_common.create_linking_context(linker_inputs = depset(direct = [linker_input]))
+    linking_context = cc_common.create_linking_context(
+        linker_inputs = depset(
+            direct = [linker_input],
+            transitive = [depset(direct = extra_linker_inputs)],
+        ),
+    )
 
     providers = [
         DefaultInfo(files = depset(direct = [output_file]), data_runfiles = ctx.runfiles(files = [output_file])),
         CcInfo(compilation_context = combined_info.compilation_context, linking_context = linking_context),
         CcStaticLibraryInfo(root_static_archive = output_file, objects = objects_to_link),
-        get_sanitizer_lib_info(ctx.attr.features, ctx.attr.deps + ctx.attr.additional_sanitizer_deps),
+        sanitizer_lib_info,
         create_cc_androidmk_provider(
             static_deps = ctx.attr.androidmk_static_deps,
             whole_archive_deps = ctx.attr.androidmk_whole_archive_deps,
@@ -505,6 +534,10 @@ _cc_library_combiner = rule(
             providers = [CcInfo],
             cfg = lto_deps_transition,
         ),
+        "shared_linking": attr.bool(
+            doc = "Whether to link as needed for shared libraries, rather than as needed for a static libraries.",
+            default = True,
+        ),
         "additional_sanitizer_deps": attr.label_list(
             providers = [CcInfo],
             cfg = lto_deps_transition,
@@ -519,6 +552,11 @@ _cc_library_combiner = rule(
             doc = "All the static deps of the lib. This is used by" +
                   " abi_dump_aspect to travel along the static_deps edges" +
                   " to create abi dump files.",
+        ),
+        "_ubsan_library": attr.label(
+            default = "//prebuilts/clang/host/linux-x86:libclang_rt.ubsan_minimal",
+            doc = "The library target corresponding to the undefined " +
+                  "behavior sanitizer library to be used",
         ),
         "androidmk_static_deps": attr.label_list(
             providers = [CcInfo],
