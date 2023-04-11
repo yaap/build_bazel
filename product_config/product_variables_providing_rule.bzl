@@ -20,15 +20,13 @@ ProductVariablesInfo = provider(
         "DefaultAppCertificate": "The default certificate to sign APKs and APEXes with. The $(dirname) of this certificate will also be used to find additional certificates when modules only give their names.",
         "TidyChecks": "List of clang tidy checks to enable.",
         "Unbundled_apps": "List of apps to build as unbundled.",
-        "ManifestPackageNameOverrides": "A list of string:string mapping from APEX/APK name to package name to override the AndroidManifest.xml package of the module.",
-        "CertificateOverrides": "A list of string:string mapping from APEX/APK name to the certificate name to override the certificate used to sign the APEX/APK container.",
     },
 )
 
 ProductVariablesDepsInfo = provider(
     "ProductVariablesDepsInfo provides fields that are not regular product config variables, but rather the concrete files that other product config vars reference.",
     fields = {
-        "DefaultAppCertificateFiles": "All the .pk8, .pem, and .avbpubkey files in the DefaultAppCertificate directory.",
+        "DefaultAppCertificateFiles": "All the .pk8 and .pem files in the DefaultAppCertificate directory.",
     },
 )
 
@@ -45,8 +43,6 @@ def _product_variables_providing_rule_impl(ctx):
             DefaultAppCertificate = vars.get("DefaultAppCertificate", None),
             TidyChecks = tidy_checks,
             Unbundled_apps = vars.get("Unbundled_apps", []),
-            ManifestPackageNameOverrides = vars.get("ManifestPackageNameOverrides", []),
-            CertificateOverrides = vars.get("CertificateOverrides", []),
         ),
         ProductVariablesDepsInfo(
             DefaultAppCertificateFiles = ctx.files.default_app_certificate_filegroup,
@@ -59,7 +55,7 @@ _product_variables_providing_rule = rule(
     attrs = {
         "attribute_vars": attr.string_dict(doc = "Variables that can be expanded using make-style syntax in attributes"),
         "product_vars": attr.string(doc = "Regular android product variables, a copy of the soong.variables file. Unfortunately this needs to be a json-encoded string because bazel attributes can only be simple types."),
-        "default_app_certificate_filegroup": attr.label(doc = "The filegroup that contains all the .pem, .pk8, and .avbpubkey files in $(dirname product_vars.DefaultAppCertificate)"),
+        "default_app_certificate_filegroup": attr.label(doc = "The filegroup that contains all the .pem and .pk8 files in $(dirname product_vars.DefaultAppCertificate)"),
     },
 )
 
