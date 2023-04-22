@@ -12,8 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("//build/bazel/tests/products:product_labels.bzl", _products_for_testing = "products")
 load("//build/bazel/rules/common/api_constants.bzl", _api_levels_released_versions = "api_levels_released_versions")
 load("//build/bazel/rules/env_variables.bzl", _CAPTURED_ENV_VARS = "CAPTURED_ENV_VARS")
 
 api_levels_released_versions = _api_levels_released_versions
 captured_env_vars = _CAPTURED_ENV_VARS
+products_for_testing = _products_for_testing
