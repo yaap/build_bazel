@@ -18,7 +18,6 @@ load("@soong_injection//api_levels:platform_versions.bzl", "platform_versions")
 load("//build/bazel/rules:common.bzl", "strip_bp2build_label_suffix")
 load("//build/bazel/rules/common:api.bzl", "api")
 
-_bionic_targets = ["//bionic/libc", "//bionic/libdl", "//bionic/libm"]
 _static_bionic_targets = ["//bionic/libc:libc_bp2build_cc_library_static", "//bionic/libdl:libdl_bp2build_cc_library_static", "//bionic/libm:libm_bp2build_cc_library_static"]
 
 # When building a APEX, stub libraries of libc, libdl, libm should be used in linking.
@@ -32,9 +31,9 @@ _bionic_stub_targets = [
 # used if no value for system_dynamic_deps is specified.
 system_dynamic_deps_defaults = select({
     "//build/bazel/rules/apex:android-in_apex": _bionic_stub_targets,
-    "//build/bazel/rules/apex:android-non_apex": _bionic_targets,
+    "//build/bazel/rules/apex:android-non_apex": _bionic_stub_targets,
     "//build/bazel/rules/apex:linux_bionic-in_apex": _bionic_stub_targets,
-    "//build/bazel/rules/apex:linux_bionic-non_apex": _bionic_targets,
+    "//build/bazel/rules/apex:linux_bionic-non_apex": _bionic_stub_targets,
     "//conditions:default": [],
 })
 
