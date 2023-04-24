@@ -136,7 +136,6 @@ def cc_library_shared(
     linkopts = linkopts + stl_info.linkopts
     copts = copts + stl_info.cppflags
 
-    extra_archive_deps = []
     if not native_coverage:
         features = features + ["-coverage"]
     else:
@@ -146,7 +145,7 @@ def cc_library_shared(
         })
 
         # TODO(b/233660582): deal with the cases where the default lib shouldn't be used
-        extra_archive_deps = select({
+        whole_archive_deps = whole_archive_deps + select({
             "//build/bazel/rules/cc:android_coverage_lib_flag": ["//system/extras/toolchain-extras:libprofile-clang-extras"],
             "//conditions:default": [],
         })
@@ -156,7 +155,7 @@ def cc_library_shared(
     # the static-variant srcs are different than the shared-variant srcs.
     cc_library_static(
         name = shared_root_name,
-        shared_linking = False,
+        shared_linking = True,
         hdrs = hdrs,
         srcs = srcs,
         srcs_c = srcs_c,
@@ -180,7 +179,7 @@ def cc_library_shared(
         implementation_whole_archive_deps = implementation_whole_archive_deps,
         system_dynamic_deps = system_dynamic_deps,
         deps = deps,
-        whole_archive_deps = whole_archive_deps + extra_archive_deps,
+        whole_archive_deps = whole_archive_deps,
         features = features,
         target_compatible_with = target_compatible_with,
         tags = ["manual"],
@@ -225,7 +224,7 @@ def cc_library_shared(
         user_link_flags = linkopts + [soname_flag],
         dynamic_deps = shared_dynamic_deps,
         additional_linker_inputs = additional_linker_inputs,
-        deps = [shared_root_name, imp_deps_stub],
+        deps = [shared_root_name] + whole_archive_deps + [imp_deps_stub],
         features = features,
         target_compatible_with = target_compatible_with,
         tags = ["manual"],
