@@ -120,6 +120,31 @@ def get_property_names(json_module):
   return get_properties(json_module).keys()
 
 
+def get_queryview_module_info_by_type(types, banchan_mode):
+  """Returns the list of transitive dependencies of input module as built by queryview."""
+  _build_with_soong("queryview", banchan_mode)
+
+  queryview_xml = subprocess.check_output(
+      [
+          "build/bazel/bin/bazel",
+          "query",
+          "--config=ci",
+          "--config=queryview",
+          "--output=xml",
+          # union of queries to get the deps of all Soong modules with the give names
+          " + ".join(f'deps(attr("soong_module_type", "^{t}$", //...))'
+                     for t in types)
+      ],
+      cwd=SRC_ROOT_DIR,
+  )
+  try:
+    return xml.etree.ElementTree.fromstring(queryview_xml)
+  except xml.etree.ElementTree.ParseError as err:
+    sys.exit(f"""Could not parse XML:
+{queryview_xml}
+ParseError: {err}""")
+
+
 def get_queryview_module_info(modules, banchan_mode):
   """Returns the list of transitive dependencies of input module as built by queryview."""
   _build_with_soong("queryview", banchan_mode)
