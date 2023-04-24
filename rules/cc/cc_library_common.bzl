@@ -417,7 +417,10 @@ def create_cc_prebuilt_library_info(ctx, lib_to_link):
     linking_context = cc_common.create_linking_context(
         linker_inputs = depset(direct = [linker_input]),
     )
-    return CcInfo(
-        compilation_context = compilation_context,
-        linking_context = linking_context,
-    )
+    return [
+        CcInfo(
+            compilation_context = compilation_context,
+            linking_context = linking_context,
+        ),
+        linker_input,
+    ]
