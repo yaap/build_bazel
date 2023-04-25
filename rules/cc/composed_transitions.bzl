@@ -19,7 +19,7 @@ load(
     "FDO_PROFILE_ATTR_KEY",
     "apply_fdo_profile",
 )
-load(":lto_transitions.bzl", "CLI_FEATURES_KEY", "apply_drop_lto")
+load(":lto_transitions.bzl", "LTO_FEATURE", "apply_drop_lto", CLI_LTO_FEATURES_KEY = "CLI_FEATURES_KEY")
 
 # Both LTO and FDO require an incoming transition on cc_library_shared
 def _lto_and_fdo_profile_incoming_transition_impl(settings, attr):
@@ -28,7 +28,7 @@ def _lto_and_fdo_profile_incoming_transition_impl(settings, attr):
         getattr(attr, FDO_PROFILE_ATTR_KEY),
     )
 
-    new_lto_settings = apply_drop_lto(settings[CLI_FEATURES_KEY])
+    new_lto_settings = apply_drop_lto(settings[CLI_LTO_FEATURES_KEY])
 
     if new_fdo_settings == None:
         new_fdo_settings = {}
@@ -40,10 +40,34 @@ lto_and_fdo_profile_incoming_transition = transition(
     implementation = _lto_and_fdo_profile_incoming_transition_impl,
     inputs = [
         CLI_CODECOV_KEY,
-        CLI_FEATURES_KEY,
+        CLI_LTO_FEATURES_KEY,
     ],
     outputs = [
         CLI_FDO_KEY,
-        CLI_FEATURES_KEY,
+        CLI_LTO_FEATURES_KEY,
+    ],
+)
+
+# Drop both lto and fdo transitions
+# Currently used for cc stub libraries.
+def _drop_lto_and_fdo_profile_incoming_transition_impl(settings, _):
+    new_cli_features = list(settings[CLI_LTO_FEATURES_KEY])
+    if LTO_FEATURE in new_cli_features:
+        new_cli_features.remove(LTO_FEATURE)
+
+    return {
+        CLI_LTO_FEATURES_KEY: new_cli_features,
+        CLI_FDO_KEY: None,
+    }
+
+drop_lto_and_fdo_profile_incoming_transition = transition(
+    implementation = _drop_lto_and_fdo_profile_incoming_transition_impl,
+    inputs = [
+        CLI_LTO_FEATURES_KEY,
+        CLI_FDO_KEY,
+    ],
+    outputs = [
+        CLI_LTO_FEATURES_KEY,
+        CLI_FDO_KEY,
     ],
 )
