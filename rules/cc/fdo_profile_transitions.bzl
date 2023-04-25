@@ -46,17 +46,3 @@ fdo_profile_transition = transition(
         CLI_FDO_KEY,
     ],
 )
-
-def _drop_fdo_profile_transition_impl(_, __):
-    return {
-        CLI_FDO_KEY: None,
-    }
-
-# This transition always resets //command_line_option:fdo_profile to None."
-drop_fdo_profile_transition = transition(
-    implementation = _drop_fdo_profile_transition_impl,
-    inputs = [],
-    outputs = [
-        CLI_FDO_KEY,
-    ],
-)
