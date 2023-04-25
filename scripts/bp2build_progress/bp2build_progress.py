@@ -496,6 +496,7 @@ def main():
   mode = args.mode
   use_queryview = args.use_queryview
   ignore_by_name = args.ignore_by_name.split(",")
+  ignore_java_auto_deps = args.ignore_java_auto_deps
   banchan_mode = args.banchan
   modules = set(args.module)
 
@@ -505,6 +506,7 @@ def main():
       modules,
       use_queryview,
       ignore_by_name,
+      ignore_java_auto_deps,
       collect_transitive_dependencies=mode != "graph",
       banchan_mode=banchan_mode)
 
