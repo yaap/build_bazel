@@ -46,3 +46,8 @@ fdo_profile_transition = transition(
         CLI_FDO_KEY,
     ],
 )
+
+def apply_drop_fdo_profile():
+    return {
+        CLI_FDO_KEY: None,
+    }
