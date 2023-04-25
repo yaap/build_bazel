@@ -236,7 +236,7 @@ def generate_report_data(modules: Dict[ModuleInfo, DepInfo],
       input_all_deps.update(transitive_deps)
       input_unconverted_deps.update(unconverted_transitive_deps)
 
-    kinds = set(f"{k}: {kind_of_unconverted_modules[k]}" for k in kind_of_unconverted_modules.keys())
+  kinds = set(f"{k}: {kind_of_unconverted_modules[k]}" for k in kind_of_unconverted_modules.keys())
 
   return ReportData(
       input_modules=input_modules,
