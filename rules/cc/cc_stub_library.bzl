@@ -193,7 +193,14 @@ def _cc_stub_library_shared_impl(ctx):
         ctx.attr.root[CcInfo],
         CcInfo(compilation_context = compilation_context),
     ])
-    toc_info = generate_toc(ctx, ctx.attr.name, ctx.attr.library_target.files.to_list()[0])
+
+    library_target_so_files = ctx.attr.library_target.files.to_list()
+    if len(library_target_so_files) != 1:
+        fail("expected single .so output file from library_target (%s); got %s" % (
+            ctx.attr.library_target.label,
+            library_target_so_files,
+        ))
+    toc_info = generate_toc(ctx, ctx.attr.name, library_target_so_files[0])
 
     return [
         ctx.attr.library_target[DefaultInfo],
