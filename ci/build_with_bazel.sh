@@ -42,7 +42,7 @@ function build_for_device() {
   for arch in arm arm64 x86 x86_64; do
     # Re-run product config and bp2build for every TARGET_PRODUCT.
     product=${product_prefix}${arch}
-    "${AOSP_ROOT}/build/soong/soong_ui.bash" --make-mode BP2BUILD_VERBOSE=1 TARGET_PRODUCT=${product} --skip-soong-tests bp2build dist
+    "${SOURCE_ROOT}/build/soong/soong_ui.bash" --make-mode BP2BUILD_VERBOSE=1 TARGET_PRODUCT=${product} --skip-soong-tests bp2build dist
     # Remove the ninja_build output marker file to communicate to buildbot that this is not a regular Ninja build, and its
     # output should not be parsed as such.
     rm -f out/ninja_build
