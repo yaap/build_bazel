@@ -41,8 +41,6 @@ def _cc_prebuilt_library_shared_impl(ctx):
             exports = [],
             link_once_static_libs = [],
             linker_input = linker_input,
-            # TODO(b/279433767): remove once future Bazel release remove
-            preloaded_deps = None,
         ),
         OutputGroupInfo(
             # TODO(b/279433767): remove once cc_library_shared is stable
