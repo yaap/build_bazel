@@ -113,3 +113,6 @@ build --experimental_writable_outputs
 
 # Make the Linux sandbox work under /tmp
 build --incompatible_sandbox_hermetic_tmp
+
+# TODO(b/275690057, b/275727890): Remove this and fix cc_shared_library usage proper.
+build --noexperimental_link_static_libraries_once
