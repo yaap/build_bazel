@@ -17,7 +17,7 @@ limitations under the License.
 load("@rules_kotlin//kotlin:compiler_opt.bzl", "kt_compiler_opt")
 load("@rules_kotlin//kotlin:jvm_library.bzl", _kt_jvm_library = "kt_jvm_library")
 load("//build/bazel/rules/java:rules.bzl", "java_import")
-load("//build/bazel/rules/java:sdk_transition.bzl", "sdk_transition", "sdk_transition_attrs")
+load("//build/bazel/rules/java:sdk_transition.bzl", "sdk_transition_attrs")
 
 def _kotlin_resources_impl(ctx):
     output_file = ctx.actions.declare_file("kt_resources.jar")
