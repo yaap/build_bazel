@@ -761,6 +761,90 @@ def _cc_library_shared_provides_androidmk_info():
         linux_test_name,
     ]
 
+def _cc_library_minimal_runtime_linked_impl(ctx):
+    env = analysistest.begin(ctx)
+    libraries = [
+        lib
+        for input in ctx.attr._ubsan_library[CcInfo].linking_context.linker_inputs.to_list()
+        for lib in input.libraries
+    ]
+    ubsan_lib_path = libraries[0].static_library.path
+
+    actions = analysistest.target_actions(env)
+    found_minimal_runtime = False
+    for action in actions:
+        if action.mnemonic != "CppLink":
+            continue
+        for i in range(len(action.argv)):
+            arg = action.argv[i]
+            if ubsan_lib_path in arg:
+                found_minimal_runtime = True
+                if i > 0:
+                    prev_arg = action.argv[i - 1]
+                asserts.true(
+                    env,
+                    "-Wl,--whole-archive" != prev_arg,
+                    "expected %s to not be a whole archive but it was" % [prev_arg, arg],
+                )
+
+    asserts.true(
+        env,
+        found_minimal_runtime,
+        "Expected to find ubsan minimal runtime, but did not.",
+    )
+
+    return analysistest.end(env)
+
+_cc_library_minimal_runtime_linked_test = analysistest.make(
+    _cc_library_minimal_runtime_linked_impl,
+    attrs = {
+        "_ubsan_library": attr.label(
+            default = "//prebuilts/clang/host/linux-x86:libclang_rt.ubsan_minimal",
+            doc = "The library target corresponding to the undefined " +
+                  "behavior sanitizer library to be used",
+        ),
+    },
+)
+
+def _cc_library_minimal_runtime_linked_from_dep():
+    name = "cc_library_minimal_runtime_linked_from_dep"
+    dep_name = "dep_" + name
+    test_name = name + "_test"
+
+    cc_library_static(
+        name = dep_name,
+        srcs = ["foo.cc"],
+        tags = ["manual"],
+        features = ["ubsan_undefined"],
+    )
+    cc_library_shared(
+        name = name,
+        srcs = ["bar.cc"],
+        implementation_deps = [dep_name],
+        tags = ["manual"],
+    )
+    _cc_library_minimal_runtime_linked_test(
+        name = test_name,
+        target_under_test = name + "_unstripped",
+    )
+    return test_name
+
+def _cc_library_minimal_runtime_linked():
+    name = "cc_library_minimal_runtime_linked"
+    test_name = name + "_test"
+
+    cc_library_shared(
+        name = name,
+        srcs = ["bar.cc"],
+        features = ["ubsan_undefined"],
+        tags = ["manual"],
+    )
+    _cc_library_minimal_runtime_linked_test(
+        name = test_name,
+        target_under_test = name + "_unstripped",
+    )
+    return test_name
+
 def cc_library_shared_test_suite(name):
     native.genrule(name = "cc_library_shared_hdr", cmd = "null", outs = ["cc_shared_f.h"], tags = ["manual"])
 
@@ -781,5 +865,7 @@ def cc_library_shared_test_suite(name):
             _cc_library_with_fdo_profile_link_flags(),
             _cc_library_disable_fdo_optimization_if_coverage_is_enabled_test(),
             _cc_library_set_defines_for_stubs(),
+            _cc_library_minimal_runtime_linked_from_dep(),
+            _cc_library_minimal_runtime_linked(),
         ] + _cc_library_shared_provides_androidmk_info(),
     )
