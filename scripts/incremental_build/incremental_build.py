@@ -37,6 +37,7 @@ import ui
 import util
 
 MAX_RUN_COUNT: int = 5
+FIRST_RUN_AFTER_WARMUP: int = MAX_RUN_COUNT + 1
 
 
 @functools.cache
@@ -221,12 +222,16 @@ def main():
       logging.info('START %s %s [%s]', build_type.name,
                    ' '.join(user_input.targets), desc)
       cujstep.apply_change()
+      run = -1
       for run in range(0, MAX_RUN_COUNT):
         run_dir = next(run_dir_gen)
         build_info = _run_cuj(run_dir, build_type, cujstep, desc, run)
         perf_metrics.archive_run(run_dir, build_info)
         if build_info['ninja_explains'] == 0:
           break
+      if run != -1 and desc == 'no change WARMUP':
+        global FIRST_RUN_AFTER_WARMUP
+        FIRST_RUN_AFTER_WARMUP = run + 2
       logging.info(' DONE %s %s [%s]', build_type.name,
                    ' '.join(user_input.targets), desc)
 
@@ -236,6 +241,10 @@ def main():
     for i in user_input.chosen_cujgroups:
       run_cuj_group(cuj_catalog.get_cujgroups()[i])
 
+  if user_input.ci_mode:
+    #TODO(b/280492115): Reduce the time and resource of CUJ CI run
+    perf_metrics.copy_first_metrics_after_warmup(user_input.log_dir,
+    user_input.log_dir.parent.joinpath('logs'), FIRST_RUN_AFTER_WARMUP)
   perf_metrics.tabulate_metrics_csv(user_input.log_dir)
   perf_metrics.display_tabulated_metrics(user_input.log_dir)
   pretty.summarize_metrics(user_input.log_dir)
