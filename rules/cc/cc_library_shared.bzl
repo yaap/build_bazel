@@ -345,7 +345,6 @@ def _correct_cc_shared_library_linking(ctx, shared_info, new_output, static_root
         exports = exports,
         link_once_static_libs = shared_info.link_once_static_libs,
         linker_input = new_linker_input,
-        preloaded_deps = shared_info.preloaded_deps,
     )
 
 CcStubLibrariesInfo = provider(
