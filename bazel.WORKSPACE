@@ -62,6 +62,12 @@ local_repository(
     path = "external/bazelbuild-rules_license",
 )
 
+local_repository(
+    name = "rules_python",
+    # TODO(b/200202912): Re-route this when rules_python is pulled into AOSP.
+    path = "build/bazel/rules/python/stubs",
+)
+
 register_toolchains(
     "//prebuilts/build-tools:py_toolchain",
 
