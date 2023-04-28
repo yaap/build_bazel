@@ -584,6 +584,9 @@ def main():
       collect_transitive_dependencies=mode != "graph",
       banchan_mode=banchan_mode)
 
+  if len(module_adjacency_list) == 0:
+    sys.exit(f"Found no modules, verify that the modules ({args.modules}) or types ({args.types}) you requested are valid.")
+
   converted = add_created_by_to_converted(converted, module_adjacency_list)
 
   output_file = args.out_file
