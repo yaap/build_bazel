@@ -65,7 +65,7 @@ local_repository(
 local_repository(
     name = "rules_python",
     # TODO(b/200202912): Re-route this when rules_python is pulled into AOSP.
-    path = "build/bazel/rules/python/stubs",
+    path = "build/bazel_common_rules/rules/python/stubs",
 )
 
 register_toolchains(
