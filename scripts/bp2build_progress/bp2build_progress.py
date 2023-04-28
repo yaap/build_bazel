@@ -565,8 +565,10 @@ def main():
   types = set(args.type) if args.type is not None else set()
   graph_filter = GraphFilterInfo(modules,types)
 
+  if len(modules) == 0 and len(types) == 0:
+    sys.exit("Must specify at least one module or type.")
   if len(modules) > 0 and len(types) > 0 and args.use_queryview:
-    sys.exit(f"Can only support either of modules or types with use-queryview")
+    sys.exit("Can only support either of modules or types with use-queryview")
   if len(modules) > 1 and args.mode == "graph":
     sys.exit(f"Can only support one module with mode {args.mode}")
   if len(types) and args.mode == "graph":
