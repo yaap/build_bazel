@@ -527,6 +527,7 @@ def main():
   parser.add_argument(
       "--ignore-java-auto-deps",
       action="store_true",
+      default=True,
       help="whether to ignore automatically added java deps",
   )
   parser.add_argument(
