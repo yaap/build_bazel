@@ -46,7 +46,7 @@ CcStaticLibraryInfo = provider(fields = ["root_static_archive", "objects"])
 
 def cc_library_static(
         name,
-        shared_linking = True,
+        shared_linking = False,
         deps = [],
         implementation_deps = [],
         dynamic_deps = [],
@@ -402,12 +402,18 @@ def _cc_library_combiner_impl(ctx):
 
     old_owner_labels = []
     cc_infos = []
-    for dep in ctx.attr.deps:
-        old_owner_labels.append(dep.label)
-        cc_info = dep[CcInfo]
 
-        # do not propagate includes, hdrs, etc, already handled by roots
-        cc_infos.append(CcInfo(linking_context = cc_info.linking_context))
+    # Soong links whole archive deps of a static lib differently, all the .o files
+    # from the whole archive deps will be loaded into the static lib. This is
+    # different from when linking from a shared lib, in which case the whole
+    # archive deps will be linked separately.
+    if not ctx.attr.shared_linking:
+        for dep in ctx.attr.deps:
+            old_owner_labels.append(dep.label)
+            cc_info = dep[CcInfo]
+
+            # do not propagate includes, hdrs, etc, already handled by roots
+            cc_infos.append(CcInfo(linking_context = cc_info.linking_context))
 
     # we handle roots after deps to mimic Soong handling objects from whole archive deps prior to objects from the target itself
     for dep in ctx.attr.roots:
@@ -415,7 +421,7 @@ def _cc_library_combiner_impl(ctx):
         cc_infos.append(dep[CcInfo])
 
     direct_owner_labels = []
-    if not ctx.attr.shared_linking:
+    if ctx.attr.shared_linking:
         for dep in ctx.attr.static_deps:
             if dep.label in old_owner_labels:
                 continue
@@ -445,7 +451,7 @@ def _cc_library_combiner_impl(ctx):
                 # This is a prebuilt library, we have to handle it separately
                 if not lib.objects and lib.static_library:
                     prebuilt_deps.append(lib.static_library)
-        elif not ctx.attr.shared_linking:
+        elif ctx.attr.shared_linking:
             if old_linker_input.owner in direct_owner_labels:
                 extra_linker_inputs.append(old_linker_input)
         else:
@@ -536,7 +542,7 @@ _cc_library_combiner = rule(
         ),
         "shared_linking": attr.bool(
             doc = "Whether to link as needed for shared libraries, rather than as needed for a static libraries.",
-            default = True,
+            default = False,
         ),
         "additional_sanitizer_deps": attr.label_list(
             providers = [CcInfo],
