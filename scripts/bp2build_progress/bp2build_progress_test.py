@@ -331,22 +331,22 @@ class Bp2BuildProgressTest(unittest.TestCase):
         module_graph, {'d', 'g'}, bp2build_progress.GraphFilterInfo(module_names={'a', 'f'}))
 
     all_unconverted_modules = collections.defaultdict(set)
-    all_unconverted_modules['b'].update({a, f})
-    all_unconverted_modules['c'].update({a})
-    all_unconverted_modules['e'].update({a})
+    all_unconverted_modules['b [type2]'].update({a, f})
+    all_unconverted_modules['c [type2]'].update({a})
+    all_unconverted_modules['e [type3]'].update({a})
 
     blocked_modules = collections.defaultdict(set)
-    blocked_modules[a].update({'b', 'c'})
+    blocked_modules[a].update({'b [type2]', 'c [type2]'})
     blocked_modules[b].update(set())
-    blocked_modules[c].update(set('e'))
-    blocked_modules[f].update(set({'b'}))
+    blocked_modules[c].update(set('e [type3]'))
+    blocked_modules[f].update(set({'b [type2]'}))
     blocked_modules[e].update(set())
 
     blocked_modules_transitive = collections.defaultdict(set)
-    blocked_modules_transitive[a].update({'b', 'c', 'e'})
+    blocked_modules_transitive[a].update({'b [type2]', 'c [type2]', 'e [type3]'})
     blocked_modules_transitive[b].update(set())
-    blocked_modules_transitive[c].update(set('e'))
-    blocked_modules_transitive[f].update(set({'b'}))
+    blocked_modules_transitive[c].update(set('e [type3]'))
+    blocked_modules_transitive[f].update(set({'b [type2]'}))
     blocked_modules_transitive[e].update(set())
 
     expected_report_data = bp2build_progress.ReportData(
@@ -355,7 +355,7 @@ class Bp2BuildProgressTest(unittest.TestCase):
             bp2build_progress.InputModule(f, 3, 1)
         },
         total_deps={b, c, d, e, g},
-        unconverted_deps={'b', 'c', 'e'},
+        unconverted_deps={'b [type2]', 'c [type2]', 'e [type3]'},
         all_unconverted_modules=all_unconverted_modules,
         blocked_modules=blocked_modules,
         blocked_modules_transitive=blocked_modules_transitive,
@@ -449,7 +449,7 @@ class Bp2BuildProgressTest(unittest.TestCase):
         module_graph, {'b'}, bp2build_progress.GraphFilterInfo(module_names={'a'}), show_converted=True)
 
     all_unconverted_modules = collections.defaultdict(set)
-    all_unconverted_modules['c'].update({a})
+    all_unconverted_modules['c [type3]'].update({a})
 
     blocked_modules = collections.defaultdict(set)
     blocked_modules[a].update({'b [type2] (c)', 'c [type3]'})
@@ -466,7 +466,7 @@ class Bp2BuildProgressTest(unittest.TestCase):
             bp2build_progress.InputModule(a, 2, 1),
         },
         total_deps={b, c},
-        unconverted_deps={'c'},
+        unconverted_deps={'c [type3]'},
         all_unconverted_modules=all_unconverted_modules,
         blocked_modules=blocked_modules,
         blocked_modules_transitive=blocked_modules_transitive,
