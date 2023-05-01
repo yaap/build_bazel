@@ -566,8 +566,10 @@ def main():
   types = set(args.type) if args.type is not None else set()
   graph_filter = GraphFilterInfo(modules,types)
 
+  if len(modules) == 0 and len(types) == 0:
+    sys.exit("Must specify at least one module or type.")
   if len(modules) > 0 and len(types) > 0 and args.use_queryview:
-    sys.exit(f"Can only support either of modules or types with use-queryview")
+    sys.exit("Can only support either of modules or types with use-queryview")
   if len(modules) > 1 and args.mode == "graph":
     sys.exit(f"Can only support one module with mode {args.mode}")
   if len(types) and args.mode == "graph":
@@ -582,6 +584,9 @@ def main():
       ignore_java_auto_deps,
       collect_transitive_dependencies=mode != "graph",
       banchan_mode=banchan_mode)
+
+  if len(module_adjacency_list) == 0:
+    sys.exit(f"Found no modules, verify that the modules ({args.modules}) or types ({args.types}) you requested are valid.")
 
   converted = add_created_by_to_converted(converted, module_adjacency_list)
 
