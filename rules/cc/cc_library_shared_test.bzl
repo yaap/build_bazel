@@ -22,7 +22,7 @@ load(
     "compile_action_argv_aspect_generator",
 )
 load("//build/bazel/rules/test_common:flags.bzl", "action_flags_present_only_for_mnemonic_test")
-load("//build/bazel/rules/test_common:paths.bzl", "get_package_dir_based_path")
+load("//build/bazel/rules/test_common:paths.bzl", "get_output_and_package_dir_based_path", "get_package_dir_based_path")
 load(":cc_library_common_test.bzl", "target_provides_androidmk_info_test")
 
 def _cc_library_shared_suffix_test_impl(ctx):
@@ -845,6 +845,64 @@ def _cc_library_minimal_runtime_linked():
     )
     return test_name
 
+def _cc_library_link_as_whole_archive_test_impl(ctx):
+    env = analysistest.begin(ctx)
+    actions = [a for a in analysistest.target_actions(env) if a.mnemonic == "CppLink"]
+    asserts.true(
+        env,
+        len(actions) == 1,
+        "Cpp link action not found: %s" % actions,
+    )
+    action = actions[0]
+    whole_arch_libs = []
+    argv_len = len(action.argv)
+    whole_archive_start = False
+    for i in range(argv_len):
+        if action.argv[i] == "-Wl,--whole-archive":
+            whole_archive_start = True
+        elif action.argv[i] == "-Wl,--no-whole-archive":
+            whole_archive_start = False
+        elif whole_archive_start:
+            whole_arch_libs.append(action.argv[i])
+
+    for lib in ctx.attr.expected_libs:
+        full_path = get_output_and_package_dir_based_path(env, lib)
+        if full_path not in whole_arch_libs:
+            fail("{} is not in list of libs for linking as whole archive deps {}".format(lib, action.argv))
+
+    return analysistest.end(env)
+
+cc_library_link_as_whole_archive_test = analysistest.make(
+    _cc_library_link_as_whole_archive_test_impl,
+    attrs = {
+        "expected_libs": attr.string_list(),
+    },
+)
+
+def _cc_library_shared_links_whole_archive_deps_separately():
+    name = "cc_library_shared_links_whole_archive_deps_separately"
+    dep_name = name + "_dep"
+    test_name = name + "_test"
+
+    cc_library_static(
+        name = dep_name,
+        tags = ["manual"],
+    )
+
+    cc_library_shared(
+        name = name,
+        whole_archive_deps = [dep_name],
+        tags = ["manual"],
+    )
+
+    cc_library_link_as_whole_archive_test(
+        name = test_name,
+        target_under_test = name + "_unstripped",
+        expected_libs = ["libcc_library_shared_links_whole_archive_deps_separately_dep.a"],
+    )
+
+    return test_name
+
 def cc_library_shared_test_suite(name):
     native.genrule(name = "cc_library_shared_hdr", cmd = "null", outs = ["cc_shared_f.h"], tags = ["manual"])
 
@@ -867,5 +925,6 @@ def cc_library_shared_test_suite(name):
             _cc_library_set_defines_for_stubs(),
             _cc_library_minimal_runtime_linked_from_dep(),
             _cc_library_minimal_runtime_linked(),
+            _cc_library_shared_links_whole_archive_deps_separately(),
         ] + _cc_library_shared_provides_androidmk_info(),
     )
