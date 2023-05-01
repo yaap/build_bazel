@@ -63,6 +63,20 @@ kotlin_resources = rule(
     },
 )
 
+def make_kt_compiler_opt(
+        name,
+        kotlincflags = None):
+    custom_kotlincopts = None
+    if kotlincflags != None:
+        ktcopts_name = name + "_kotlincopts"
+        kt_compiler_opt(
+            name = ktcopts_name,
+            opts = kotlincflags,
+        )
+        custom_kotlincopts = [":" + ktcopts_name]
+
+    return custom_kotlincopts
+
 # TODO(b/277801336): document these attributes.
 def kt_jvm_library(
         name,
@@ -93,14 +107,7 @@ def kt_jvm_library(
 
         deps = deps + [":" + java_import_name]
 
-    custom_kotlincopts = None
-    if kotlincflags != None:
-        ktcopts_name = name + "_kotlincopts"
-        kt_compiler_opt(
-            name = ktcopts_name,
-            opts = kotlincflags,
-        )
-        custom_kotlincopts = [":" + ktcopts_name]
+    custom_kotlincopts = make_kt_compiler_opt(name, kotlincflags)
 
     lib_name = name + "_private"
     _kt_jvm_library(
