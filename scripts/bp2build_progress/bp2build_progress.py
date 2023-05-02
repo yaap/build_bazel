@@ -165,7 +165,7 @@ def get_transitive_unconverted_deps(
   for d in dep.direct_deps:
     if d.is_converted_or_skipped(converted):
       continue
-    unconverted_deps.add(d.name)
+    unconverted_deps.add(d.short_string(converted))
     transitive = get_transitive_unconverted_deps(cache, d, modules, converted)
     unconverted_deps = unconverted_deps.union(transitive)
   cache[module] = unconverted_deps
