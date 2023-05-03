@@ -62,6 +62,7 @@ class UserInput:
   description: Optional[str]
   log_dir: Path
   targets: list[str]
+  ci_mode: bool
 
 
 @functools.cache
@@ -145,6 +146,9 @@ def get_user_input() -> UserInput:
   p.add_argument('targets', nargs='*', default=['nothing'],
                  help='Targets to run, e.g. "libc adbd". '
                       'Defaults to %(default)s')
+  p.add_argument('--ci-mode', default=False, action='store_true',
+                 help='Only use it for CI runs.It will copy the '
+                      'first metrics after warmup to the logs directory in CI')
 
   options = p.parse_args()
 
@@ -202,9 +206,18 @@ def get_user_input() -> UserInput:
     if response.upper() != 'Y':
       sys.exit(1)
 
+  if options.ci_mode:
+    if len(chosen_cujgroups) > 1:
+      sys.exit('CI mode can only allow one cuj group. '
+               'Remove --ci-mode flag to skip this check.')
+    if len(build_types) > 1:
+      sys.exit('CI mode can only allow one build type. '
+               'Remove --ci-mode flag to skip this check.')
+
   return UserInput(
     build_types=build_types,
     chosen_cujgroups=chosen_cujgroups,
     description=options.description,
     log_dir=Path(options.log_dir).resolve(),
-    targets=options.targets)
+    targets=options.targets,
+    ci_mode=options.ci_mode)
