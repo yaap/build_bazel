@@ -23,7 +23,7 @@ load("//build/bazel/rules/java:sdk_transition.bzl", "sdk_transition_attrs")
 def _kotlin_resources_impl(ctx):
     java_runtime = ctx.attr._runtime[java_common.JavaRuntimeInfo]
 
-    output_file = ctx.actions.declare_file("kt_resources.jar")
+    output_file = ctx.actions.declare_file(ctx.attr.name + "_kt_resources.jar")
 
     ctx.actions.run_shell(
         outputs = [output_file],
