@@ -87,6 +87,8 @@ def license_map(deps):
     license_by_label = dict()
     licensees = dict()
     for lic in depset(transitive = transitive_licenses).to_list():
+        if not LicenseInfo in lic:
+            continue
         label = lic[LicenseInfo].label.name
         if not label in license_by_label:
             license_by_label[label] = lic
