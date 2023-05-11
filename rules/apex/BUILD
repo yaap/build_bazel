@@ -12,6 +12,12 @@ load(":apex_mk_test.bzl", "apex_mk_test_suite")
 load(":apex_test.bzl", "apex_test_suite")
 
 string_setting(
+    name = "api_domain",
+    build_setting_default = "system",
+    visibility = ["//visibility:public"],
+)
+
+string_setting(
     name = "apex_name",
     build_setting_default = "",
     visibility = ["//visibility:public"],
@@ -40,6 +46,16 @@ bool_setting(
     name = "within_apex",
     build_setting_default = False,
     visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "system",
+    constraint_values = [
+        constants.ArchVariantToConstraints["android"],
+    ],
+    flag_values = {
+        ":api_domain": "system",
+    },
 )
 
 config_setting(
