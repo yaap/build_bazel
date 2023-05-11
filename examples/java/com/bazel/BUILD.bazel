@@ -15,7 +15,7 @@
 load("@rules_java//java:defs.bzl", "java_binary")
 load("//build/bazel/rules/java:import.bzl", "java_import")
 load("//build/bazel/rules/java:library.bzl", "java_library")
-load("//build/bazel/rules/kotlin:rules.bzl", "kt_jvm_library")
+load("//build/bazel/rules/kotlin:kt_jvm_library.bzl", "kt_jvm_library")
 
 package(default_applicable_licenses = ["//build/soong/licenses:Android-Apache-2.0"])
 
