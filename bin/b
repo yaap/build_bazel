@@ -37,7 +37,7 @@ for i in $@; do
 done
 
 function upload_metrics {
-   "$TOP/build/soong/soong_ui.bash" --upload-metrics-only $bazel_exit_code_string
+   "$TOP/build/soong/soong_ui.bash" --finalize-bazel-metrics $bazel_exit_code_string
 }
 trap upload_metrics EXIT
 
