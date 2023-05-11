@@ -33,6 +33,12 @@ https://cs.android.com/android/platform/superproject/+/master:build/soong/apex/a
 load("@bazel_skylib//lib:dicts.bzl", "dicts")
 load("//build/bazel/rules/apex:sdk_versions.bzl", "maybe_override_min_sdk_version")
 
+def _get_api_domain(apex_name, base_apex_name):
+    # AOSP and Google variants of apexes are part of the same API domain.
+    # Test apexes and source apexes are part of the same API domain.
+    # Return base_apex_name if it is not empty.
+    return base_apex_name or apex_name
+
 def _create_apex_configuration(settings, attr, additional = {}):
     min_sdk_version = maybe_override_min_sdk_version(
         attr.min_sdk_version,
@@ -44,6 +50,7 @@ def _create_apex_configuration(settings, attr, additional = {}):
         "//build/bazel/rules/apex:base_apex_name": attr.base_apex_name,  # Name of the base APEX, if exists
         "//build/bazel/rules/apex:min_sdk_version": min_sdk_version,
         "//build/bazel/rules/apex:within_apex": True,  # Building a APEX
+        "//build/bazel/rules/apex:api_domain": _get_api_domain(attr.name, attr.base_apex_name),
     }, additional)
 
 def _impl(settings, attr):
@@ -70,6 +77,7 @@ _TRANSITION_OUTPUTS = [
     "//build/bazel/rules/apex:within_apex",
     "//build/bazel/rules/apex:min_sdk_version",
     "//build/bazel/rules/apex:apex_direct_deps",
+    "//build/bazel/rules/apex:api_domain",
 ]
 
 apex_transition = transition(
