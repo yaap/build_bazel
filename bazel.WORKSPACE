@@ -127,6 +127,25 @@ local_repository(
     path = "prebuilts/bazel/linux-x86_64/remote_java_tools_linux",
 )
 
+# TODO(b/253667328): the below 3 repositories are all pointed to shim
+# repositories with targets that will cause failures if they are
+# actually depended on. Eventually we should properly vendor these
+# repositories.
+local_repository(
+    name = "remote_java_tools_darwin_x86_64",
+    path = "prebuilts/bazel/darwin-x86_64/remote_java_tools_darwin",
+)
+
+local_repository(
+    name = "remote_java_tools_darwin_arm64",
+    path = "prebuilts/bazel/darwin-x86_64/remote_java_tools_darwin",
+)
+
+local_repository(
+    name = "remote_java_tools_windows",
+    path = "prebuilts/bazel/darwin-x86_64/remote_java_tools_darwin",
+)
+
 # The following repository contains android_tools prebuilts.
 local_repository(
     name = "android_tools",
