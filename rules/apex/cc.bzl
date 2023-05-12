@@ -182,6 +182,9 @@ def _apex_cc_aspect_impl(target, ctx):
 
             # Mark this target as required from the system either via
             # the system partition, or another APEX, and propagate this list.
+            if CcStubLibrarySharedInfo not in target:
+                fail("Analysis of target: %s in apex: %s failed. This target does not provide CcStubLibrarySharedInfo. \
+This apex should likely use stubs of the target instead." % (target, ctx.attr._apex_name[BuildSettingInfo].value))
             source_library_label = target[CcStubLibrarySharedInfo].source_library_label
 
             # If a stub library is in the "provides" of the apex, it doesn't need to be in the "requires"
