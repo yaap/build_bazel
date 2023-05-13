@@ -160,7 +160,7 @@ def src(p: str) -> Path:
   return util.get_top_dir().joinpath(p)
 
 
-def modify_revert(file: Path, text: str = '//BOGUS line\n') -> CujGroup:
+def modify_revert(file: Path, text: str = f'//BOGUS {uuid.uuid4()}\n') -> CujGroup:
   """
   :param file: the file to be modified and reverted
   :param text: the text to be appended to the file to modify it
