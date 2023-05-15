@@ -56,6 +56,9 @@ test --test_output=errors
 common --experimental_sibling_repository_layout
 common --experimental_disable_external_package
 
+# Disable all repository_ctx.download calls.
+common --experimental_repository_disable_download
+
 # Increase refresh rate of command line UI for improved perceived responsiveness.
 common --show_progress_rate_limit=0.05
 
