@@ -36,8 +36,15 @@ load("//build/bazel/rules/apex:sdk_versions.bzl", "maybe_override_min_sdk_versio
 def _get_api_domain(apex_name, base_apex_name):
     # AOSP and Google variants of apexes are part of the same API domain.
     # Test apexes and source apexes are part of the same API domain.
+    # Override test apexes should return the api domain of the overriden test apex
     # Return base_apex_name if it is not empty.
-    return base_apex_name or apex_name
+    if base_apex_name:
+        # TODO (b/282058578): Deprecate this special handling.
+        # TODO: This does not handle special cases like test1_com.android.tzdata.
+        # This is fine for now since tzdata does not have native code.
+        return base_apex_name.lstrip("test_")
+
+    return apex_name
 
 def _create_apex_configuration(settings, attr, additional = {}):
     min_sdk_version = maybe_override_min_sdk_version(
