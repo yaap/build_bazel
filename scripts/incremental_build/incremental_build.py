@@ -66,8 +66,8 @@ def _prepare_env() -> (Mapping[str, str], str):
   return env, '\n'.join(pretty_env_str)
 
 
-def _build_file_sha() -> str:
-  build_file = util.get_out_dir().joinpath('soong/build.ninja')
+def _build_file_sha(target_product: str) -> str:
+  build_file = util.get_out_dir().joinpath(f'soong/build.{target_product}.ninja')
   if not build_file.exists():
     return '--'
   with open(build_file, mode="rb") as f:
@@ -77,8 +77,8 @@ def _build_file_sha() -> str:
     return h.hexdigest()[0:8]
 
 
-def _build_file_size() -> int:
-  build_file = util.get_out_dir().joinpath('soong/build.ninja')
+def _build_file_size(target_product: str) -> int:
+  build_file = util.get_out_dir().joinpath(f'soong/build.{target_product}.ninja')
   return os.path.getsize(build_file) if build_file.exists() else 0
 
 
@@ -92,6 +92,7 @@ def _build(build_type: ui.BuildType, run_dir: Path) -> (int, BuildInfo):
   logging.info('Command: %s', cmd)
   env, env_str = _prepare_env()
   ninja_log_file = util.get_out_dir().joinpath('.ninja_log')
+  target_product = env.get("TARGET_PRODUCT", "aosp_arm")
 
   def get_action_count() -> int:
     if not ninja_log_file.exists():
@@ -106,7 +107,7 @@ def _build(build_type: ui.BuildType, run_dir: Path) -> (int, BuildInfo):
         'prebuilts/build-tools/linux-x86/bin/ninja'),
       '-f',
       util.get_out_dir().joinpath(
-        f'combined-{env.get("TARGET_PRODUCT", "aosp_arm")}.ninja'),
+        f'combined-{target_product}.ninja'),
       '-t', 'recompact'],
       check=False, cwd=util.get_top_dir(), shell=False,
       stdout=f, stderr=f)
@@ -127,8 +128,8 @@ def _build(build_type: ui.BuildType, run_dir: Path) -> (int, BuildInfo):
 
   return (p.returncode, {
       'build_type': build_type.to_flag(),
-      'build.ninja': _build_file_sha(),
-      'build.ninja.size': _build_file_size(),
+      'build.ninja': _build_file_sha(target_product),
+      'build.ninja.size': _build_file_size(target_product),
       'targets': ' '.join(ui.get_user_input().targets),
       'log': str(run_dir.relative_to(ui.get_user_input().log_dir)),
       'actions': action_count_after - action_count_before,
