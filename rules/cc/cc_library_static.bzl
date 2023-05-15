@@ -221,6 +221,24 @@ def cc_library_static(
         **common_attrs
     )
 
+    tidy_providing_deps = []
+    if shared_linking:
+        tidy_providing_deps = (
+            deps +
+            implementation_deps +
+            whole_archive_deps +
+            implementation_whole_archive_deps +
+            runtime_deps +
+            dynamic_deps +
+            implementation_dynamic_deps
+        )
+    else:
+        # We should only be running tidy actions for object files on which
+        # we depend. For static libraries, only whole_archive_deps actually
+        # create a linking dependency; other dependencies are header-only,
+        # so we shouldn't try to run their tidy actions.
+        tidy_providing_deps = whole_archive_deps + implementation_whole_archive_deps
+
     # Root target to handle combining of the providers of the language-specific targets.
     _cc_library_combiner(
         name = name,
@@ -257,6 +275,7 @@ def cc_library_static(
         tidy_disabled_srcs = tidy_disabled_srcs,
         tidy_timeout_srcs = tidy_timeout_srcs,
         tidy_gen_header_filter = tidy_gen_header_filter,
+        tidy_providing_deps = tidy_providing_deps,
     )
 
 def _generate_tidy_files(ctx):
@@ -311,9 +330,10 @@ def _generate_tidy_files(ctx):
 
 def _generate_tidy_actions(ctx):
     transitive_tidy_files = []
-    for ts in get_dep_targets(ctx.attr, predicate = lambda t: ClangTidyInfo in t).values():
-        for t in ts:
-            transitive_tidy_files.append(t[ClangTidyInfo].transitive_tidy_files)
+    for attr, attr_targets in get_dep_targets(ctx.attr, predicate = lambda t: ClangTidyInfo in t).items():
+        if attr == "tidy_providing_deps":
+            for t in attr_targets:
+                transitive_tidy_files.append(t[ClangTidyInfo].transitive_tidy_files)
 
     with_tidy = ctx.attr._with_tidy[BuildSettingInfo].value
     allow_local_tidy_true = ctx.attr._allow_local_tidy_true[BuildSettingInfo].value
@@ -614,6 +634,7 @@ _cc_library_combiner = rule(
         "tidy_disabled_srcs": attr.label_list(allow_files = True),
         "tidy_timeout_srcs": attr.label_list(allow_files = True),
         "tidy_gen_header_filter": attr.bool(),
+        "tidy_providing_deps": attr.label_list(),
         "_clang_tidy_sh": attr.label(
             default = Label("@//prebuilts/clang/host/linux-x86:clang-tidy.sh"),
             allow_single_file = True,
