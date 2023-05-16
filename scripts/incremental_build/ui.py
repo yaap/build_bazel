@@ -90,21 +90,21 @@ def get_user_input() -> UserInput:
       if len(matching_cuj_groups):
         return matching_cuj_groups
     raise argparse.ArgumentError(
-      argument=None,
-      message=f'Invalid input: "{input_str}" '
-              f'expected an index <= {len(cujgroups)} '
-              'or a regex pattern for a CUJ descriptions')
+        argument=None,
+        message=f'Invalid input: "{input_str}" '
+                f'expected an index <= {len(cujgroups)} '
+                'or a regex pattern for a CUJ descriptions')
 
   # importing locally here to avoid chances of cyclic import
   import incremental_build
   p = argparse.ArgumentParser(
-    formatter_class=argparse.RawTextHelpFormatter,
-    description='' +
-                textwrap.dedent(incremental_build.__doc__) +
-                textwrap.dedent(incremental_build.main.__doc__))
+      formatter_class=argparse.RawTextHelpFormatter,
+      description='' +
+                  textwrap.dedent(incremental_build.__doc__) +
+                  textwrap.dedent(incremental_build.main.__doc__))
 
   cuj_list = '\n'.join(
-    [f'{i:2}: {cujgroup}' for i, cujgroup in enumerate(cujgroups)])
+      [f'{i:2}: {cujgroup}' for i, cujgroup in enumerate(cujgroups)])
   p.add_argument('-c', '--cujs', nargs='+',
                  type=validate_cujgroups,
                  help='Index number(s) for the CUJ(s) from the following list. '
@@ -121,7 +121,7 @@ def get_user_input() -> UserInput:
   p.add_argument('-v', '--verbosity', choices=log_levels, default='INFO',
                  help='Log level. Defaults to %(default)s')
   default_log_dir = util.get_top_dir().parent.joinpath(
-    f'timing-{date.today().strftime("%b%d")}')
+      f'timing-{date.today().strftime("%b%d")}')
   p.add_argument('-l', '--log-dir', type=Path, default=default_log_dir,
                  help=textwrap.dedent(f'''
                  Directory for timing logs. Defaults to %(default)s
@@ -132,8 +132,8 @@ def get_user_input() -> UserInput:
                   3 To view column headers:
                     {util.get_csv_columns_cmd(default_log_dir)}''').strip())
   def_build_types = [BuildType.SOONG_ONLY,
-                        BuildType.MIXED_PROD,
-                        BuildType.MIXED_STAGING]
+                     BuildType.MIXED_PROD,
+                     BuildType.MIXED_STAGING]
   p.add_argument('-b', '--build-types', nargs='+',
                  type=BuildType.from_flag,
                  default=[def_build_types],
@@ -184,7 +184,7 @@ def get_user_input() -> UserInput:
     raise RuntimeError(f'bazel labels can not be used with {non_b}')
 
   pretty_str = '\n'.join(
-    [f'{i:2}: {cujgroups[i]}' for i in chosen_cujgroups])
+      [f'{i:2}: {cujgroups[i]}' for i in chosen_cujgroups])
   logging.info(f'%d CUJs chosen:\n%s', len(chosen_cujgroups), pretty_str)
 
   if not options.ignore_repo_diff and util.has_uncommitted_changes():
@@ -206,6 +206,10 @@ def get_user_input() -> UserInput:
     if response.upper() != 'Y':
       sys.exit(1)
 
+  if log_dir.is_relative_to(util.get_top_dir()):
+    sys.exit(f" choose a log_dir outside the source tree; "
+             f"{options.log_dir}' resolves to {log_dir}")
+
   if options.ci_mode:
     if len(chosen_cujgroups) > 1:
       sys.exit('CI mode can only allow one cuj group. '
@@ -215,9 +219,9 @@ def get_user_input() -> UserInput:
                'Remove --ci-mode flag to skip this check.')
 
   return UserInput(
-    build_types=build_types,
-    chosen_cujgroups=chosen_cujgroups,
-    description=options.description,
-    log_dir=Path(options.log_dir).resolve(),
+      build_types=build_types,
+      chosen_cujgroups=chosen_cujgroups,
+      description=options.description,
+      log_dir=Path(options.log_dir).resolve(),
     targets=options.targets,
     ci_mode=options.ci_mode)
