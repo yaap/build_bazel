@@ -41,6 +41,7 @@ shift $((OPTIND - 1))
 readonly -a build_types=("$@")
 
 log_dir=${log_dir:-"$TOP/../timing-$(date +%b%d-%H%M)"}
+log_dir=$(realpath "$log_dir")
 
 function build() {
   date
