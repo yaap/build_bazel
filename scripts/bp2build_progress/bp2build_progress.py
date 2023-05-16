@@ -165,7 +165,7 @@ def get_transitive_unconverted_deps(
   for d in dep.direct_deps:
     if d.is_converted_or_skipped(converted):
       continue
-    unconverted_deps.add(d.short_string(converted))
+    unconverted_deps.add(d)
     transitive = get_transitive_unconverted_deps(cache, d, modules, converted)
     unconverted_deps = unconverted_deps.union(transitive)
   cache[module] = unconverted_deps
@@ -198,7 +198,7 @@ def generate_report_data(modules: Dict[ModuleInfo, DepInfo],
   for module, dep_info in sorted(modules.items()):
     deps = dep_info.direct_deps
     unconverted_deps = set(
-        dep.short_string(converted) for dep in deps if not dep.is_converted_or_skipped(converted))
+        dep for dep in deps if not dep.is_converted_or_skipped(converted))
 
     unconverted_transitive_deps = get_transitive_unconverted_deps(transitive_deps_by_dep_info, module, modules, converted)
 
@@ -208,7 +208,7 @@ def generate_report_data(modules: Dict[ModuleInfo, DepInfo],
         module.kind,
         module.dirname,
         module.created_by,
-        len(deps),
+        len(dep_info.all_deps()),
         module.is_converted(converted),
     )
 
@@ -218,9 +218,9 @@ def generate_report_data(modules: Dict[ModuleInfo, DepInfo],
     if not module.is_converted_or_skipped(converted) or (
         show_converted and not module.is_converted_or_skipped(set())):
       if show_converted:
-        full_deps = set(f"{dep.short_string(converted)}" for dep in deps)
+        full_deps = set(dep for dep in deps)
         blocked_modules[module].update(full_deps)
-        full_deps = set(f"{dep.short_string(converted)}" for dep in dep_info.all_deps())
+        full_deps = set(dep for dep in dep_info.all_deps())
         blocked_modules_transitive[module].update(full_deps)
       else:
         blocked_modules[module].update(unconverted_deps)
@@ -263,7 +263,7 @@ def generate_proto(report_data, file_name):
         name=module.name,
         directory=module.dirname,
         type=module.kind,
-        unconverted_deps=unconverted_deps,
+        unconverted_deps={d.name for d in unconverted_deps},
         num_deps=module.num_deps,
     )
 
@@ -309,6 +309,7 @@ def generate_report(report_data):
       report_lines.append(f"\n{count} unconverted transitive deps remaining:")
       current_count = count
     unconverted_deps = report_data.blocked_modules.get(module, set())
+    unconverted_deps = set(d.short_string(report_data.converted) for d in unconverted_deps)
     report_lines.append("{module} direct deps: {deps}".format(
         module=module, deps=", ".join(sorted(unconverted_deps))))
 
@@ -318,7 +319,7 @@ def generate_report(report_data):
       ((len(unconverted), dep)
        for dep, unconverted in report_data.all_unconverted_modules.items()),
       reverse=True):
-    report_lines.append("%s: blocking %d modules" % (dep, count))
+    report_lines.append("%s: blocking %d modules" % (dep.short_string(report_data.converted), count))
 
   report_lines.append("\n")
   report_lines.append("# Dirs with unconverted modules:\n\n{}".format("\n".join(
