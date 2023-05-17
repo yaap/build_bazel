@@ -38,7 +38,6 @@ build_for_device BUILD_TARGETS TEST_TARGETS
 declare -a host_targets
 host_targets+=( "${BUILD_TARGETS[@]}" )
 host_targets+=( "${TEST_TARGETS[@]}" )
-host_targets+=( "${HOST_INCOMPATIBLE_TARGETS[@]}" )
 host_targets+=( "${HOST_ONLY_TEST_TARGETS[@]}" )
 
 build_for_host ${host_targets[@]}
