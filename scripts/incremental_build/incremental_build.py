@@ -37,7 +37,6 @@ import ui
 import util
 
 MAX_RUN_COUNT: int = 5
-FIRST_RUN_AFTER_WARMUP: int = MAX_RUN_COUNT + 1
 
 
 @functools.cache
@@ -213,8 +212,10 @@ def main():
   '''))
 
   run_dir_gen = util.next_path(user_input.log_dir.joinpath(util.RUN_DIR_PREFIX))
+  stop_building = False
 
   def run_cuj_group(cuj_group: cuj_catalog.CujGroup):
+    nonlocal stop_building
     for cujstep in cuj_group.steps:
       desc = cujstep.verb
       desc = f'{desc} {cuj_group.description}'.strip()
@@ -222,16 +223,22 @@ def main():
       logging.info('START %s %s [%s]', build_type.name,
                    ' '.join(user_input.targets), desc)
       cujstep.apply_change()
-      run = -1
       for run in range(0, MAX_RUN_COUNT):
+        if stop_building:
+          logging.warning('SKIPPING BUILD')
+          break
         run_dir = next(run_dir_gen)
         build_info = _run_cuj(run_dir, build_type, cujstep, desc, run)
-        perf_metrics.archive_run(run_dir, build_info)
+        if user_input.ci_mode:
+          if build_info['build_result'] == 'FAILED':
+            sys.exit('Failed CI build runs detected!')
+          if cuj_group != cuj_catalog.Warmup:
+            stop_building = True
+            logs_dir_for_ci = user_input.log_dir.parent.joinpath('logs')
+            perf_metrics.archive_run(logs_dir_for_ci, build_info)
         if build_info['ninja_explains'] == 0:
           break
-      if run != -1 and desc == 'no change WARMUP':
-        global FIRST_RUN_AFTER_WARMUP
-        FIRST_RUN_AFTER_WARMUP = run + 2
+        perf_metrics.archive_run(run_dir, build_info)
       logging.info(' DONE %s %s [%s]', build_type.name,
                    ' '.join(user_input.targets), desc)
 
@@ -240,18 +247,10 @@ def main():
     run_cuj_group(cuj_catalog.Warmup)
     for i in user_input.chosen_cujgroups:
       run_cuj_group(cuj_catalog.get_cujgroups()[i])
-
   perf_metrics.tabulate_metrics_csv(user_input.log_dir)
   perf_metrics.display_tabulated_metrics(user_input.log_dir)
-  isBuildSuccessful = pretty.summarize_and_verify_metrics(user_input.log_dir)
+  pretty.summarize_metrics(user_input.log_dir)
   pretty.display_summarized_metrics(user_input.log_dir)
-  if user_input.ci_mode:
-    #TODO(b/280492115): Reduce the time and resource of CUJ CI run
-    if isBuildSuccessful:
-      perf_metrics.copy_first_metrics_after_warmup(user_input.log_dir,
-      user_input.log_dir.parent.joinpath('logs'), FIRST_RUN_AFTER_WARMUP)
-    else:
-      sys.exit('Failed CI build runs detected!')
 
 
 if __name__ == '__main__':
