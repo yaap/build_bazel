@@ -61,6 +61,7 @@ config_setting(
     ],
     flag_values = {
         ":api_domain": "system",
+        ":within_apex": "False",
     },
 )
 
