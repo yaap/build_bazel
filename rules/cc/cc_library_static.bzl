@@ -16,6 +16,7 @@ load("@bazel_skylib//lib:paths.bzl", "paths")
 load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 load("@bazel_tools//tools/build_defs/cc:action_names.bzl", "ACTION_NAMES")
 load("@bazel_tools//tools/cpp:toolchain_utils.bzl", "find_cpp_toolchain")
+load("@soong_injection//cc_toolchain:config_constants.bzl", config_constants = "constants")
 load("//build/bazel/rules:common.bzl", "get_dep_targets")
 load(
     ":cc_library_common.bzl",
@@ -116,6 +117,11 @@ def cc_library_static(
             "non_external_compiler_flags",
             "-external_compiler_flags",
         ]
+
+    for allowed_project in config_constants.WarningAllowedProjects:
+        if native.package_name().startswith(allowed_project):
+            toolchain_features += ["-warnings_as_errors"]
+            break
 
     if rtti:
         toolchain_features.append("rtti")
