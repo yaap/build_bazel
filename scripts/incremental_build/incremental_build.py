@@ -241,14 +241,17 @@ def main():
     for i in user_input.chosen_cujgroups:
       run_cuj_group(cuj_catalog.get_cujgroups()[i])
 
-  if user_input.ci_mode:
-    #TODO(b/280492115): Reduce the time and resource of CUJ CI run
-    perf_metrics.copy_first_metrics_after_warmup(user_input.log_dir,
-    user_input.log_dir.parent.joinpath('logs'), FIRST_RUN_AFTER_WARMUP)
   perf_metrics.tabulate_metrics_csv(user_input.log_dir)
   perf_metrics.display_tabulated_metrics(user_input.log_dir)
-  pretty.summarize_metrics(user_input.log_dir)
+  isBuildSuccessful = pretty.summarize_and_verify_metrics(user_input.log_dir)
   pretty.display_summarized_metrics(user_input.log_dir)
+  if user_input.ci_mode:
+    #TODO(b/280492115): Reduce the time and resource of CUJ CI run
+    if isBuildSuccessful:
+      perf_metrics.copy_first_metrics_after_warmup(user_input.log_dir,
+      user_input.log_dir.parent.joinpath('logs'), FIRST_RUN_AFTER_WARMUP)
+    else:
+      sys.exit('Failed CI build runs detected!')
 
 
 if __name__ == '__main__':
