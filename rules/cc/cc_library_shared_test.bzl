@@ -23,6 +23,7 @@ load(
 )
 load("//build/bazel/rules/test_common:flags.bzl", "action_flags_present_only_for_mnemonic_test")
 load("//build/bazel/rules/test_common:paths.bzl", "get_output_and_package_dir_based_path", "get_package_dir_based_path")
+load(":cc_binary_test.bzl", "cc_bad_linkopts_test")
 load(":cc_library_common_test.bzl", "target_provides_androidmk_info_test")
 
 def _cc_library_shared_suffix_test_impl(ctx):
@@ -903,6 +904,22 @@ def _cc_library_shared_links_whole_archive_deps_separately():
 
     return test_name
 
+# Test that an error is raised if a user requests a library that is not available in the toolchain.
+def _cc_library_shared_bad_linkopts_test():
+    subject_name = "cc_library_shared_bad_linkopts"
+    test_name = subject_name + "_test"
+
+    cc_library_shared(
+        name = subject_name,
+        linkopts = ["-lunknown"],
+        tags = ["manual"],
+    )
+    cc_bad_linkopts_test(
+        name = test_name,
+        target_under_test = subject_name,
+    )
+    return test_name
+
 def cc_library_shared_test_suite(name):
     native.genrule(name = "cc_library_shared_hdr", cmd = "null", outs = ["cc_shared_f.h"], tags = ["manual"])
 
@@ -926,5 +943,6 @@ def cc_library_shared_test_suite(name):
             _cc_library_minimal_runtime_linked_from_dep(),
             _cc_library_minimal_runtime_linked(),
             _cc_library_shared_links_whole_archive_deps_separately(),
+            _cc_library_shared_bad_linkopts_test(),
         ] + _cc_library_shared_provides_androidmk_info(),
     )

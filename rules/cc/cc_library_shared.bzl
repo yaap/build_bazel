@@ -18,6 +18,7 @@ load(
     ":cc_library_common.bzl",
     "CcAndroidMkInfo",
     "add_lists_defaulting_to_none",
+    "check_valid_ldlibs",
     "parse_sdk_version",
     "system_dynamic_deps_defaults",
 )
@@ -302,6 +303,7 @@ def cc_library_shared(
         runtime_deps = runtime_deps,
         abi_dump = abi_dump_name,
         fdo_profile = fdo_profile,
+        linkopts = linkopts,
         tags = tags,
     )
 
@@ -366,6 +368,8 @@ CcSharedLibraryOutputInfo = provider(
 )
 
 def _cc_library_shared_proxy_impl(ctx):
+    check_valid_ldlibs(ctx, ctx.attr.linkopts)
+
     # Using a "deps" label_list instead of a single mandatory label attribute
     # is a hack to support aspect propagation of graph_aspect of the native
     # cc_shared_library. The aspect will only be applied and propagated along
@@ -485,6 +489,19 @@ _cc_library_shared_proxy = rule(
             executable = True,
             allow_single_file = True,
             default = "//prebuilts/clang/host/linux-x86:llvm-readelf",
+        ),
+        "linkopts": attr.string_list(default = []),  # Used for validation
+        "_android_constraint": attr.label(
+            default = Label("//build/bazel/platforms/os:android"),
+        ),
+        "_darwin_constraint": attr.label(
+            default = Label("//build/bazel/platforms/os:darwin"),
+        ),
+        "_linux_constraint": attr.label(
+            default = Label("//build/bazel/platforms/os:linux"),
+        ),
+        "_windows_constraint": attr.label(
+            default = Label("//build/bazel/platforms/os:windows"),
         ),
     },
     provides = [CcAndroidMkInfo, CcInfo, CcTocInfo],
