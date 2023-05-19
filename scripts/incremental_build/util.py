@@ -39,7 +39,7 @@ def _is_important(column) -> bool:
       'log', 'actions', 'time',
       'soong/soong', 'bp2build/', 'symlink_forest/', r'soong_build/\*',
       r'soong_build/\*\.bazel', 'bp2build/', 'kati/kati build', 'ninja/ninja'
-      }
+  }
   for pattern in patterns:
     if re.fullmatch(pattern, column):
       return True
@@ -105,7 +105,7 @@ def get_default_log_dir() -> Path:
 
 def is_interactive_shell() -> bool:
   return sys.__stdin__.isatty() and sys.__stdout__.isatty() \
-         and sys.__stderr__.isatty()
+    and sys.__stderr__.isatty()
 
 
 # see test_next_path_helper() for examples
@@ -154,24 +154,6 @@ def is_ninja_dry_run(ninja_args: str = None) -> bool:
     ninja_args = os.environ.get('NINJA_ARGS') or ''
   ninja_dry_run = re.compile(r'(?:^|\s)-n\b')
   return ninja_dry_run.search(ninja_args) is not None
-
-
-def count_explanations(process_log_file: Path) -> int:
-  """
-  Builds are run with '-d explain' flag and ninja's explanations for running
-  build statements (except for phony outputs) are counted. The explanations
-  help debugging. The count is an over-approximation of actions run, but it
-  will be ZERO for a no-op build.
-  """
-  explanations = 0
-  pattern = re.compile(
-      r'^ninja explain:(?! edge with output .* is a phony output,'
-      r' so is always dirty$)')
-  with open(process_log_file) as f:
-    for line in f:
-      if pattern.match(line):
-        explanations += 1
-  return explanations
 
 
 def is_git_repo(p: Path) -> bool:
@@ -264,7 +246,7 @@ def hhmmss(t: datetime.timedelta) -> str:
 def period_to_seconds(s: str) -> float:
   """converts a time period into seconds. The input is expected to be in the
   format used by hhmmss().
-  Example: 02:04.000 -> 125.0
+  Example: 02:04 -> 125
   See unit test for more examples."""
   if s == '':
     return 0.0
