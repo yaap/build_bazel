@@ -280,6 +280,40 @@ def _cc_binary_provides_androidmk_info():
         linux_test_name,
     ]
 
+def _cc_bad_linkopts_test_impl(ctx):
+    env = analysistest.begin(ctx)
+    if ctx.target_platform_has_constraint(ctx.attr._android_constraint[platform_common.ConstraintValueInfo]):
+        asserts.expect_failure(env, "Library requested via -l is not supported for device builds. Use implementation_deps instead.")
+    else:
+        asserts.expect_failure(env, "Host library(s) requested via -l is not available in the toolchain.")
+    return analysistest.end(env)
+
+cc_bad_linkopts_test = analysistest.make(
+    _cc_bad_linkopts_test_impl,
+    expect_failure = True,
+    attrs = {
+        "_android_constraint": attr.label(
+            default = Label("//build/bazel/platforms/os:android"),
+        ),
+    },
+)
+
+# Test that an error is raised if a user requests a library that is not available in the toolchain.
+def _cc_binary_bad_linkopts():
+    subject_name = "cc_binary_bad_linkopts"
+    test_name = subject_name + "_test"
+
+    cc_binary(
+        name = subject_name,
+        linkopts = ["-lunknown"],
+        tags = ["manual"],
+    )
+    cc_bad_linkopts_test(
+        name = test_name,
+        target_under_test = subject_name,
+    )
+    return test_name
+
 def cc_binary_test_suite(name):
     native.test_suite(
         name = name,
@@ -291,5 +325,6 @@ def cc_binary_test_suite(name):
             _cc_binary_strip_all(),
             _cc_binary_suffix(),
             _cc_binary_empty_suffix(),
+            _cc_binary_bad_linkopts(),
         ] + _cc_binary_provides_androidmk_info(),
     )
