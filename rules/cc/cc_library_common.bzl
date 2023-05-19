@@ -15,6 +15,7 @@
 load("@bazel_tools//tools/cpp:toolchain_utils.bzl", "find_cpp_toolchain")
 load("@soong_injection//android:constants.bzl", android_constants = "constants")
 load("@soong_injection//api_levels:platform_versions.bzl", "platform_versions")
+load("@soong_injection//cc_toolchain:config_constants.bzl", cc_constants = "constants")
 load("//build/bazel/rules:common.bzl", "strip_bp2build_label_suffix")
 load("//build/bazel/rules/common:api.bzl", "api")
 
@@ -423,3 +424,31 @@ def create_cc_prebuilt_library_info(ctx, lib_to_link):
         ),
         linker_input,
     ]
+
+# Check that -l<lib> requested via linkopts is supported by the toolchain.
+def check_valid_ldlibs(ctx, linkopts):
+    libs_in_linkopts = [lo for lo in linkopts if lo.startswith("-l")]
+    if not libs_in_linkopts:
+        return
+
+    # Android
+    if ctx.target_platform_has_constraint(ctx.attr._android_constraint[platform_common.ConstraintValueInfo]):
+        fail("Library requested via -l is not supported for device builds. Use implementation_deps instead.")
+
+    libs_available = []
+
+    # linux
+    if ctx.target_platform_has_constraint(ctx.attr._linux_constraint[platform_common.ConstraintValueInfo]):
+        libs_available = cc_constants.LinuxAvailableLibraries
+
+    # darwin
+    if ctx.target_platform_has_constraint(ctx.attr._darwin_constraint[platform_common.ConstraintValueInfo]):
+        libs_available = cc_constants.DarwinAvailableLibraries
+
+    # windows
+    if ctx.target_platform_has_constraint(ctx.attr._windows_constraint[platform_common.ConstraintValueInfo]):
+        libs_available = cc_constants.WindowsAvailableLibraries
+
+    bad_libs = [lib for lib in libs_in_linkopts if lib not in libs_available]
+    if bad_libs:
+        fail("Host library(s) requested via -l is not available in the toolchain. Got: %s, Supported: %s" % (bad_libs, libs_available))
