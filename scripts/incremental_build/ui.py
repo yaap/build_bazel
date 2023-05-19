@@ -223,5 +223,5 @@ def get_user_input() -> UserInput:
       chosen_cujgroups=chosen_cujgroups,
       description=options.description,
       log_dir=Path(options.log_dir).resolve(),
-    targets=options.targets,
-    ci_mode=options.ci_mode)
+      targets=options.targets,
+      ci_mode=options.ci_mode)
