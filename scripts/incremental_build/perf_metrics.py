@@ -58,10 +58,10 @@ SOONG_BUILD_PB = 'soong_build_metrics.pb'
 BP2BUILD_PB = 'bp2build_metrics.pb'
 
 
-def _copy_pbs(source: Path, d: Path):
-  soong_pb = source.joinpath(SOONG_PB)
-  soong_build_pb = source.joinpath(SOONG_BUILD_PB)
-  bp2build_pb = source.joinpath(BP2BUILD_PB)
+def _copy_pbs_to(d: Path):
+  soong_pb = util.get_out_dir().joinpath(SOONG_PB)
+  soong_build_pb = util.get_out_dir().joinpath(SOONG_BUILD_PB)
+  bp2build_pb = util.get_out_dir().joinpath(BP2BUILD_PB)
   if soong_pb.exists():
     shutil.copy(soong_pb, d.joinpath(SOONG_PB))
   if soong_build_pb.exists():
@@ -69,13 +69,9 @@ def _copy_pbs(source: Path, d: Path):
   if bp2build_pb.exists():
     shutil.copy(bp2build_pb, d.joinpath(BP2BUILD_PB))
 
-def copy_first_metrics_after_warmup(source: Path, d: Path, run: int):
-  first_run_after_warmup = util.RUN_DIR_PREFIX + '-' + str(run)
-  first_run_after_warmup_path = source.joinpath(first_run_after_warmup)
-  _copy_pbs(first_run_after_warmup_path, d)
 
 def archive_run(d: Path, build_info: dict[str, any]):
-  _copy_pbs(util.get_out_dir(), d)
+  _copy_pbs_to(d)
   with open(d.joinpath(util.BUILD_INFO_JSON), 'w') as f:
     json.dump(build_info, f, indent=True)
 
