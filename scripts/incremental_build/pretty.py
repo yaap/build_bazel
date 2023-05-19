@@ -60,9 +60,7 @@ def _get_build_types(xs: list[dict]) -> list[str]:
   return build_types
 
 
-def summarize_and_verify_metrics(log_dir: Path) -> bool:
-  """Summarize the metrics and return whether all build runs are successful"""
-  isBuildSuccessful = True
+def summarize_metrics(log_dir: Path):
   filename = log_dir if log_dir.is_file() else log_dir.joinpath(
       util.METRICS_TABLE)
   with open(filename) as f:
@@ -72,7 +70,6 @@ def summarize_and_verify_metrics(log_dir: Path) -> bool:
   for line in csv_lines:
     if line["build_result"] == "FAILED":
       logging.warning(f"{line['description']} / {line['build_type']}")
-      isBuildSuccessful = False
     else:
       lines.append(line)
 
@@ -101,7 +98,6 @@ def summarize_and_verify_metrics(log_dir: Path) -> bool:
 
   with open(log_dir.joinpath(util.SUMMARY_TABLE), mode='wt') as f:
     write_table(f, rows)
-  return isBuildSuccessful
 
 
 def display_summarized_metrics(log_dir: Path):
