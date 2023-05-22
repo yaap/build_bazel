@@ -31,6 +31,7 @@ https://cs.android.com/android/platform/superproject/+/master:build/soong/apex/a
 """
 
 load("@bazel_skylib//lib:dicts.bzl", "dicts")
+load("@bazel_skylib//lib:collections.bzl", "collections")
 load("//build/bazel/rules/apex:sdk_versions.bzl", "maybe_override_min_sdk_version")
 
 def _get_api_domain(apex_name, base_apex_name):
@@ -71,7 +72,7 @@ def _impl(settings, attr):
     direct_deps += [str(dep) for dep in attr.binaries]
 
     return _create_apex_configuration(settings, attr, {
-        "//build/bazel/rules/apex:apex_direct_deps": direct_deps,
+        "//build/bazel/rules/apex:apex_direct_deps": collections.uniq(sorted(direct_deps)),
     })
 
 _TRANSITION_INPUTS = [
@@ -126,7 +127,7 @@ def _impl_shared_lib_transition_32(settings, attr):
     old_platform = str(settings["//command_line_option:platforms"][0])
 
     return _create_apex_configuration(settings, attr, {
-        "//build/bazel/rules/apex:apex_direct_deps": direct_deps,
+        "//build/bazel/rules/apex:apex_direct_deps": collections.uniq(sorted(direct_deps)),
         "//command_line_option:platforms": old_platform + "_secondary",
     })
 
@@ -147,7 +148,7 @@ def _impl_shared_lib_transition_64(settings, attr):
     # we only read the value of native_shared_libs_64 when the target
     # is 64-bit already
     return _create_apex_configuration(settings, attr, {
-        "//build/bazel/rules/apex:apex_direct_deps": direct_deps,
+        "//build/bazel/rules/apex:apex_direct_deps": collections.uniq(sorted(direct_deps)),
     })
 
 shared_lib_transition_64 = transition(
