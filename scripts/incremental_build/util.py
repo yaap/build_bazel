@@ -69,7 +69,7 @@ def get_cmd_to_display_tabulated_metrics(d: Path) -> str:
 
   columns: list[int] = [i for i, h in enumerate(headers) if _is_important(h)]
   f = ','.join(str(i + 1) for i in columns)
-  return f'grep -v rebuild- "{csv_file}" | grep -v FAILED | ' \
+  return f'grep -v rebuild- "{csv_file}" | grep -v WARMUP | grep -v FAILED | ' \
          f'cut -d, -f{f} | column -t -s,'
 
 
