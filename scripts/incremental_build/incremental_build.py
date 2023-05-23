@@ -211,7 +211,8 @@ def main():
           if cuj_group != cuj_catalog.Warmup:
             stop_building = True
             logs_dir_for_ci = user_input.log_dir.parent.joinpath('logs')
-            perf_metrics.archive_run(logs_dir_for_ci, build_info)
+            if logs_dir_for_ci.exists():
+              perf_metrics.archive_run(logs_dir_for_ci, build_info)
         perf_metrics.archive_run(run_dir, build_info)
         if build_info['actions'] == 0:
           # build has stabilized
