@@ -220,7 +220,7 @@ def main():
       desc = cujstep.verb
       desc = f'{desc} {cuj_group.description}'.strip()
       desc = f'{desc} {user_input.description}'.strip()
-      logging.info('START %s %s [%s]', build_type.name,
+      logging.info('<<<<< %s %s [%s] <<<<<', build_type.name,
                    ' '.join(user_input.targets), desc)
       cujstep.apply_change()
       for run in range(0, MAX_RUN_COUNT):
@@ -239,7 +239,7 @@ def main():
         if build_info['ninja_explains'] == 0:
           break
         perf_metrics.archive_run(run_dir, build_info)
-      logging.info(' DONE %s %s [%s]', build_type.name,
+      logging.info('>>>>> %s %s [%s] >>>>>', build_type.name,
                    ' '.join(user_input.targets), desc)
 
   for build_type in user_input.build_types:
@@ -254,5 +254,8 @@ def main():
 
 
 if __name__ == '__main__':
-  logging.root.setLevel(logging.INFO)
+  logging.basicConfig(
+      format='%(asctime)s %(levelname)-8s %(message)s',
+      level=logging.INFO,
+      datefmt='%H:%M:%S')
   main()
