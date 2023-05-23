@@ -13,22 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""A json-module-graph postprocessing script to generate a bp2build progress tracker.
-
-Usage:
-  b run :bp2build_progress [report|graph] -m <module name>
-
-Example:
-
-  To generate a report on the `adbd` module, run:
-    b run //build/bazel/scripts/bp2build_progress:bp2build_progress \
-      -- report -m <module-name>
-
-  To generate a graph on the `adbd` module, run:
-    b run //build/bazel/scripts/bp2build_progress:bp2build_progress \
-      -- graph -m adbd > /tmp/graph.in && \
-      dot -Tpng -o /tmp/graph.png /tmp/graph.in
-"""
 
 import argparse
 import collections
@@ -536,10 +520,12 @@ def main():
       action="store_true",
       help="whether to run Soong in a banchan configuration rather than lunch",
   )
+  # TODO(b/283512659): Fix the relative path bug and update the README file
   parser.add_argument(
       "--proto-file",
       help="Path to write proto output",
   )
+  # TODO(b/283512659): Fix the relative path bug and update the README file
   parser.add_argument(
       "--out-file",
       "-o",
