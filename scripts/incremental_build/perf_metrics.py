@@ -237,8 +237,8 @@ def tabulate_metrics_csv(log_dir: Path):
     f.writelines(f'{line}\n' for line in lines)
 
 
-def display_tabulated_metrics(log_dir: Path):
-  cmd_str = util.get_cmd_to_display_tabulated_metrics(log_dir)
+def display_tabulated_metrics(log_dir: Path, ci_mode: bool):
+  cmd_str = util.get_cmd_to_display_tabulated_metrics(log_dir, ci_mode)
   output = subprocess.check_output(cmd_str, shell=True, text=True)
   logging.info(textwrap.dedent(f'''
   %s
