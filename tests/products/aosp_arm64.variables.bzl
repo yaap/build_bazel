@@ -225,7 +225,7 @@ variables = json.decode('''{
     "BuildBrokenClangProperty": false,
     "BuildBrokenClangAsFlags": false,
     "BuildBrokenClangCFlags": false,
-    "BuildBrokenDepfile": false,
+    "GenruleSandboxing": false,
     "BuildBrokenEnforceSyspropOwner": false,
     "BuildBrokenTrebleSyspropNeverallow": false,
     "BuildBrokenUsesSoongPython2Modules": false,
