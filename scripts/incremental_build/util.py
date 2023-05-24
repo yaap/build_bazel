@@ -55,7 +55,7 @@ def get_csv_columns_cmd(d: Path) -> str:
   return f'head -n 1 "{csv_file.absolute()}" | sed "s/,/\\n/g" | nl'
 
 
-def get_cmd_to_display_tabulated_metrics(d: Path) -> str:
+def get_cmd_to_display_tabulated_metrics(d: Path, ci_mode: bool) -> str:
   """
   :param d: the log directory
   :return: a quick shell command to view some collected metrics
@@ -68,6 +68,11 @@ def get_cmd_to_display_tabulated_metrics(d: Path) -> str:
       headers = reader.fieldnames or []
 
   columns: list[int] = [i for i, h in enumerate(headers) if _is_important(h)]
+  if ci_mode:
+    # ci mode contains all information about the top level events
+    for i, h in enumerate(headers):
+      if re.match(r'^\w+/[^.]+$', h) and i not in columns:
+        columns.append(i)
   f = ','.join(str(i + 1) for i in columns)
   return f'grep -v rebuild- "{csv_file}" | grep -v WARMUP | grep -v FAILED | ' \
          f'cut -d, -f{f} | column -t -s,'

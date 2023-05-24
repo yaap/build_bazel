@@ -228,7 +228,7 @@ def main():
     for i in user_input.chosen_cujgroups:
       run_cuj_group(cuj_catalog.get_cujgroups()[i])
   perf_metrics.tabulate_metrics_csv(user_input.log_dir)
-  perf_metrics.display_tabulated_metrics(user_input.log_dir)
+  perf_metrics.display_tabulated_metrics(user_input.log_dir, user_input.ci_mode)
   pretty.summarize_metrics(user_input.log_dir)
   pretty.display_summarized_metrics(user_input.log_dir)
 
