@@ -38,7 +38,7 @@ def _is_important(column) -> bool:
       'description', 'build_type', r'build\.ninja(\.size)?', 'targets',
       'log', 'actions', 'time',
       'soong/soong', 'bp2build/', 'symlink_forest/', r'soong_build/\*',
-      r'soong_build/\*\.bazel', 'bp2build/', 'kati/kati build', 'ninja/ninja'
+      r'soong_build/\*\.bazel', 'kati/kati build', 'ninja/ninja'
   }
   for pattern in patterns:
     if re.fullmatch(pattern, column):
