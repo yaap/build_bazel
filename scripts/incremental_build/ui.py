@@ -128,7 +128,8 @@ def get_user_input() -> UserInput:
                  TIPS:
                   1 Specify a directory outside of the source tree
                   2 To view key metrics in metrics.csv:
-                    {util.get_cmd_to_display_tabulated_metrics(default_log_dir)}
+                    {util.get_cmd_to_display_tabulated_metrics(default_log_dir,
+                                                               False)}
                   3 To view column headers:
                     {util.get_csv_columns_cmd(default_log_dir)}''').strip())
   def_build_types = [BuildType.SOONG_ONLY,
