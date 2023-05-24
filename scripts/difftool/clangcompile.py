@@ -95,21 +95,22 @@ class ClangCompileInfo(CommandInfo):
   def __str__(self):
     s = "ClangCompileInfo:\n"
 
-    def add_iff_any(label, fields):
+    for label, fields in {
+        "Features": self.features,
+        "Defines": self.defines,
+        "Libraries": self.libraries,
+        "Linker args": self.linker_args,
+        "Assembler args": self.assembler_args,
+        "Includes (-I,": self.i_includes,
+        "Includes (-iquote,": self.iquote_includes,
+        "Includes (-isystem,": self.isystem_includes,
+        "Files": self.file_flags,
+        "Warnings": self.warnings,
+        "Misc": self.misc_flags,
+    }.items():
       if len(fields) > 0:
         s += self._str_for_field(label, list(set(fields)))
 
-    add_iff_any("Features", self.features)
-    add_iff_any("Defines", self.defines)
-    add_iff_any("Libraries", self.libraries)
-    add_iff_any("Linker args", self.linker_args)
-    add_iff_any("Assembler args", self.assembler_args)
-    add_iff_any("Includes (-I)", self.i_includes)
-    add_iff_any("Includes (-iquote)", self.iquote_includes)
-    add_iff_any("Includes (-isystem)", self.isystem_includes)
-    add_iff_any("Files", self.file_flags)
-    add_iff_any("Warnings", self.warnings)
-    add_iff_any("Misc", self.misc_flags)
     return s
 
   def compare(self, other):
