@@ -58,6 +58,7 @@ def get_csv_columns_cmd(d: Path) -> str:
 def get_cmd_to_display_tabulated_metrics(d: Path, ci_mode: bool) -> str:
   """
   :param d: the log directory
+  :param ci_mode: if true all top-level events are displayed
   :return: a quick shell command to view some collected metrics
   """
   csv_file = d.joinpath(METRICS_TABLE)
@@ -73,6 +74,12 @@ def get_cmd_to_display_tabulated_metrics(d: Path, ci_mode: bool) -> str:
     for i, h in enumerate(headers):
       if re.match(r'^\w+/[^.]+$', h) and i not in columns:
         columns.append(i)
+
+  if len(columns):
+    # just so that the command is "correct" even if the file doesn't exist
+    # or is empty
+    columns.append(1)
+
   f = ','.join(str(i + 1) for i in columns)
   return f'grep -v rebuild- "{csv_file}" | grep -v WARMUP | grep -v FAILED | ' \
          f'cut -d, -f{f} | column -t -s,'
