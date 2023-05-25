@@ -140,7 +140,6 @@ def _build(build_type: ui.BuildType, run_dir: Path) -> (int, BuildInfo):
 
 def _run_cuj(run_dir: Path, build_type: ui.BuildType,
     cujstep: cuj_catalog.CujStep, desc: str, run) -> BuildInfo:
-  run_dir.mkdir(parents=True, exist_ok=False)
   (exit_code, build_info) = _build(build_type, run_dir)
   # if build was successful, run test
   if exit_code != 0:
