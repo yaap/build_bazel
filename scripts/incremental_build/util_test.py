@@ -14,16 +14,17 @@
 import datetime
 import os
 import unittest
+from pathlib import Path
 
-from util import _next_path_helper
 from util import any_match
 from util import get_top_dir
 from util import hhmmss
+from util import next_path
 from util import period_to_seconds
 
 
 class UtilTest(unittest.TestCase):
-  def test_next_path_helper(self):
+  def test_next_path(self):
     examples = [
         ('output', 'output-1'),
         ('output.x', 'output-1.x'),
@@ -34,7 +35,9 @@ class UtilTest(unittest.TestCase):
     ]
     for (pattern, expected) in examples:
       with self.subTest(msg=pattern, pattern=pattern, expected=expected):
-        self.assertEqual(_next_path_helper(pattern), expected)
+        generator = next_path(Path(pattern))
+        n = next(generator)
+        self.assertEqual(n, Path(expected))
 
   def test_any_match(self):
     path, matches = any_match('root.bp')
