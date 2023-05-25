@@ -180,9 +180,10 @@ def get_user_input() -> UserInput:
   build_types: list[BuildType] = [i for sublist in options.build_types for i in
                                   sublist]
   if len(bazel_labels) > 0:
-    non_b = [b for b in build_types if
+    non_b = [b.name for b in build_types if
              b != BuildType.B and b != BuildType.B_ANDROID]
-    raise RuntimeError(f'bazel labels can not be used with {non_b}')
+    if len(non_b):
+      raise RuntimeError(f'bazel labels can not be used with {non_b}')
 
   pretty_str = '\n'.join(
       [f'{i:2}: {cujgroups[i]}' for i in chosen_cujgroups])
