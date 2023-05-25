@@ -129,7 +129,6 @@ def next_path(path: Path) -> Generator[Path, None, None]:
   :returns a new Path with an increasing number suffix to the name
   e.g. _to_file('a.txt') = a-5.txt (if a-4.txt already exists)
   """
-  path.parent.mkdir(parents=True, exist_ok=True)
   while True:
     name = _next_path_helper(path.name)
     path = path.parent.joinpath(name)

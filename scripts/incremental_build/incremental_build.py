@@ -87,6 +87,7 @@ BuildInfo = dict[str, any]
 
 def _build(build_type: ui.BuildType, run_dir: Path) -> (int, BuildInfo):
   logfile = run_dir.joinpath('output.txt')
+  run_dir.mkdir(parents=True, exist_ok=False)
   logging.info('TIP: to see the log:\n  tail -f "%s"', logfile)
   cmd = [*build_type.value, *ui.get_user_input().targets]
   logging.info('Command: %s', cmd)
