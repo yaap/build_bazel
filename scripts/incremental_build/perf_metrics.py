@@ -129,8 +129,8 @@ def read_pbs(d: Path) -> dict[str, str]:
   def normalize(desc: str) -> str:
     return re.sub(r'^(?:soong_build|mixed_build)', '*', desc)
 
-  return {f'{m.name}/{normalize(m.description)}': util.hhmmss(m.real_time) for m
-          in events}
+  return {f'{m.name}/{normalize(m.description)}':
+            util.hhmmss(m.real_time, decimal_precision=True) for m in events}
 
 
 Row = dict[str, any]
