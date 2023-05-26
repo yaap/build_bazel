@@ -478,7 +478,7 @@ def get_cujgroups() -> list[CujGroup]:
 
   return [
       CujGroup('', [CujStep('clean', clean)]),
-      Warmup,
+      CujGroup('', Warmup.steps),
 
       create_delete(src('bionic/libc/tzcode/globbed.c'),
                     InWorkspace.UNDER_SYMLINK),
