@@ -55,7 +55,7 @@ function build() {
   fi
   set +x
 }
-build --cujs clean 'create bionic/unreferenced.txt' 'modify Android.bp' -- droid
+build --cujs clean 'no change' 'create bionic/unreferenced.txt' 'modify Android.bp' -- droid
 build --cujs 'modify bionic/.*/stdio.cpp' --append-csv libc
 build --cujs 'modify .*/adb/daemon/main.cpp' --append-csv adbd
 build --cujs 'modify frameworks/.*/View.java' --append-csv framework
