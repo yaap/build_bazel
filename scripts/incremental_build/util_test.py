@@ -81,14 +81,22 @@ class UtilTest(unittest.TestCase):
       self.assertFalse('BUILD' in files)
 
   def test_hhmmss(self):
-    examples = [
+    decimal_precision_examples = [
         (datetime.timedelta(seconds=(2 * 60 + 5)), '02:05.000'),
         (datetime.timedelta(seconds=(3600 + 23 * 60 + 45.897898)),
          '1:23:45.898'),
     ]
-    for (ts, expected) in examples:
+    non_decimal_precision_examples = [
+        (datetime.timedelta(seconds=(2 * 60 + 5)), '02:05'),
+        (datetime.timedelta(seconds=(3600 + 23 * 60 + 45.897898)),
+         '1:23:46'),
+    ]
+    for (ts, expected) in decimal_precision_examples:
       self.subTest(ts=ts, expected=expected)
-      self.assertEqual(hhmmss(ts), expected)
+      self.assertEqual(hhmmss(ts, decimal_precision=True), expected)
+    for (ts, expected) in non_decimal_precision_examples:
+      self.subTest(ts=ts, expected=expected)
+      self.assertEqual(hhmmss(ts, decimal_precision=False), expected)
 
   def test_period_to_seconds(self):
     examples = [
