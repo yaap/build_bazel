@@ -134,7 +134,8 @@ def _build(build_type: ui.BuildType, run_dir: Path) -> (int, BuildInfo):
       'targets': ' '.join(ui.get_user_input().targets),
       'log': str(run_dir.relative_to(ui.get_user_input().log_dir)),
       'actions': action_count_after - action_count_before,
-      'time': util.hhmmss(datetime.timedelta(microseconds=elapsed_ns / 1000))
+      'time': util.hhmmss(datetime.timedelta(microseconds=elapsed_ns / 1000),
+                          decimal_precision=True)
   })
 
 
