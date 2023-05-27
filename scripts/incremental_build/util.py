@@ -243,15 +243,19 @@ def any_match_under(root: Path, *patterns: str) -> (Path, list[str]):
   raise RuntimeError(f'No suitable directory for {patterns}')
 
 
-def hhmmss(t: datetime.timedelta) -> str:
+def hhmmss(t: datetime.timedelta, decimal_precision: bool) -> str:
   """pretty prints time periods, prefers mm:ss.sss and resorts to hh:mm:ss.sss
   only if t >= 1 hour.
-  Examples: 02:12.231, 00:00.512, 00:01:11.321, 1:12:13.121
+  Examples(non_decimal_precision): 02:12, 1:12:13
+  Examples(decimal_precision): 02:12.231, 00:00.512, 00:01:11.321, 1:12:13.121
   See unit test for more examples."""
   h, f = divmod(t.seconds, 60 * 60)
   m, f = divmod(f, 60)
   s = f + t.microseconds / 1000_000
-  return f'{h}:{m:02d}:{s:06.3f}' if h else f'{m:02d}:{s:06.3f}'
+  if decimal_precision:
+    return f'{h}:{m:02d}:{s:06.3f}' if h else f'{m:02d}:{s:06.3f}'
+  else:
+    return f'{h}:{m:02}:{s:02.0f}' if h else f'{m:02}:{s:02.0f}'
 
 
 def period_to_seconds(s: str) -> float:
