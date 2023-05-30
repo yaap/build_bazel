@@ -50,7 +50,7 @@ fi
 
 # Default setting should contain bazel-out, as *at least* tzdata is allowlisted for
 # default prod mode.
-if [[ $(grep -L "bazel-out" ${OUT_DIR}/soong/build.ninja) ]]; then
+if [[ $(grep -L "bazel-out" ${OUT_DIR}/soong/build.aosp_arm64.ninja) ]]; then
   echo "Expected default build to reference bazel-out"
   exit 1
 fi
@@ -70,7 +70,7 @@ build/soong/soong_ui.bash --make-mode \
 
 # Note - we could m clean and assert that the bazel build doesn't exist, but this is
 # a better use of time
-if [[ ! $(grep -L "bazel-out" ${OUT_DIR}/soong/build.ninja) ]]; then
+if [[ ! $(grep -L "bazel-out" ${OUT_DIR}/soong/build.aosp_arm64.ninja) ]]; then
   echo "Expected BUILD_BROKEN override to not reference bazel-out"
   exit 1
 fi
@@ -94,7 +94,7 @@ if [[ ! $(ls out/bazel/output/execroot/__main__/bazel-out/aosp_arm64-userdebug-o
   exit 1
 fi
 
-if [[ $(grep -L "bazel-out" ${OUT_DIR}/soong/build.ninja) ]]; then
+if [[ $(grep -L "bazel-out" ${OUT_DIR}/soong/build.aosp_arm64.ninja) ]]; then
   echo "Expected default build rerun to reference bazel-out"
   exit 1
 fi
