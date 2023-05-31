@@ -70,7 +70,7 @@ def _prepare_env() -> (Mapping[str, str], str):
 def _build_file_sha(target_product: str) -> str:
   build_file = util.get_out_dir().joinpath(f'soong/build.{target_product}.ninja')
   if not build_file.exists():
-    return '--'
+    return ''
   with open(build_file, mode="rb") as f:
     h = hashlib.sha256()
     for block in iter(lambda: f.read(4096), b''):
@@ -105,14 +105,14 @@ def _build(build_type: ui.BuildType, run_dir: Path) -> (int, BuildInfo):
 
   def recompact_ninja_log():
     subprocess.run([
-      util.get_top_dir().joinpath(
-        'prebuilts/build-tools/linux-x86/bin/ninja'),
-      '-f',
-      util.get_out_dir().joinpath(
+        util.get_top_dir().joinpath(
+            'prebuilts/build-tools/linux-x86/bin/ninja'),
+        '-f',
+        util.get_out_dir().joinpath(
         f'combined-{target_product}.ninja'),
-      '-t', 'recompact'],
-      check=False, cwd=util.get_top_dir(), shell=False,
-      stdout=f, stderr=f)
+        '-t', 'recompact'],
+        check=False, cwd=util.get_top_dir(), shell=False,
+        stdout=f, stderr=f)
 
   with open(logfile, mode='w') as f:
     action_count_before = get_action_count()
