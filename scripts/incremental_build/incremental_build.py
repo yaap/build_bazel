@@ -216,6 +216,8 @@ def main():
             if logs_dir_for_ci.exists():
               perf_metrics.archive_run(logs_dir_for_ci, build_info)
         perf_metrics.archive_run(run_dir, build_info)
+        # we are doing tabulation and summary after each run
+        # so that we can look at intermediate results
         perf_metrics.tabulate_metrics_csv(user_input.log_dir)
         pretty.summarize_metrics(user_input.log_dir)
         if build_info['actions'] == 0:
