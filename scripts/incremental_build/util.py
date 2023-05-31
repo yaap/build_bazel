@@ -81,7 +81,7 @@ def get_cmd_to_display_tabulated_metrics(d: Path, ci_mode: bool) -> str:
     columns.append(1)
 
   f = ','.join(str(i + 1) for i in columns)
-  return f'grep -v rebuild- "{csv_file}" | grep -v WARMUP | grep -v FAILED | ' \
+  return f'grep -v "WARMUP\\|rebuild-\\|FAILED "{csv_file}" | ' \
          f'cut -d, -f{f} | column -t -s,'
 
 
