@@ -236,7 +236,8 @@ else
 fi
 
 # TODO(b/240354506): Re-enable hsperfdata file creation without causing SIGBUS errors
-JAVA_HOME="${ANDROID_BAZEL_JDK_PATH}" "${ANDROID_BAZEL_PATH}" \
+PATH="${RESTRICTED_PATH}" JAVA_HOME="${ANDROID_BAZEL_JDK_PATH}" \
+  "${ANDROID_BAZEL_PATH}" \
   --server_javabase="${ANDROID_BAZEL_JDK_PATH}" \
   --output_user_root="${BAZEL_METADATA_OUT}/output_user_root" \
   --host_jvm_args=-Djava.io.tmpdir="${BAZEL_METADATA_OUT}/javatmp" \
