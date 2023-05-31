@@ -59,6 +59,7 @@ _DEFAULT_CHECKS = [
     "-cert-err33-c",
     "-bugprone-unchecked-optional-access",
     "-misc-use-anonymous-namespace",
+    "-performance-avoid-endl",
 ]
 _DEFAULT_CHECKS_AS_ERRORS = [
     "-bugprone-assignment-in-if-condition",
