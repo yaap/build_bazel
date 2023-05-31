@@ -227,8 +227,7 @@ def tabulate_metrics_csv(log_dir: Path):
   headers: list[str] = _get_column_headers(rows, allow_cycles=True)
 
   def row2line(r):
-    #if a column value is missing, use '-' as a placeholder
-    return ','.join([str(r.get(col, '-')) for col in headers])
+    return ','.join([str(r.get(col, '')) for col in headers])
 
   lines = [','.join(headers)]
   lines.extend(row2line(r) for r in rows)
