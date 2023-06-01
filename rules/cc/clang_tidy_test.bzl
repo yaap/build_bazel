@@ -66,6 +66,11 @@ _DEFAULT_CHECKS_AS_ERRORS = [
     "-bugprone-branch-clone",
     "-bugprone-signed-char-misuse",
     "-misc-const-correctness",
+    "-bugprone-unsafe-functions",
+    "-cert-msc24-c",
+    "-cert-msc33-c",
+    "-modernize-type-traits",
+    "-readability-avoid-unconditional-preprocessor-if",
 ]
 _EXTRA_ARGS_BEFORE = [
     "-D__clang_analyzer__",
