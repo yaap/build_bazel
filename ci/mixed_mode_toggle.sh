@@ -39,12 +39,12 @@ build/soong/soong_ui.bash --make-mode \
   com.android.tzdata \
   dist DIST_DIR=$DIST_DIR
 
-
 # PLEASE NOTE - IF TZDATA IS EVER REMOVED FROM THE PROD ALLOWLIST, THIS _WILL_ FAIL
 # Should that happen, look into reverting to the assertions on bazel-out or switching
+sentinel_file="${OUT_DIR}/bazel/output/execroot/__main__/bazel-out/*/bin/system/timezone/apex/com.android.tzdata_staging_dir/etc/tz/tzdata"
 
-if [[ ! $(ls out/bazel/output/execroot/__main__/bazel-out/aosp_arm64-userdebug-opt-ST-743b56eaae08/bin/system/timezone/apex/com.android.tzdata_staging_dir/etc/tz/tzdata) ]] ; then
-  echo "Expected tzdata files under bazel-out"
+if [[ $(ls ${sentinel_file} | wc -l) -ne 1 ]]; then
+  echo "Expected a single configuration of tzdata files under bazel-out"
   exit 1
 fi
 
@@ -89,8 +89,8 @@ build/soong/soong_ui.bash --make-mode \
   com.android.tzdata \
   dist DIST_DIR=$DIST_DIR
 
-if [[ ! $(ls out/bazel/output/execroot/__main__/bazel-out/aosp_arm64-userdebug-opt-ST-743b56eaae08/bin/system/timezone/apex/com.android.tzdata_staging_dir/etc/tz/tzdata) ]] ; then
-  echo "Expected tzdata files under bazel-out"
+if [[ $(ls ${sentinel_file} | wc -l) -ne 1 ]]; then
+  echo "Expected a single configuration of tzdata files under bazel-out"
   exit 1
 fi
 
