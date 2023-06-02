@@ -59,7 +59,7 @@ def _prepare_env() -> (Mapping[str, str], str):
         sys.exit(1)
     else:
       logging.warning(
-        f'Using {target_product}-{variant} instead of {default_product}-eng')
+          f'Using {target_product}-{variant} instead of {default_product}-eng')
   env['TARGET_PRODUCT'] = target_product
   env['TARGET_BUILD_VARIANT'] = variant
   pretty_env_str = [f'{k}={v}' for (k, v) in env.items()]
@@ -68,7 +68,8 @@ def _prepare_env() -> (Mapping[str, str], str):
 
 
 def _build_file_sha(target_product: str) -> str:
-  build_file = util.get_out_dir().joinpath(f'soong/build.{target_product}.ninja')
+  build_file = util.get_out_dir().joinpath(
+      f'soong/build.{target_product}.ninja')
   if not build_file.exists():
     return ''
   with open(build_file, mode="rb") as f:
@@ -79,7 +80,8 @@ def _build_file_sha(target_product: str) -> str:
 
 
 def _build_file_size(target_product: str) -> int:
-  build_file = util.get_out_dir().joinpath(f'soong/build.{target_product}.ninja')
+  build_file = util.get_out_dir().joinpath(
+      f'soong/build.{target_product}.ninja')
   return os.path.getsize(build_file) if build_file.exists() else 0
 
 
@@ -157,8 +159,8 @@ def _run_cuj(run_dir: Path, build_type: ui.BuildType,
   # summarize
   log_desc = desc if run == 0 else f'rebuild-{run} after {desc}'
   build_info = {
-                 'description': log_desc,
-                 'build_result': build_result
+                   'description': log_desc,
+                   'build_result': build_result
                } | build_info
   return build_info
 
@@ -206,10 +208,11 @@ def main():
           break
         run_dir = next(run_dir_gen)
         build_info = _run_cuj(run_dir, build_type, cujstep, desc, run)
-        logging.info(json.dumps(build_info,indent=2))
+        logging.info(json.dumps(build_info, indent=2))
         if user_input.ci_mode:
           if build_info['build_result'] == 'FAILED':
-            sys.exit('Failed CI build runs detected!')
+            sys.exit(f'Failed CI build runs detected! Please see logs in: '
+                     f'{str(user_input.log_dir)}/{build_info["log"]}')
           if cuj_group != cuj_catalog.Warmup:
             stop_building = True
             logs_dir_for_ci = user_input.log_dir.parent.joinpath('logs')
