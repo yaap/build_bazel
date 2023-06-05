@@ -69,7 +69,7 @@ def summarize_metrics(log_dir: Path):
   lines: list[dict] = []
   for line in csv_lines:
     if line["build_result"] == "FAILED":
-      logging.warning(f"{line['description']} / {line['build_type']}")
+      logging.warning(f"Failed {line['description']}/{line['build_type']}")
     else:
       lines.append(line)
 
