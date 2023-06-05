@@ -74,6 +74,10 @@ def get_user_input() -> UserInput:
       i = int(input_str)
       if 0 <= i < len(cujgroups):
         return [i]
+      raise argparse.ArgumentError(
+          argument=None,
+          message=f'Invalid input: "{input_str}" '
+                  f'expected an index <= {len(cujgroups)} ')
     else:
       pattern = re.compile(input_str)
 
@@ -89,11 +93,10 @@ def get_user_input() -> UserInput:
                              matches(cujgroup)]
       if len(matching_cuj_groups):
         return matching_cuj_groups
-    raise argparse.ArgumentError(
-        argument=None,
-        message=f'Invalid input: "{input_str}" '
-                f'expected an index <= {len(cujgroups)} '
-                'or a regex pattern for a CUJ descriptions')
+      raise argparse.ArgumentError(
+          argument=None,
+          message=f'Invalid input: "{input_str}" does not match any CUJ'
+      )
 
   # importing locally here to avoid chances of cyclic import
   import incremental_build
@@ -196,8 +199,8 @@ def get_user_input() -> UserInput:
       sys.exit(1)
 
   if log_dir.is_relative_to(util.get_top_dir()):
-    sys.exit(f" choose a log_dir outside the source tree; "
-             f"{options.log_dir}' resolves to {log_dir}")
+    sys.exit(f"choose a log_dir outside the source tree; "
+             f"'{options.log_dir}' resolves to {log_dir}")
 
   if options.ci_mode:
     if len(chosen_cujgroups) > 1:
