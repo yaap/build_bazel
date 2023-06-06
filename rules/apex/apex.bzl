@@ -976,6 +976,12 @@ APEX is truly updatable. To be updatable, min_sdk_version should be set as well.
             default = "",
             doc = "The name of the base apex of this apex. For example, the AOSP variant of this apex.",
         ),
+        "apex_available_name": attr.string(
+            default = "",
+            doc = "The name that dependencies can specify in their apex_available " +
+                  "properties to refer to this module. If not specified, this " +
+                  "defaults to Soong module name.",
+        ),
 
         # Attributes that contribute to the payload.
         "native_shared_libs_32": attr.label_list(
