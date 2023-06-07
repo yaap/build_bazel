@@ -15,6 +15,7 @@
 py_binary(
     name = "incremental_build",
     srcs = [
+        "cuj.py",
         "cuj_catalog.py",
         "incremental_build.py",
         "pretty.py",
