@@ -37,6 +37,7 @@ import perf_metrics
 import pretty
 import ui
 import util
+from cuj import BuildResult
 
 MAX_RUN_COUNT: Final[int] = 5
 
@@ -147,14 +148,14 @@ def _run_cuj(run_dir: Path, build_type: ui.BuildType,
   (exit_code, build_info) = _build(build_type, run_dir)
   # if build was successful, run test
   if exit_code != 0:
-    build_result = cuj_catalog.BuildResult.FAILED.name
+    build_result = BuildResult.FAILED.name
   else:
     try:
       cujstep.verify()
-      build_result = cuj_catalog.BuildResult.SUCCESS.name
+      build_result = BuildResult.SUCCESS.name
     except Exception as e:
       logging.error(e)
-      build_result = (cuj_catalog.BuildResult.TEST_FAILURE.name +
+      build_result = (BuildResult.TEST_FAILURE.name +
                       ':' + str(e))
   # summarize
   log_desc = desc if run == 0 else f'rebuild-{run} after {desc}'
