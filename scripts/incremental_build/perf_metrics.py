@@ -131,12 +131,15 @@ def read_pbs(d: Path) -> dict[str, str]:
 
   retval = {}
   if soong_build_metrics.mixed_builds_info:
-    ll = soong_build_metrics.mixed_builds_info.mixed_build_enabled_modules
-    if ll:
-      retval['mixed.enabled'] = len(ll)
-    ll = soong_build_metrics.mixed_builds_info.mixed_build_disabled_modules
-    if ll:
-      retval['mixed.disabled'] = len(ll)
+    ms = soong_build_metrics.mixed_builds_info.mixed_build_enabled_modules
+    if ms:
+      retval['mixed.enabled'] = len(ms)
+      with open(d.joinpath('mixed.enabled.txt'), 'w') as f:
+        for m in ms:
+          print(m, file=f)
+    ms = soong_build_metrics.mixed_builds_info.mixed_build_disabled_modules
+    if ms:
+      retval['mixed.disabled'] = len(ms)
   for m in events:
     retval[f'{m.name}/{normalize(m.description)}'] = \
       util.hhmmss(m.real_time, decimal_precision=True)
