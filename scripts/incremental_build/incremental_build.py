@@ -24,6 +24,7 @@ import itertools
 import json
 import logging
 import os
+import shutil
 import subprocess
 import sys
 import textwrap
@@ -99,12 +100,24 @@ def _build(build_type: ui.BuildType, run_dir: Path) -> (int, BuildInfo):
   ninja_log_file = util.get_out_dir().joinpath('.ninja_log')
   target_product = env.get("TARGET_PRODUCT", "aosp_arm")
 
-  def get_action_count() -> int:
+  def get_new_action_count(log=False, previous_count=0) -> int:
     if not ninja_log_file.exists():
       return 0
-    with open(ninja_log_file, 'r') as ninja_log:
-      # subtracting 1 to account for "# ninja log v5" in the first line
-      return sum(1 for _ in ninja_log) - 1
+    action_count: int = 0
+    actions_file = run_dir.joinpath('new_ninja_actions.txt')
+    with open(ninja_log_file, 'r') as ninja_log, open(actions_file, 'w') as af:
+      for line in ninja_log:
+        # note "# ninja log v5" is the first line in `.nina_log`
+        if line.startswith('#'):
+          continue
+        action_count += 1
+        if log and previous_count < action_count:
+          # second from last column is the file
+          print(line.split()[-2], file=af)
+    delta = action_count - previous_count
+    if delta == 0:
+      os.remove(actions_file)
+    return delta
 
   def recompact_ninja_log():
     subprocess.run([
@@ -112,39 +125,46 @@ def _build(build_type: ui.BuildType, run_dir: Path) -> (int, BuildInfo):
             'prebuilts/build-tools/linux-x86/bin/ninja'),
         '-f',
         util.get_out_dir().joinpath(
-        f'combined-{target_product}.ninja'),
+            f'combined-{target_product}.ninja'),
         '-t', 'recompact'],
         check=False, cwd=util.get_top_dir(), shell=False,
         stdout=f, stderr=f)
 
   with open(logfile, mode='w') as f:
-    action_count_before = get_action_count()
+    action_count_before = get_new_action_count()
     if action_count_before > 0:
       recompact_ninja_log()
-      action_count_before = get_action_count()
+      action_count_before = get_new_action_count()
     f.write(f'Command: {cmd}\n')
     f.write(f'Environment Variables:\n{textwrap.indent(env_str, "  ")}\n\n\n')
-    f.flush()
+    f.flush()  # because we pass f to a subprocess, we want to flush now
     start_ns = time.perf_counter_ns()
     p = subprocess.run(cmd, check=False, cwd=util.get_top_dir(), env=env,
                        shell=False, stdout=f, stderr=f)
     elapsed_ns = time.perf_counter_ns() - start_ns
-    action_count_after = get_action_count()
+    action_count_delta = get_new_action_count(
+        log=True, previous_count=action_count_before)
 
   return (p.returncode, {
-      'build_type': build_type.to_flag(),
       'build.ninja': _build_file_sha(target_product),
       'build.ninja.size': _build_file_size(target_product),
-      'targets': ' '.join(ui.get_user_input().targets),
-      'log': str(run_dir.relative_to(ui.get_user_input().log_dir)),
-      'actions': action_count_after - action_count_before,
+      'actions': action_count_delta,
       'time': util.hhmmss(datetime.timedelta(microseconds=elapsed_ns / 1000),
                           decimal_precision=True)
   })
 
 
 def _run_cuj(run_dir: Path, build_type: ui.BuildType,
-    cujstep: cuj_catalog.CujStep, desc: str, run) -> BuildInfo:
+    cujstep: cuj_catalog.CujStep) -> BuildInfo:
+  cquery_out = util.get_out_dir().joinpath('soong/soong_injection/cquery.out')
+
+  def get_cquery_ts() -> float:
+    try:
+      return os.stat(cquery_out).st_mtime
+    except FileNotFoundError:
+      return 0.0
+
+  cquery_ts = get_cquery_ts()
   (exit_code, build_info) = _build(build_type, run_dir)
   # if build was successful, run test
   if exit_code != 0:
@@ -157,11 +177,20 @@ def _run_cuj(run_dir: Path, build_type: ui.BuildType,
       logging.error(e)
       build_result = (BuildResult.TEST_FAILURE.name +
                       ':' + str(e))
-  # summarize
-  log_desc = desc if run == 0 else f'rebuild-{run} after {desc}'
+  if get_cquery_ts() > cquery_ts:
+    build_info['cquery.out.size'] = os.path.getsize(cquery_out)
+    shutil.copy(cquery_out, run_dir.joinpath('cquery.out'))
+    cquery_profile = util.get_out_dir().joinpath(
+        'bazel_metrics/cquery-buildroot_bazel_profile.gz')
+    if cquery_profile.exists():
+      shutil.copy(cquery_profile,
+                  run_dir.joinpath('cquery-buildroot_bazel_profile.gz'))
+
   build_info = {
-                   'description': log_desc,
-                   'build_result': build_result
+                   'build_result': build_result,
+                   'build_type': build_type.to_flag(),
+                   'targets': ' '.join(ui.get_user_input().targets),
+                   'log': str(run_dir.relative_to(ui.get_user_input().log_dir)),
                } | build_info
   return build_info
 
@@ -208,7 +237,12 @@ def main():
           logging.warning('SKIPPING BUILD')
           break
         run_dir = next(run_dir_gen)
-        build_info = _run_cuj(run_dir, build_type, cujstep, desc, run)
+        build_info = _run_cuj(run_dir, build_type, cujstep)
+        build_info = build_info | {
+            'description': desc if run == 0 else f'rebuild-{run} after {desc}',
+            'warmup': cuj_group == cuj_catalog.Warmup,
+            'rebuild': run != 0
+        }
         logging.info(json.dumps(build_info, indent=2))
         if user_input.ci_mode:
           if build_info['build_result'] == 'FAILED':

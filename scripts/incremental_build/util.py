@@ -165,10 +165,9 @@ def has_uncommitted_changes() -> bool:
   for cmd in ['diff', 'diff --staged']:
     diff = subprocess.run(
         args=f'repo forall -c git {cmd} --quiet --exit-code'.split(),
-        cwd=get_top_dir(), text=True,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL)
+        cwd=get_top_dir(), text=True, capture_output=True)
     if diff.returncode != 0:
+      logging.error(diff.stderr)
       return True
   return False
 
