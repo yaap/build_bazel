@@ -54,14 +54,8 @@ def _prepare_env() -> (Mapping[str, str], str):
   variant = os.environ.get('TARGET_BUILD_VARIANT') or 'eng'
 
   if target_product != default_product or variant != 'eng':
-    if util.is_interactive_shell():
-      response = input(f'Are you sure you want {target_product}-{variant} '
-                       f'and not {default_product}-eng? [Y/n]')
-      if response.upper() != 'Y':
-        sys.exit(1)
-    else:
-      logging.warning(
-          f'Using {target_product}-{variant} instead of {default_product}-eng')
+    logging.warning(
+        f'USING {target_product}-{variant} INSTEAD OF {default_product}-eng')
   env['TARGET_PRODUCT'] = target_product
   env['TARGET_BUILD_VARIANT'] = variant
   pretty_env_str = [f'{k}={v}' for (k, v) in env.items()]
@@ -93,12 +87,10 @@ BuildInfo = dict[str, any]
 def _build(build_type: ui.BuildType, run_dir: Path) -> (int, BuildInfo):
   logfile = run_dir.joinpath('output.txt')
   run_dir.mkdir(parents=True, exist_ok=False)
-  logging.info('TIP: to see the log:\n  tail -f "%s"', logfile)
   cmd = [*build_type.value, *ui.get_user_input().targets]
-  logging.info('Command: %s', cmd)
   env, env_str = _prepare_env()
   ninja_log_file = util.get_out_dir().joinpath('.ninja_log')
-  target_product = env.get("TARGET_PRODUCT", "aosp_arm")
+  target_product = env["TARGET_PRODUCT"]
 
   def get_new_action_count(log=False, previous_count=0) -> int:
     if not ninja_log_file.exists():
@@ -138,6 +130,8 @@ def _build(build_type: ui.BuildType, run_dir: Path) -> (int, BuildInfo):
     f.write(f'Command: {cmd}\n')
     f.write(f'Environment Variables:\n{textwrap.indent(env_str, "  ")}\n\n\n')
     f.flush()  # because we pass f to a subprocess, we want to flush now
+    logging.info('Command: %s', cmd)
+    logging.info('TIP: To view the log:\n  tail -f "%s"', logfile)
     start_ns = time.perf_counter_ns()
     p = subprocess.run(cmd, check=False, cwd=util.get_top_dir(), env=env,
                        shell=False, stdout=f, stderr=f)
@@ -149,6 +143,7 @@ def _build(build_type: ui.BuildType, run_dir: Path) -> (int, BuildInfo):
       'build.ninja': _build_file_sha(target_product),
       'build.ninja.size': _build_file_size(target_product),
       'actions': action_count_delta,
+      'product': f'{target_product}-{env["TARGET_BUILD_VARIANT"]}',
       'time': util.hhmmss(datetime.timedelta(microseconds=elapsed_ns / 1000),
                           decimal_precision=True)
   })
@@ -277,9 +272,42 @@ def main():
   pretty.display_summarized_metrics(user_input.log_dir)
 
 
+class InfoAndBelow(logging.Filter):
+  def filter(self, record):
+    return record.levelno < logging.WARNING
+
+
+class ColoredLoggingFormatter(logging.Formatter):
+  GREEN = '\x1b[32m'
+  PURPLE = '\x1b[35m'
+  RED = '\x1b[31m'
+  YELLOW = '\x1b[33m'
+  RESET = '\x1b[0m'
+  BASIC = '%(asctime)s %(levelname)s: %(message)s'
+
+  FORMATS = {
+      logging.DEBUG: f'{YELLOW}%(asctime)s %(levelname)s:{RESET} %(message)s',
+      logging.INFO: f'{GREEN}%(asctime)s %(levelname)s:{RESET} %(message)s',
+      logging.WARNING: f'{PURPLE}{BASIC}{RESET}',
+      logging.ERROR: f'{RED}{BASIC}{RESET}',
+      logging.CRITICAL: f'{RED}{BASIC}{RESET}'
+  }
+
+  def format(self, record):
+    f = self.FORMATS.get(record.levelno, ColoredLoggingFormatter.BASIC)
+    formatter = logging.Formatter(fmt=f, datefmt='%H:%M:%S')
+    return formatter.format(record)
+
+
 if __name__ == '__main__':
-  logging.basicConfig(
-      format='%(asctime)s %(levelname)-8s %(message)s',
-      level=logging.INFO,
-      datefmt='%H:%M:%S')
+  eh = logging.StreamHandler(stream=sys.stderr)
+  eh.setLevel(logging.WARNING)
+  eh.setFormatter(ColoredLoggingFormatter())
+  logging.getLogger().addHandler(eh)
+
+  oh = logging.StreamHandler(stream=sys.stdout)
+  oh.addFilter(InfoAndBelow())
+  oh.setFormatter(ColoredLoggingFormatter())
+  logging.getLogger().addHandler(oh)
+
   main()
