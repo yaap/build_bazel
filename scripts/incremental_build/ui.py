@@ -57,11 +57,11 @@ class BuildType(Enum):
 
 @dataclasses.dataclass(frozen=True)
 class UserInput:
-  build_types: tuple[BuildType]
-  chosen_cujgroups: tuple[int]
+  build_types: tuple[BuildType, ...]
+  chosen_cujgroups: tuple[int, ...]
   description: Optional[str]
   log_dir: Path
-  targets: tuple[str]
+  targets: tuple[str, ...]
   ci_mode: bool
 
 
@@ -156,7 +156,7 @@ def get_user_input() -> UserInput:
   if options.verbosity:
     logging.root.setLevel(options.verbosity)
 
-  chosen_cujgroups: tuple[int] = \
+  chosen_cujgroups: tuple[int, ...] = \
     tuple(int(i) for sublist in options.cujs for i in sublist)
 
   bazel_labels: list[str] = [target for target in options.targets if
@@ -167,7 +167,7 @@ def get_user_input() -> UserInput:
   if os.getenv('BUILD_BROKEN_DISABLE_BAZEL') is not None:
     raise RuntimeError(f'use -b {BuildType.SOONG_ONLY.to_flag()} '
                        f'instead of BUILD_BROKEN_DISABLE_BAZEL')
-  build_types: tuple[BuildType] = \
+  build_types: tuple[BuildType, ...] = \
     tuple(BuildType(i) for sublist in options.build_types for i in sublist)
   if len(bazel_labels) > 0:
     non_b = [b.name for b in build_types if
