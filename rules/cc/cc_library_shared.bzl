@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@bazel_skylib//lib:paths.bzl", "paths")
 load("@bazel_tools//tools/cpp:toolchain_utils.bzl", "find_cpp_toolchain")
 load("//build/bazel/rules/abi:abi_dump.bzl", "AbiDiffInfo", "abi_dump")
 load(
@@ -40,6 +41,7 @@ load(":versioned_cc_common.bzl", "versioned_shared_library")
 
 def cc_library_shared(
         name,
+        stem = "",
         suffix = "",
         # Common arguments between shared_root and the shared library
         features = [],
@@ -217,7 +219,8 @@ def cc_library_shared(
         stl_info.shared_deps,
     )
 
-    soname = name + suffix + ".so"
+    filename_stem = stem or name
+    soname = filename_stem + suffix + ".so"
     soname_flag = "-Wl,-soname," + soname
 
     native.cc_shared_library(
@@ -297,7 +300,7 @@ def cc_library_shared(
         shared_debuginfo = unstripped_name,
         deps = [shared_root_name],
         features = features,
-        output_file = soname,
+        output_file = paths.join(name, soname),  # Prevent name collision by generating in a directory unique to the target
         target_compatible_with = target_compatible_with,
         has_stubs = stubs_symbol_file != None,
         runtime_deps = runtime_deps,
