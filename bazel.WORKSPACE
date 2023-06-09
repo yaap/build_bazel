@@ -5,30 +5,6 @@ load("//build/bazel/rules:soong_injection.bzl", "soong_injection_repository")
 
 soong_injection_repository(name = "soong_injection")
 
-# ! WARNING ! WARNING ! WARNING !
-# make_injection is a repository rule to allow Bazel builds to depend on
-# Soong-built prebuilts for experimental purposes. It is fragile, slow, and
-# works for very limited use cases. Do not add a dependency that will cause
-# make_injection to run for any prod builds or tests.
-#
-# If you need to add something in this list, please contact the Roboleaf
-# team and ask jingwen@ for a review.
-load("//build/bazel/rules:make_injection.bzl", "make_injection_repository")
-
-make_injection_repository(
-    name = "make_injection",
-    binaries = [
-        "build_image",
-        "mkuserimg_mke2fs",
-    ],
-    target_module_files = {},
-    watch_android_bp_files = [
-        "//:build/make/tools/releasetools/Android.bp",  # for build_image
-        "//:system/extras/ext4_utils/Android.bp",  # for mkuserimg_mke2fs
-    ],
-)
-# ! WARNING ! WARNING ! WARNING !
-
 load("//build/bazel/rules:env.bzl", "env_repository")
 
 env_repository(
