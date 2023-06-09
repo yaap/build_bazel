@@ -232,6 +232,7 @@ def tabulate_metrics_csv(log_dir: Path):
   for d in dirs:
     d = log_dir.joinpath(d)
     row = get_build_info_and_perf(d)
+    row['log'] = d.name
     rows.append(row)
 
   headers: list[str] = _get_column_headers(rows, allow_cycles=True)
