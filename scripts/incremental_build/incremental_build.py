@@ -184,8 +184,7 @@ def _run_cuj(run_dir: Path, build_type: ui.BuildType,
   build_info = {
                    'build_result': build_result,
                    'build_type': build_type.to_flag(),
-                   'targets': ' '.join(ui.get_user_input().targets),
-                   'log': str(run_dir.relative_to(ui.get_user_input().log_dir)),
+                   'targets': ' '.join(ui.get_user_input().targets)
                } | build_info
   return build_info
 
@@ -241,8 +240,8 @@ def main():
         logging.info(json.dumps(build_info, indent=2))
         if user_input.ci_mode:
           if build_info['build_result'] == 'FAILED':
-            sys.exit(f'Failed CI build runs detected! Please see logs in: '
-                     f'{str(user_input.log_dir)}/{build_info["log"]}')
+            sys.exit(
+                f'Failed CI build runs detected! Please see logs in: {run_dir}')
           if cuj_group != cuj_catalog.Warmup:
             stop_building = True
             logs_dir_for_ci = user_input.log_dir.parent.joinpath('logs')
