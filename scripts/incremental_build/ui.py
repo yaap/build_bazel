@@ -74,10 +74,11 @@ def get_user_input() -> UserInput:
       i = int(input_str)
       if 0 <= i < len(cujgroups):
         return [i]
-      raise argparse.ArgumentError(
-          argument=None,
-          message=f'Invalid input: "{input_str}" '
-                  f'expected an index <= {len(cujgroups)} ')
+      logging.critical(
+          f'Invalid input: {input_str}. '
+          f'Expected an index between 1 and {len(cujgroups)}. '
+          'Try --help to view the list of available CUJs')
+      raise argparse.ArgumentTypeError()
     else:
       pattern = re.compile(input_str)
 
@@ -93,10 +94,10 @@ def get_user_input() -> UserInput:
                              matches(cujgroup)]
       if len(matching_cuj_groups):
         return matching_cuj_groups
-      raise argparse.ArgumentError(
-          argument=None,
-          message=f'Invalid input: "{input_str}" does not match any CUJ'
-      )
+      logging.critical(
+          f'Invalid input: "{input_str}" does not many any CUJ. '
+          'Try --help to view the list of available CUJs')
+      raise argparse.ArgumentTypeError()
 
   # importing locally here to avoid chances of cyclic import
   import incremental_build
@@ -162,8 +163,10 @@ def get_user_input() -> UserInput:
   bazel_labels: list[str] = [target for target in options.targets if
                              target.startswith('//')]
   if 0 < len(bazel_labels) < len(options.targets):
-    sys.exit(f'Don\'t mix bazel labels {bazel_labels} with soong targets '
-             f'{[t for t in options.targets if t not in bazel_labels]}')
+    logging.critical(
+      f'Don\'t mix bazel labels {bazel_labels} with soong targets '
+      f'{[t for t in options.targets if t not in bazel_labels]}')
+    sys.exit(1)
   if os.getenv('BUILD_BROKEN_DISABLE_BAZEL') is not None:
     raise RuntimeError(f'use -b {BuildType.SOONG_ONLY.to_flag()} '
                        f'instead of BUILD_BROKEN_DISABLE_BAZEL')
@@ -183,32 +186,40 @@ def get_user_input() -> UserInput:
     error_message = 'THERE ARE UNCOMMITTED CHANGES (TIP: repo status).' \
                     'Use --ignore-repo-diff to skip this check.'
     if not util.is_interactive_shell():
-      sys.exit(error_message)
-    response = input(f'{error_message}\nContinue?[Y/n]')
+      logging.critical(error_message)
+      sys.exit(1)
+    logging.error(error_message)
+    response = input('Continue?[Y/n]')
     if response.upper() != 'Y':
       sys.exit(1)
 
   log_dir = Path(options.log_dir).resolve()
   if not options.append_csv and log_dir.exists():
     error_message = f'{log_dir} already exists. ' \
-                    'Use --append-csv to skip this check.'
+                    'Use --append-csv to skip this check.' \
+                    'Consider --description to annotate your new runs'
     if not util.is_interactive_shell():
-      sys.exit(error_message)
-    response = input(f'{error_message}\nContinue?[Y/n]')
+      logging.critical(error_message)
+      sys.exit(1)
+    logging.error(error_message)
+    response = input('Continue?[Y/n]')
     if response.upper() != 'Y':
       sys.exit(1)
 
   if log_dir.is_relative_to(util.get_top_dir()):
-    sys.exit(f"choose a log_dir outside the source tree; "
-             f"'{options.log_dir}' resolves to {log_dir}")
+    logging.critical(f"choose a log_dir outside the source tree; "
+                     f"'{options.log_dir}' resolves to {log_dir}")
+    sys.exit(1)
 
   if options.ci_mode:
     if len(chosen_cujgroups) > 1:
-      sys.exit('CI mode can only allow one cuj group. '
-               'Remove --ci-mode flag to skip this check.')
+      logging.critical('CI mode can only allow one cuj group. '
+                       'Remove --ci-mode flag to skip this check.')
+      sys.exit(1)
     if len(build_types) > 1:
-      sys.exit('CI mode can only allow one build type. '
-               'Remove --ci-mode flag to skip this check.')
+      logging.critical('CI mode can only allow one build type. '
+                       'Remove --ci-mode flag to skip this check.')
+      sys.exit(1)
 
   return UserInput(
       build_types=build_types,
