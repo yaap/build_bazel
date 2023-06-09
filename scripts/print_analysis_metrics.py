@@ -28,7 +28,7 @@ import sys
 from google.protobuf import json_format
 from metrics_proto.metrics_pb2 import SoongBuildMetrics, MetricsBase
 from bazel_metrics_proto.bazel_metrics_pb2 import BazelMetrics
-
+from bp2build_metrics_proto.bp2build_metrics_pb2 import Bp2BuildMetrics
 
 class Event(object):
   """Contains nested event data.
@@ -79,17 +79,18 @@ def _write_event(out, event):
   )
 
 
-def _print_soong_build_metrics(soong_build_metrics):
+def _print_metrics_event_times(description, metrics):
   # Bail if there are no events
-  raw_events = soong_build_metrics.events
+  raw_events = metrics.events
   if not raw_events:
-    print("No events to display")
+    print("%s: No events to display" % description)
     return
+  print("-- %s events --" % description)
 
   # Update the start times to be based on the first event
   first_time_ns = min([event.start_time for event in raw_events])
   events = [
-      Event(e.description, e.start_time - first_time_ns, e.real_time)
+      Event(getattr(e, 'description', e.name), e.start_time - first_time_ns, e.real_time)
       for e in raw_events
   ]
 
@@ -101,7 +102,7 @@ def _print_soong_build_metrics(soong_build_metrics):
 
   for event in events:
     _write_event(sys.stdout, event)
-
+  print()
 
 def _format_ns(duration_ns):
   "Pretty print duration in nanoseconds"
@@ -126,6 +127,20 @@ def _save_file(data, file):
   with open(file, "w") as f:
     f.write(data)
     f.close()
+
+
+def _handle_missing_metrics(args, filename):
+  """Handles cleanup for a metrics file that doesn't exist.
+
+  This will delete any output files under the tool's output directory that
+  would have been generated as a result of a metrics file from a previous
+  build. This prevents stale analysis files from polluting the output dir."""
+  if args.skip_metrics:
+    # If skip_metrics is enabled, then don't write or delete any data.
+    return
+  output_filepath = _get_output_file(args.output_dir, filename)
+  if os.path.exists(output_filepath):
+    os.remove(output_filepath)
 
 
 def main():
@@ -167,30 +182,46 @@ def main():
   args.output_dir = args.output_dir or _get_default_out_dir(metrics_files_dir)
   if not args.skip_metrics:
     os.makedirs(args.output_dir, exist_ok=True)
+    print("Writing build analysis files to "+args.output_dir, file=sys.stderr)
 
   if not os.path.exists(metrics_files_dir):
     raise Exception(
         "File " + metrics_files_dir + " not found. Did you run a build?"
     )
 
+  bp2build_file = os.path.join(metrics_files_dir, "bp2build_metrics.pb")
+  if os.path.exists(bp2build_file):
+    bp2build_metrics = Bp2BuildMetrics()
+    _read_data(bp2build_file, bp2build_metrics)
+    _print_metrics_event_times("bp2build", bp2build_metrics)
+    _maybe_save_data(bp2build_metrics, "bp2build_metrics.pb", args)
+  else:
+    _handle_missing_metrics(args, "bp2build_metrics.pb")
+
   soong_build_file = os.path.join(metrics_files_dir, "soong_build_metrics.pb")
   if os.path.exists(soong_build_file):
     soong_build_metrics = SoongBuildMetrics()
     _read_data(soong_build_file, soong_build_metrics)
-    _print_soong_build_metrics(soong_build_metrics)
+    _print_metrics_event_times("soong_build", soong_build_metrics)
     _maybe_save_data(soong_build_metrics, "soong_build_metrics.pb", args)
+  else:
+    _handle_missing_metrics(args, "soong_build_metrics.pb")
 
   soong_metrics_file = os.path.join(metrics_files_dir, "soong_metrics")
-  if os.path.exists(soong_metrics_file) and not args.skip_metrics:
+  if os.path.exists(soong_metrics_file):
     metrics_base = MetricsBase()
     _read_data(soong_metrics_file, metrics_base)
     _maybe_save_data(metrics_base, "soong_metrics", args)
+  else:
+    _handle_missing_metrics(args, "soong_metrics")
 
   bazel_metrics_file = os.path.join(metrics_files_dir, "bazel_metrics.pb")
-  if os.path.exists(bazel_metrics_file) and not args.skip_metrics:
+  if os.path.exists(bazel_metrics_file):
     bazel_metrics = BazelMetrics()
     _read_data(bazel_metrics_file, bazel_metrics)
     _maybe_save_data(bazel_metrics, "bazel_metrics.pb", args)
+  else:
+    _handle_missing_metrics(args, "bazel_metrics.pb")
 
 
 if __name__ == "__main__":
