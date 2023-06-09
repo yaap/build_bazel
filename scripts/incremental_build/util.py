@@ -26,6 +26,9 @@ from typing import Final
 from typing import Generator
 
 INDICATOR_FILE: Final[str] = 'build/soong/soong_ui.bash'
+# metrics.csv is written to but not read by this tool.
+# It's supposed to be viewed as a spreadsheet that compiles data from multiple
+# builds to be analyzed by other external tools.
 METRICS_TABLE: Final[str] = 'metrics.csv'
 SUMMARY_TABLE: Final[str] = 'summary.csv'
 RUN_DIR_PREFIX: Final[str] = 'run'
