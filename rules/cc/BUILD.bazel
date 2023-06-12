@@ -47,9 +47,35 @@ config_setting(
     values = {"collect_code_coverage": "True"},
 )
 
+bool_setting(
+    name = "cfi_assembly",
+    build_setting_default = False,
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "coverage_cfi_enabled",
+    flag_values = {":cfi_assembly": "True"},
+)
+
+config_setting(
+    name = "coverage_cfi_disabled",
+    flag_values = {":cfi_assembly": "False"},
+)
+
+selects.config_setting_group(
+    name = "android_coverage_lib_flag_cfi",
+    match_all = [
+        ":coverage_cfi_enabled",
+        ":coverage_lib_flag",
+        "//build/bazel/platforms/os:android_config_setting",
+    ],
+)
+
 selects.config_setting_group(
     name = "android_coverage_lib_flag",
     match_all = [
+        ":coverage_cfi_disabled",
         ":coverage_lib_flag",
         "//build/bazel/platforms/os:android_config_setting",
     ],
