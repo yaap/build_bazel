@@ -144,12 +144,14 @@ def cc_library_shared(
     else:
         features = features + select({
             "//build/bazel/rules/cc:android_coverage_lib_flag": ["android_coverage_lib"],
+            "//build/bazel/rules/cc:android_coverage_lib_flag_cfi": ["android_coverage_lib"],
             "//conditions:default": [],
         })
 
         # TODO(b/233660582): deal with the cases where the default lib shouldn't be used
         whole_archive_deps = whole_archive_deps + select({
             "//build/bazel/rules/cc:android_coverage_lib_flag": ["//system/extras/toolchain-extras:libprofile-clang-extras"],
+            "//build/bazel/rules/cc:android_coverage_lib_flag_cfi": ["//system/extras/toolchain-extras:libprofile-clang-extras_cfi_support"],
             "//conditions:default": [],
         })
 
