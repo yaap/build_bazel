@@ -21,38 +21,12 @@ import re
 import sys
 import textwrap
 from datetime import date
-from enum import Enum
 from pathlib import Path
 from typing import Optional
 
 import cuj_catalog
 import util
-
-
-class BuildType(Enum):
-  _ignore_ = '_soong_cmd'
-  _soong_cmd = ['build/soong/soong_ui.bash',
-                '--make-mode',
-                '--skip-soong-tests']
-  SOONG_ONLY = [*_soong_cmd, 'BUILD_BROKEN_DISABLE_BAZEL=true']
-  MIXED_PROD = [*_soong_cmd, '--bazel-mode']
-  MIXED_STAGING = [*_soong_cmd, '--bazel-mode-staging']
-  MIXED_DEV = [*_soong_cmd, '--bazel-mode-dev']
-  B = ['build/bazel/bin/b', 'build']
-  B_ANDROID = [*B, '--config=android']
-
-  @staticmethod
-  def from_flag(s: str) -> list['BuildType']:
-    chosen: list[BuildType] = []
-    for e in BuildType:
-      if s.lower() in e.name.lower():
-        chosen.append(e)
-    if len(chosen) == 0:
-      raise RuntimeError(f'no such build type: {s}')
-    return chosen
-
-  def to_flag(self):
-    return self.name.lower()
+from util import BuildType
 
 
 @dataclasses.dataclass(frozen=True)
