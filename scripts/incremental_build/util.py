@@ -12,9 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import csv
+import dataclasses
 import datetime
+import enum
 import functools
 import glob
+import json
 import logging
 import os
 import re
@@ -47,6 +50,67 @@ def _is_important(column) -> bool:
     if re.fullmatch(pattern, column):
       return True
   return False
+
+
+class BuildResult(enum.Enum):
+  SUCCESS = enum.auto()
+  FAILED = enum.auto()
+  TEST_FAILURE = enum.auto()
+
+
+class BuildType(enum.Enum):
+  # see https://docs.python.org/3/library/enum.html#enum.Enum._ignore_
+  _ignore_ = '_soong_cmd'
+  # _sooong_cmd_ will not be listed as an enum constant because of `_ignore_`
+  _soong_cmd = ['build/soong/soong_ui.bash',
+                '--make-mode',
+                '--skip-soong-tests']
+
+  SOONG_ONLY = [*_soong_cmd, 'BUILD_BROKEN_DISABLE_BAZEL=true']
+  MIXED_PROD = [*_soong_cmd, '--bazel-mode']
+  MIXED_STAGING = [*_soong_cmd, '--bazel-mode-staging']
+  B = ['build/bazel/bin/b', 'build']
+  B_ANDROID = [*B, '--config=android']
+
+  @staticmethod
+  def from_flag(s: str) -> list['BuildType']:
+    chosen: list[BuildType] = []
+    for e in BuildType:
+      if s.lower() in e.name.lower():
+        chosen.append(e)
+    if len(chosen) == 0:
+      raise RuntimeError(f'no such build type: {s}')
+    return chosen
+
+  def to_flag(self):
+    return self.name.lower()
+
+
+@dataclasses.dataclass(frozen=True)
+class BuildInfo:
+  build_type: BuildType
+  build_result: BuildResult
+  build_ninja_hash: str  # hash
+  build_ninja_size: int
+  product: str
+  time: datetime.timedelta
+  actions: int
+  cquery_out_size: int = -1
+  description: str = '<unset>'
+  warmup: bool = False
+  rebuild: bool = False
+  targets: tuple[str, ...] = None
+
+
+class CustomEncoder(json.JSONEncoder):
+  def default(self, obj):
+    if isinstance(obj, BuildInfo):
+      return dataclasses.asdict(obj)
+    if isinstance(obj, datetime.timedelta):
+      return hhmmss(obj, decimal_precision=True)
+    if isinstance(obj, enum.Enum):
+      return obj.name
+    return json.JSONEncoder.default(self, obj)
 
 
 def get_csv_columns_cmd(d: Path) -> str:
