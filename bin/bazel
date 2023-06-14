@@ -106,7 +106,6 @@ build --action_env=PATH=${RESTRICTED_PATH}
 
 
 # Run bazel query from the workspace, without cd'ing into \$OUT_DIR/soong/queryview
-common:queryview --noannounce_rc
 build:queryview --package_path=${ABSOLUTE_OUT_DIR}/soong/queryview
 fetch:queryview --package_path=${ABSOLUTE_OUT_DIR}/soong/queryview
 modquery:queryview --package_path=${ABSOLUTE_OUT_DIR}/soong/queryview
@@ -114,7 +113,6 @@ query:queryview --package_path=${ABSOLUTE_OUT_DIR}/soong/queryview
 sync:queryview --package_path=${ABSOLUTE_OUT_DIR}/soong/queryview
 
 # Run bazel build from the workspace, without cd'ing into \$OUT_DIR/soong/api_bp2build
-common:api_bp2build --noannounce_rc
 build:api_bp2build --package_path=${ABSOLUTE_OUT_DIR}/soong/api_bp2build
 fetch:api_bp2build --package_path=${ABSOLUTE_OUT_DIR}/soong/api_bp2build
 modquery:api_bp2build --package_path=${ABSOLUTE_OUT_DIR}/soong/api_bp2build
@@ -122,7 +120,6 @@ query:api_bp2build --package_path=${ABSOLUTE_OUT_DIR}/soong/api_bp2build
 sync:api_bp2build --package_path=${ABSOLUTE_OUT_DIR}/soong/api_bp2build
 
 # Run bazel build from the workspace, without cd'ing into \$OUT_DIR/soong/workspace
-common:bp2build --noannounce_rc
 build:bp2build --package_path=${ABSOLUTE_OUT_DIR}/soong/workspace
 fetch:bp2build --package_path=${ABSOLUTE_OUT_DIR}/soong/workspace
 modquery:bp2build --package_path=${ABSOLUTE_OUT_DIR}/soong/workspace
