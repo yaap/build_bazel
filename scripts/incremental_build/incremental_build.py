@@ -217,6 +217,8 @@ def main():
 
   def run_cuj_group(cuj_group: cuj_catalog.CujGroup):
     nonlocal stop_building
+    metrics = user_input.log_dir.joinpath(util.METRICS_TABLE)
+    summary = user_input.log_dir.joinpath(util.SUMMARY_TABLE)
     for cujstep in cuj_group.steps:
       desc = cujstep.verb
       desc = f'{desc} {cuj_group.description}'.strip()
@@ -253,7 +255,8 @@ def main():
         # we are doing tabulation and summary after each run
         # so that we can look at intermediate results
         perf_metrics.tabulate_metrics_csv(user_input.log_dir)
-        pretty.summarize_metrics(user_input.log_dir)
+        with open(metrics, mode='rt') as mf, open(summary, mode='wt') as sf:
+          pretty.summarize_metrics(mf, sf)
         if run == 0:
           perf_metrics.display_tabulated_metrics(user_input.log_dir, user_input.ci_mode)
           pretty.display_summarized_metrics(user_input.log_dir)
@@ -297,7 +300,7 @@ class ColoredLoggingFormatter(logging.Formatter):
     return formatter.format(record)
 
 
-if __name__ == '__main__':
+def configure_logger():
   eh = logging.StreamHandler(stream=sys.stderr)
   eh.setLevel(logging.WARNING)
   eh.setFormatter(ColoredLoggingFormatter())
@@ -308,4 +311,7 @@ if __name__ == '__main__':
   oh.setFormatter(ColoredLoggingFormatter())
   logging.getLogger().addHandler(oh)
 
+
+if __name__ == '__main__':
+  configure_logger()
   main()
