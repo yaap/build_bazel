@@ -21,12 +21,6 @@ from typing import TypeAlias
 import util
 
 
-class BuildResult(enum.Enum):
-  SUCCESS = enum.auto()
-  FAILED = enum.auto()
-  TEST_FAILURE = enum.auto()
-
-
 Action: TypeAlias = Callable[[], None]
 Verifier: TypeAlias = Callable[[], None]
 
