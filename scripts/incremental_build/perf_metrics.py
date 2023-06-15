@@ -203,7 +203,7 @@ def _get_column_headers(rows: list[Row], allow_cycles: bool) -> list[str]:
     if entry.indegree != 0:
       cycle = '->'.join(entry.dfs(entry.header))
       s = f'event ordering has a cycle {cycle}'
-      logging.warning(s)
+      logging.debug(s)
       if not allow_cycles:
         raise ValueError(s)
     acc.append(entry.header)
