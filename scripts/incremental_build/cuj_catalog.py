@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Final
 from typing import Optional
 
+import clone
 import ui
 import util
 from cuj import CujGroup
@@ -362,6 +363,7 @@ def get_cujgroups() -> list[CujGroup]:
   return [
       CujGroup('', [CujStep('clean', clean)]),
       CujGroup('', Warmup.steps),
+      clone.get_cuj_group(src('packages/modules/adb/Android.bp'), 'adbd'),
 
       create_delete(src('bionic/libc/tzcode/globbed.c'),
                     InWorkspace.UNDER_SYMLINK),
