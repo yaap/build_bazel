@@ -13,6 +13,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+
+# Smoke tests for basic bazel commands.
+build/bazel/bin/b version
+build/bazel/bin/b info
+build/bazel/bin/b shutdown
 
 # Verifies that the b invocations properly record metrics and their exit codes.
 build/bazel/bin/b build libcore:all
