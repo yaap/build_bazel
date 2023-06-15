@@ -25,6 +25,7 @@ import subprocess
 import sys
 from datetime import date
 from pathlib import Path
+from typing import Callable
 from typing import Final
 from typing import Generator
 
@@ -239,14 +240,6 @@ def has_uncommitted_changes() -> bool:
   return False
 
 
-@functools.cache
-def is_ninja_dry_run(ninja_args: str = None) -> bool:
-  if ninja_args is None:
-    ninja_args = os.environ.get('NINJA_ARGS') or ''
-  ninja_dry_run = re.compile(r'(?:^|\s)-n\b')
-  return ninja_dry_run.search(ninja_args) is not None
-
-
 def is_git_repo(p: Path) -> bool:
   """checks if p is in a directory that's under git version control"""
   git = subprocess.run(args=f'git remote'.split(), cwd=p,
@@ -353,3 +346,11 @@ def period_to_seconds(s: str) -> float:
       s = right[0]
     else:
       return acc
+
+
+def groupby(xs: list[dict], key: Callable[[dict], str]) -> dict[
+  str, list[dict]]:
+  grouped = {}
+  for x in xs:
+    grouped.setdefault(key(x), []).append(x)
+  return grouped
