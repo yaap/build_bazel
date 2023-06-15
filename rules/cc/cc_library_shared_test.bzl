@@ -30,7 +30,6 @@ def _cc_library_shared_suffix_test_impl(ctx):
     env = analysistest.begin(ctx)
     target = analysistest.target_under_test(env)
     info = target[DefaultInfo]
-    suffix = ctx.attr.suffix
 
     # NB: There may be more than 1 output file (if e.g. including a TOC)
     outputs = [so for so in info.files.to_list() if so.path.endswith(".so")]
@@ -40,28 +39,19 @@ def _cc_library_shared_suffix_test_impl(ctx):
         "Expected only 1 output file; got %s" % outputs,
     )
     out = outputs[0]
-    suffix_ = suffix + ".so"
-    asserts.true(
+    asserts.equals(
         env,
-        out.path.endswith(suffix_),
-        "Expected output filename to end in `%s`; it was instead %s" % (suffix_, out),
+        ctx.attr.expected_output_filename_with_ext,
+        out.basename,
+        "Expected output filename to be `%s`; it was instead %s" % (ctx.attr.expected_output_filename_with_ext, out.basename),
     )
-
-    if ctx.attr.stem:
-        asserts.equals(
-            env,
-            out.basename.removesuffix(".so"),
-            ctx.attr.stem,
-            "Expected output filename %s to be equal to `stem` attribute %s" % (out, ctx.attr.stem),
-        )
 
     return analysistest.end(env)
 
 cc_library_shared_suffix_test = analysistest.make(
     _cc_library_shared_suffix_test_impl,
     attrs = {
-        "stem": attr.string(),
-        "suffix": attr.string(),
+        "expected_output_filename_with_ext": attr.string(),
     },
 )
 
@@ -79,7 +69,7 @@ def _cc_library_shared_suffix():
     cc_library_shared_suffix_test(
         name = test_name,
         target_under_test = name,
-        suffix = suffix,
+        expected_output_filename_with_ext = name + suffix + ".so",
     )
     return test_name
 
@@ -95,6 +85,7 @@ def _cc_library_shared_empty_suffix():
     cc_library_shared_suffix_test(
         name = test_name,
         target_under_test = name,
+        expected_output_filename_with_ext = name + ".so",
     )
     return test_name
 
@@ -110,8 +101,8 @@ def _cc_library_with_stem():
     )
     cc_library_shared_suffix_test(
         name = test_name,
-        stem = "bar",
         target_under_test = name,
+        expected_output_filename_with_ext = "bar.so",
     )
     return test_name
 
