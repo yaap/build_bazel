@@ -89,6 +89,7 @@ class BuildType(enum.Enum):
 
 @dataclasses.dataclass(frozen=True)
 class BuildInfo:
+  build_root_deps_count: int
   build_type: BuildType
   build_result: BuildResult
   build_ninja_hash: str  # hash
@@ -106,9 +107,13 @@ class BuildInfo:
 class CustomEncoder(json.JSONEncoder):
   def default(self, obj):
     if isinstance(obj, BuildInfo):
-      return dataclasses.asdict(obj)
+      return self.default(dataclasses.asdict(obj))
+    if isinstance(obj, dict):
+      return {k: v for k, v in obj.items() if v is not None}
     if isinstance(obj, datetime.timedelta):
       return hhmmss(obj, decimal_precision=True)
+    if isinstance(obj, BuildType):
+      return obj.to_flag()
     if isinstance(obj, enum.Enum):
       return obj.name
     return json.JSONEncoder.default(self, obj)
