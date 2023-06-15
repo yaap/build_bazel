@@ -194,6 +194,9 @@ def process_timing_mode(args):
 
 
 def process_build_files_mode(args):
+  if args.skip_metrics:
+    raise Exception("build_files mode incompatible with --skip-metrics")
+  os.makedirs(args.output_dir, exist_ok=True)
   tar_out = os.path.join(args.output_dir, "build_files.tar.gz")
 
   os.chdir(args.metrics_files_dir)
