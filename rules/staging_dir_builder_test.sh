@@ -29,7 +29,6 @@ debugfs_path="${RUNFILES_DIR}/__main__/external/e2fsprogs/debugfs/bin/debugfs"
 soong_zip_path="${RUNFILES_DIR}/__main__/prebuilts/build-tools/linux-x86/bin"
 aapt2_path="${RUNFILES_DIR}/__main__/frameworks/base/tools/aapt2/bin/aapt2"
 android_jar="${RUNFILES_DIR}/__main__/prebuilts/sdk/current/public/android.jar"
-blkid_path="$(readlink -f ${RUNFILES_DIR}/__main__/external/e2fsprogs/misc/bin/blkid)"
 fsckerofs_path="$(readlink -f ${RUNFILES_DIR}/__main__/external/erofs-utils/bin/fsck.erofs/fsck.erofs)"
 
 input_dir=$(mktemp -d)
@@ -130,7 +129,7 @@ trap 'rm -rf -- "${staging_dir}"' EXIT
 #############################################
 # check the result
 #############################################
-"${deapexer_tool_path}" --debugfs_path="${debugfs_path}/debugfs" --blkid_path="${blkid_path}" --fsckerofs_path="${fsckerofs_path}" extract ${output_file} ${output_dir}
+"${deapexer_tool_path}" --debugfs_path="${debugfs_path}/debugfs" --fsckerofs_path="${fsckerofs_path}" extract ${output_file} ${output_dir}
 
 # The expected mounted tree should be something like this:
 # /tmp/tmp.9u7ViPlMr7
