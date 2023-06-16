@@ -87,7 +87,7 @@ class BuildType(enum.Enum):
     return self.name.lower()
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclasses.dataclass
 class BuildInfo:
   build_type: BuildType
   build_result: BuildResult
@@ -96,7 +96,8 @@ class BuildInfo:
   product: str
   time: datetime.timedelta
   actions: int
-  cquery_out_size: int = -1
+  build_root_deps_count: int
+  cquery_out_size: int = None
   description: str = '<unset>'
   warmup: bool = False
   rebuild: bool = False
@@ -120,7 +121,7 @@ def get_csv_columns_cmd(d: Path) -> str:
   :return: a quick shell command to view columns in metrics.csv
   """
   csv_file = d.joinpath(METRICS_TABLE)
-  return f'head -n 1 "{csv_file.absolute()}" | sed "s/,/\\n/g" | nl'
+  return f'head -n 1 "{csv_file.absolute()}" | sed "s/,/\\n/g" | less -N'
 
 
 def get_cmd_to_display_tabulated_metrics(d: Path, ci_mode: bool) -> str:
