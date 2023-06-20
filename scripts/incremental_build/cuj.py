@@ -20,6 +20,7 @@ from typing import Callable
 from typing import TypeAlias
 import util
 
+
 Action: TypeAlias = Callable[[], None]
 Verifier: TypeAlias = Callable[[], None]
 
@@ -74,12 +75,12 @@ class InWorkspace(enum.Enum):
     return f
 
 
-def skip_when_soong_only(func: Callable[[], any]) -> Callable[[], any]:
-  """A decorator for functions not applicable to soong-only builds"""
+def skip_when_soong_only(func: Verifier) -> Verifier:
+  """A decorator for Verifiers that are not applicable to soong-only builds"""
 
   def wrapper():
-    if not getattr(skip_when_soong_only, 'skip'):
-      return func()
+    if InWorkspace.ws_counterpart(util.get_top_dir()).exists():
+      func()
 
   return wrapper
 

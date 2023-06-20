@@ -39,26 +39,10 @@ import perf_metrics
 import pretty
 import ui
 import util
-from util import BuildType
 from util import BuildInfo
 from util import BuildResult
-from cuj import skip_when_soong_only
 
 MAX_RUN_COUNT: Final[int] = 5
-
-
-@skip_when_soong_only
-def _query_buildroot_deps() -> int:
-  cmd = 'build/bazel/bin/b ' \
-        'cquery "deps(@soong_injection//mixed_builds:buildroot)" ' \
-        '| wc -l'
-  env, env_str = _prepare_env()
-  p = subprocess.run(cmd, check=False, cwd=util.get_top_dir(), env=env,
-                     shell=True, capture_output=True)
-  if p.returncode:
-    logging.error('couldn\'t determine build graph size: %s', p.stderr)
-    return -1
-  return int(p.stdout)
 
 
 @functools.cache
@@ -96,10 +80,10 @@ def _build_file_sha(target_product: str) -> str:
 def _build_file_size(target_product: str) -> int:
   build_file = util.get_out_dir().joinpath(
       f'soong/build.{target_product}.ninja')
-  return os.path.getsize(build_file) if build_file.exists() else None
+  return os.path.getsize(build_file) if build_file.exists() else 0
 
 
-def _build(build_type: BuildType, run_dir: Path) -> BuildInfo:
+def _build(build_type: ui.BuildType, run_dir: Path) -> BuildInfo:
   logfile = run_dir.joinpath('output.txt')
   run_dir.mkdir(parents=True, exist_ok=False)
   cmd = [*build_type.value, *ui.get_user_input().targets]
@@ -158,7 +142,6 @@ def _build(build_type: BuildType, run_dir: Path) -> BuildInfo:
       actions=action_count_delta,
       build_type=build_type,
       build_result=BuildResult.FAILED if p.returncode else BuildResult.SUCCESS,
-      build_root_deps_count=_query_buildroot_deps(),
       build_ninja_hash=_build_file_sha(target_product),
       build_ninja_size=_build_file_size(target_product),
       product=f'{target_product}-{env["TARGET_BUILD_VARIANT"]}',
@@ -196,7 +179,7 @@ def _run_cuj(run_dir: Path, build_type: ui.BuildType,
       shutil.copy(cquery_profile,
                   run_dir.joinpath('cquery-buildroot_bazel_profile.gz'))
   else:
-    cquery_out_size = None
+    cquery_out_size = 0
 
   build_info = dataclasses.replace(
       build_info,
@@ -249,9 +232,6 @@ def main():
           logging.info('rebuilding')
         if stop_building:
           logging.warning('SKIPPING BUILD')
-          # note we continue to apply_change() for the rest of the steps
-          # so that at the end of the cuj_group there will be no changes
-          # left on the source tree
           break
         run_dir = next(run_dir_gen)
         build_info = _run_cuj(run_dir, build_type, cujstep)
@@ -287,7 +267,6 @@ def main():
           sys.exit(f'Build did not stabilize in {run} attempts')
 
   for build_type in user_input.build_types:
-    skip_when_soong_only.skip = build_type == util.BuildType.SOONG_ONLY
     # warm-up run reduces variations attributable to OS caches
     run_cuj_group(cuj_catalog.Warmup)
     for i in user_input.chosen_cujgroups:
