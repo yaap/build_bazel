@@ -126,7 +126,6 @@ def android_binary(
 def _android_binary_sdk_transition_impl(ctx):
     return struct(
         android = ctx.attr.exports[0].android,
-        JavaGenJarsProvider = ctx.attr.exports[0][JavaInfo].annotation_processing,
         providers = [
             ctx.attr.exports[0][AndroidIdlInfo],
             ctx.attr.exports[0][InstrumentedFilesInfo],
