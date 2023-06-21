@@ -15,6 +15,7 @@
 py_binary(
     name = "incremental_build",
     srcs = [
+        "clone.py",
         "cuj.py",
         "cuj_catalog.py",
         "incremental_build.py",
@@ -29,6 +30,18 @@ py_binary(
 py_binary(
     name = "pretty",
     srcs = ["pretty.py"],
+    main = "pretty.py",
+    python_version = "PY3",
+    deps = [":util"],
+)
+
+py_binary(
+    name = "clone",
+    srcs = [
+        "clone.py",
+        "cuj.py",
+    ],
+    main = "clone.py",
     python_version = "PY3",
     deps = [":util"],
 )
