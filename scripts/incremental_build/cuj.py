@@ -75,12 +75,12 @@ class InWorkspace(enum.Enum):
     return f
 
 
-def skip_when_soong_only(func: Verifier) -> Verifier:
+def skip_when_soong_only(func: Callable[[], any]) -> Callable[[], any]:
   """A decorator for Verifiers that are not applicable to soong-only builds"""
 
   def wrapper():
     if InWorkspace.ws_counterpart(util.get_top_dir()).exists():
-      func()
+      return func()
 
   return wrapper
 
@@ -98,7 +98,7 @@ def verify_symlink_forest_has_only_symlink_leaves():
         continue
       f = Path(root).joinpath(file)
       if file != 'BUILD.bazel' and not f.is_symlink():
-        raise AssertionError(f'{f} unexpected')
+        raise AssertionError(f'{f} unexpected in symlink forest')
 
   logging.info('VERIFIED Symlink Forest has no real files except BUILD.bazel')
 
