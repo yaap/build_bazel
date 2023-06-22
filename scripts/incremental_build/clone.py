@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-#
 # Copyright (C) 2023 The Android Open Source Project
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import argparse
 import functools
+import logging
 import re
 import shutil
 import uuid
@@ -120,9 +120,33 @@ def get_cuj_group(androidbp: Path, module: str) -> CujGroup:
     shutil.move(androidbp_bak, androidbp)
     shutil.move(allowlist_bak, src(_ALLOWLISTS))
 
-  counts: Final[list[int]] = [1, 100, 1000, 2000, 4000, 6000, 8000, 10000]
+  counts: Final[list[int]] = [1, 10]
   steps = [CujStep(verb=str(count),
                    apply_change=functools.partial(helper, count))
            for count in counts]
   steps.append(CujStep(verb='0', apply_change=revert))
   return CujGroup(f'clone-{module}', steps)
+
+
+def main():
+  """
+  provided only for manual run;
+  use incremental_build.sh to invoke the cuj instead
+  """
+  p = argparse.ArgumentParser()
+  p.add_argument('--module', '-m', default='adbd',
+                 help='name of the module to clone; default=%(default)s')
+  p.add_argument('--count', '-n', default=100, type=int,
+                 help='number of times to clone; default: %(default)s')
+  adb_bp = util.get_top_dir().joinpath('packages/modules/adb/Android.bp')
+  p.add_argument('androidbp', nargs='?', default=adb_bp, type=Path,
+                 help='absolute path to Android.bp file; default=%(default)s')
+  options = p.parse_args()
+  _clone(options.androidbp, options.module, options.count)
+  _allowlist(options.module, options.count)
+  logging.warning('Changes made to your source tree; TIP: `repo status`')
+
+
+if __name__ == '__main__':
+  logging.root.setLevel(logging.INFO)
+  main()
