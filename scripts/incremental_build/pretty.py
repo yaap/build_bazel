@@ -58,14 +58,20 @@ def _acceptable(row: Row) -> bool:
 def _median_value(prop: str, rows: list[Row]) -> str:
   if not rows:
     return ''
-  vals = (x.get(prop) for x in rows)
-  vals = (x for x in vals if bool(x))
-  vals = list(util.period_to_seconds(x) for x in vals)
+  vals = [x.get(prop) for x in rows]
+  vals = [x for x in vals if bool(x)]
   if len(vals) == 0:
     return ''
-  cell = util.hhmmss(
-      datetime.timedelta(seconds=statistics.median(vals)),
-      decimal_precision=False)
+
+  isnum = sum(1 for x in vals if x.isnumeric()) == len(vals)
+  if isnum:
+    vals = [int(x) for x in vals]
+    cell = f'{(statistics.median(vals)):.0f}'
+  else:
+    vals = [util.period_to_seconds(x) for x in vals]
+    cell = util.hhmmss(datetime.timedelta(seconds=statistics.median(vals)),
+                       decimal_precision=False)
+
   if len(vals) > 1:
     cell = f'{cell}[N={len(vals)}]'
   return cell
