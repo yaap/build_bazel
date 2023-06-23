@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import argparse
+import dataclasses
 import functools
 import logging
 import re
@@ -28,22 +29,47 @@ from cuj import src
 _ALLOWLISTS = 'build/soong/android/allowlists/allowlists.go'
 
 
+@dataclasses.dataclass
+class GoList:
+  lines: list[str]
+  begin: int = -1
+  end: int = -1
+
+  def has_module(self, module: str) -> bool:
+    for i in range(self.begin, self.end):
+      if f'"{module}"' in self.lines[i]:
+        return True
+    return False
+
+  def insert_clones(self, module: str, count: int):
+    clones = [f'\t\t"{module}-{i + 1}",\n' for i in range(0, count)]
+    self.lines = self.lines[0:self.begin] + clones + self.lines[self.begin:]
+    self.end += count
+
+  def locate(self, listname: str):
+    start = re.compile(r'^\s*{l}\s=\s*\[]string\{{\s*$'.format(l=listname))
+    self.begin = -1
+    for i, line in enumerate(self.lines):
+      if self.begin == -1 and start.match(line):
+        self.begin = i + 1
+      elif self.begin != -1 and line.strip() == '}':
+        self.end = i
+        return
+    raise RuntimeError(f'{listname} not found')
+
+
 def _allowlist(module: str, count: int):
-  """
-  Allow-lists `module` and its clones - this does not check if the module is
-  already allow-listed: which can result in an off-by-1 error in
-  mixed-build-enabled module count
-  """
-  start = re.compile(r'^\s*ProdMixedBuildsEnabledList\s*=\s*\[]string\{\s*$')
-  content = []
+  """Add clones of `module` to bazel enabled allow lists"""
   with open(src(_ALLOWLISTS), "r+") as file:
-    for line in file.readlines():
-      content.append(line)
-      if start.match(line):
-        content.append(f'    "{module}",\n')
-        content.extend([f'    "{module}-{i + 1}",\n' for i in range(0, count)])
+    golist = GoList(file.readlines())
+    golist.locate('ProdMixedBuildsEnabledList')
+    golist.insert_clones(module, count)
+    golist.locate('Bp2buildModuleAlwaysConvertList')
+    if golist.has_module(module):
+      golist.insert_clones(module, count)
+
     file.seek(0)
-    file.writelines(content)
+    file.writelines(golist.lines)
 
 
 def _clone(androidbp: Path, module: str, count: int):
@@ -53,7 +79,7 @@ def _clone(androidbp: Path, module: str, count: int):
   for i=1 to `count`
   """
   name_pattern = re.compile(
-      f'^(?P<prefix>\\s*name:\\s*"){module}(?P<suffix>",?)$')
+      r'^(?P<prefix>\s*name:\s*"){mod}(?P<suffix>",?)$'.format(mod=module))
   # we'll assume that the Android.bp file is properly formatted,
   # specifically, for any module definition:
   # 1. its first line matches `start_pattern` and
@@ -97,6 +123,11 @@ def _clone(androidbp: Path, module: str, count: int):
       f.write('\n')
 
 
+def clone_and_bazel_enable(androidbp: Path, module: str, count: int):
+  _allowlist(module, count)
+  _clone(androidbp, module, count)
+
+
 def get_cuj_group(androidbp: Path, module: str) -> CujGroup:
   marker = uuid.uuid4()
   androidbp_bak: Final[Path] = util.get_out_dir().joinpath(
@@ -113,14 +144,13 @@ def get_cuj_group(androidbp: Path, module: str) -> CujGroup:
     else:
       shutil.copy(androidbp_bak, androidbp)
       shutil.copy(allowlist_bak, src(_ALLOWLISTS))
-    _clone(androidbp, module, count)
-    _allowlist(module, count)
+    clone_and_bazel_enable(androidbp, module, count)
 
   def revert():
     shutil.move(androidbp_bak, androidbp)
     shutil.move(allowlist_bak, src(_ALLOWLISTS))
 
-  counts: Final[list[int]] = [1, 10]
+  counts: Final[list[int]] = [1, 500, 1000, 5000, 10_000, 15_000]
   steps = [CujStep(verb=str(count),
                    apply_change=functools.partial(helper, count))
            for count in counts]
@@ -142,8 +172,7 @@ def main():
   p.add_argument('androidbp', nargs='?', default=adb_bp, type=Path,
                  help='absolute path to Android.bp file; default=%(default)s')
   options = p.parse_args()
-  _clone(options.androidbp, options.module, options.count)
-  _allowlist(options.module, options.count)
+  clone_and_bazel_enable(options.androidbp, options.module, options.count)
   logging.warning('Changes made to your source tree; TIP: `repo status`')
 
 
