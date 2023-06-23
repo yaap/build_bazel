@@ -363,7 +363,11 @@ def get_cujgroups() -> list[CujGroup]:
   return [
       CujGroup('', [CujStep('clean', clean)]),
       CujGroup('', Warmup.steps),
-      clone.get_cuj_group(src('packages/modules/adb/Android.bp'), 'adbd'),
+      clone.get_cuj_group(
+          src('packages/modules/adb/Android.bp'), 'adbd'),
+      clone.get_cuj_group(
+          src('packages/modules/NeuralNetworks/runtime/Android.bp'),
+          'libneuralnetworks'),
 
       create_delete(src('bionic/libc/tzcode/globbed.c'),
                     InWorkspace.UNDER_SYMLINK),
