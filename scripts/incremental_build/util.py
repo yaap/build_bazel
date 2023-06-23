@@ -87,6 +87,10 @@ class BuildType(enum.Enum):
     return self.name.lower()
 
 
+CURRENT_BUILD_TYPE: BuildType
+"""global state capturing what the current build type is"""
+
+
 @dataclasses.dataclass
 class BuildInfo:
   build_type: BuildType
