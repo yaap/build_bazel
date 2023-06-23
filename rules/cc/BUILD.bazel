@@ -39,6 +39,7 @@ load(":cfi_transition_test.bzl", "cfi_transition_test_suite")
 load(":clang_tidy_test.bzl", "clang_tidy_test_suite")
 load(":flex_test.bzl", "flex_test_suite")
 load(":lto_transitions_test.bzl", "lto_transition_test_suite")
+load(":rscript_to_cpp_test.bzl", "rscript_to_cpp_test_suite")
 load(":stl_test.bzl", "stl_test_suite")
 load(":yasm_test.bzl", "yasm_test_suite")
 
@@ -150,3 +151,5 @@ lto_transition_test_suite(name = "lto_transition_tests")
 stl_test_suite(name = "stl_tests")
 
 yasm_test_suite(name = "yasm_tests")
+
+rscript_to_cpp_test_suite(name = "rscript_to_cpp_tests")
