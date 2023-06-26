@@ -35,6 +35,12 @@ py_binary(
     deps = [":util"],
 )
 
+py_test(
+    name = "pretty_test",
+    srcs = ["pretty_test.py"],
+    deps = [":pretty"],
+)
+
 py_binary(
     name = "clone",
     srcs = [
@@ -47,9 +53,9 @@ py_binary(
 )
 
 py_test(
-    name = "pretty_test",
-    srcs = ["pretty_test.py"],
-    deps = [":pretty"],
+    name = "clone_test",
+    srcs = ["clone_test.py"],
+    deps = [":clone"],
 )
 
 py_library(
