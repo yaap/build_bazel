@@ -95,8 +95,7 @@ def get_user_input() -> UserInput:
   log_levels = dict(getattr(logging, '_levelToName')).values()
   p.add_argument('-v', '--verbosity', choices=log_levels, default='INFO',
                  help='Log level. Defaults to %(default)s')
-  default_log_dir = util.get_top_dir().parent.joinpath(
-      f'timing-{date.today().strftime("%b%d")}')
+  default_log_dir = util.get_default_log_dir()
   p.add_argument('-l', '--log-dir', type=Path, default=default_log_dir,
                  help=textwrap.dedent(f'''
                  Directory for timing logs. Defaults to %(default)s
