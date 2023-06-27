@@ -43,7 +43,7 @@ BUILD_INFO_JSON: Final[str] = 'build_info.json'
 def _is_important(column) -> bool:
   patterns = {
       'description', 'build_type', r'build\.ninja(\.size)?', 'targets',
-      'log', 'actions', 'time',
+      'log', 'actions', 'time', 'build_root_deps_count',
       'soong/soong', 'bp2build/', 'symlink_forest/', r'soong_build/\*',
       r'soong_build/\*\.bazel', 'kati/kati build', 'ninja/ninja'
   }
