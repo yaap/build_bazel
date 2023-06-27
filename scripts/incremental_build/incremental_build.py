@@ -173,7 +173,7 @@ def _build(build_type: BuildType, run_dir: Path) -> BuildInfo:
 
   return BuildInfo(
       actions=action_count_delta,
-      build_root_deps_count=_query_buildroot_deps(),
+      build_root_deps=_query_buildroot_deps(),
       build_type=build_type,
       build_result=BuildResult.FAILED if p.returncode else BuildResult.SUCCESS,
       build_ninja_hash=_build_file_sha(target_product),
