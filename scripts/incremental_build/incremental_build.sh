@@ -14,17 +14,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#
-# Gather and print top-line performance metrics for the android build
-#
 readonly TOP="$(realpath "$(dirname "$0")/../../../..")"
+if [[ -z ${OUT_DIR+x} ]]; then
+  OUT_DIR="$TOP/out"
+fi
 
-"$TOP/build/soong/soong_ui.bash" \
-  --build-mode \
-  --all-modules \
-  --dir="$(pwd)" \
-  --skip-soong-tests \
-  bp2build
+if [[ ! -f ${OUT_DIR}/soong/workspace/WORKSPACE ]]; then
+  "$TOP/build/soong/soong_ui.bash" \
+    --build-mode \
+    --all-modules \
+    --dir="$(pwd)" \
+    --skip-soong-tests \
+    bp2build
+fi
 
 # to debug use `--run_under /usr/lib/python3.10/pdb.py`
 # or simply add `breakpoint()` in the code somewhere
