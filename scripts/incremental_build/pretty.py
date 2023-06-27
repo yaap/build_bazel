@@ -144,18 +144,38 @@ def display_summarized_metrics(log_dir: Path):
 
 def main():
   p = argparse.ArgumentParser()
-  p.add_argument('metrics', help='metrics.csv file to parse')
-  p.add_argument('-p', '--properties', default=['^time$'], nargs='*',
-                 help='properties to extract, should be time period based')
+  p.add_argument(
+      '-p', '--properties',
+      default=['^time$'],
+      nargs='*',
+      help='properties to extract, should be time period based')
+  p.add_argument(
+      'metrics',
+      nargs='?',
+      default=util.get_default_log_dir().joinpath(util.METRICS_TABLE),
+      help='metrics.csv file to parse')
+  p.add_argument(
+      '--csv',
+      action='store_true'
+  )
   options = p.parse_args()
-  with open(options.metrics, mode='rt') as mf:
+  input_file = Path(options.metrics)
+  if input_file.exists() and input_file.is_dir():
+    input_file = input_file.joinpath(util.METRICS_TABLE)
+  if not input_file.exists():
+    raise RuntimeError(f'{input_file} does not exit')
+  with open(input_file, mode='rt') as mf:
     for prop, s in summarize(mf, *options.properties).items():
-      p = subprocess.run(
-          f'echo "{s}"  | grep -v "rebuild" | column -t -s,',
-          shell=True, text=True, check=True, capture_output=True)
-      logging.info('%s\n%s', prop, p.stdout)
-      if p.returncode:
-        logging.error(p.stderr)
+      logging.info('Displaying %s', prop)
+      if options.csv:
+        logging.info(s)
+      else:
+        p = subprocess.run(
+            f'echo "{s}"  | grep -v "rebuild" | column -t -s,',
+            shell=True, text=True, check=True, capture_output=True)
+        logging.info('\n%s', p.stdout)
+        if p.returncode:
+          logging.error(p.stderr)
 
 
 if __name__ == '__main__':
