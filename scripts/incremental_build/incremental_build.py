@@ -37,7 +37,7 @@ import perf_metrics
 import pretty
 import ui
 import util
-from cuj import skip_when_soong_only
+from cuj import skip_for
 from util import BuildInfo
 from util import BuildResult
 from util import BuildType
@@ -116,7 +116,7 @@ def _build_file_size(target_product: str) -> int:
   return os.path.getsize(build_file) if build_file.exists() else 0
 
 
-@skip_when_soong_only
+@skip_for(BuildType.SOONG_ONLY)
 def _query_buildroot_deps() -> int:
   cmd = f'{util.get_top_dir().joinpath("build/bazel/bin/bazel")} ' \
         f'--output_base={util.get_out_dir().joinpath("bazel/output")} ' \
@@ -193,7 +193,7 @@ def _run_cuj(run_dir: Path, build_type: ui.BuildType,
     except FileNotFoundError:
       return -1
 
-  @skip_when_soong_only
+  @skip_for(BuildType.SOONG_ONLY)
   def get_cquery_size() -> int:
     return os.path.getsize(cquery_out)
 
@@ -298,6 +298,7 @@ def main():
           sys.exit(f'Build did not stabilize in {run} attempts')
 
   for build_type in user_input.build_types:
+    util.CURRENT_BUILD_TYPE = build_type
     # warm-up run reduces variations attributable to OS caches
     run_cuj_group(cuj_catalog.Warmup)
     for i in user_input.chosen_cujgroups:
