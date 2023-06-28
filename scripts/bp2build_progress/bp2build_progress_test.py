@@ -18,6 +18,7 @@
 import collections
 import unittest
 import unittest.mock
+from bp2build_metrics_proto.bp2build_metrics_pb2 import Bp2BuildMetrics
 import bp2build_pb2
 import bp2build_progress
 import dependency_analysis
@@ -725,6 +726,7 @@ class Bp2BuildProgressTest(unittest.TestCase):
         reasons_from_heuristics=frozenset(
             {'unconverted dependencies', 'type missing converter'}
         ),
+        reason_from_metric='TYPE_UNSUPPORTED',
     )
     b = bp2build_progress.ModuleInfo(
         name='b',
@@ -736,6 +738,7 @@ class Bp2BuildProgressTest(unittest.TestCase):
         reasons_from_heuristics=frozenset(
             {'unconverted properties: [BaseName]'}
         ),
+        reason_from_metric='PROPERTY_UNSUPPORTED',
     )
     c = bp2build_progress.ModuleInfo(
         name='c',
@@ -745,6 +748,7 @@ class Bp2BuildProgressTest(unittest.TestCase):
         created_by=None,
         props=frozenset({'Name', 'Defaults'}),
         reasons_from_heuristics=frozenset({'unconverted dependencies'}),
+        reason_from_metric='UNCONVERTED_DEP',
     )
     d = bp2build_progress.ModuleInfo(
         name='d', kind='type2', dirname='pkg', num_deps=0, created_by=None
@@ -756,6 +760,7 @@ class Bp2BuildProgressTest(unittest.TestCase):
         num_deps=0,
         created_by=None,
         reasons_from_heuristics=frozenset({'type missing converter'}),
+        reason_from_metric='TYPE_UNSUPPORTED',
     )
     f = bp2build_progress.ModuleInfo(
         name='f',
@@ -767,6 +772,7 @@ class Bp2BuildProgressTest(unittest.TestCase):
             {'Name', 'Sdk_version', 'Visibility', 'Backend.Java.Platform_apis'}
         ),
         reasons_from_heuristics=frozenset({'unconverted dependencies'}),
+        reason_from_metric='UNCONVERTED_DEP',
     )
     g = bp2build_progress.ModuleInfo(
         name='g', kind='type4', dirname='pkg2', num_deps=2, created_by=None
@@ -795,6 +801,13 @@ class Bp2BuildProgressTest(unittest.TestCase):
         )
     )
 
+    bp2build_metrics = Bp2BuildMetrics()
+    bp2build_metrics.unconvertedModules['a'].type = 3
+    bp2build_metrics.unconvertedModules['b'].type = 4
+    bp2build_metrics.unconvertedModules['c'].type = 5
+    bp2build_metrics.unconvertedModules['f'].type = 5
+    bp2build_metrics.unconvertedModules['e'].type = 3
+
     report_data = bp2build_progress.generate_report_data(
         module_graph,
         {'d', 'g'},
@@ -803,6 +816,7 @@ class Bp2BuildProgressTest(unittest.TestCase):
         ),
         props_by_converted_module_type,
         use_queryview=False,
+        bp2build_metrics=bp2build_metrics,
     )
 
     all_unconverted_modules = collections.defaultdict(set)
@@ -859,6 +873,7 @@ class Bp2BuildProgressTest(unittest.TestCase):
             'unconverted properties: [Flags, Stability]',
             'unconverted dependencies',
         }),
+        reason_from_metric='PROPERTY_UNSUPPORTED',
     )
     b = bp2build_progress.ModuleInfo(
         name='b',
@@ -867,6 +882,7 @@ class Bp2BuildProgressTest(unittest.TestCase):
         num_deps=1,
         created_by=None,
         reasons_from_heuristics=frozenset({'type missing converter'}),
+        reason_from_metric='TYPE_UNSUPPORTED',
     )
     c = bp2build_progress.ModuleInfo(
         name='c',
@@ -877,6 +893,7 @@ class Bp2BuildProgressTest(unittest.TestCase):
         reasons_from_heuristics=frozenset(
             {'unconverted dependencies', 'type missing converter'}
         ),
+        reason_from_metric='TYPE_UNSUPPORTED',
     )
     d = bp2build_progress.ModuleInfo(
         name='d', kind='type2', dirname='pkg', num_deps=0, created_by=None
@@ -888,6 +905,7 @@ class Bp2BuildProgressTest(unittest.TestCase):
         num_deps=0,
         created_by=None,
         reasons_from_heuristics=frozenset({'type missing converter'}),
+        reason_from_metric='TYPE_UNSUPPORTED',
     )
     f = bp2build_progress.ModuleInfo(
         name='f',
@@ -897,6 +915,7 @@ class Bp2BuildProgressTest(unittest.TestCase):
         created_by=None,
         props=frozenset({'Name', 'Visibility'}),
         reasons_from_heuristics=frozenset({'unconverted dependencies'}),
+        reason_from_metric='UNCONVERTED_DEP',
     )
     g = bp2build_progress.ModuleInfo(
         name='g',
@@ -930,6 +949,13 @@ class Bp2BuildProgressTest(unittest.TestCase):
         )
     )
 
+    bp2build_metrics = Bp2BuildMetrics()
+    bp2build_metrics.unconvertedModules['a'].type = 4
+    bp2build_metrics.unconvertedModules['b'].type = 3
+    bp2build_metrics.unconvertedModules['c'].type = 3
+    bp2build_metrics.unconvertedModules['f'].type = 5
+    bp2build_metrics.unconvertedModules['e'].type = 3
+
     report_data = bp2build_progress.generate_report_data(
         module_graph,
         {'d', 'g'},
@@ -938,6 +964,7 @@ class Bp2BuildProgressTest(unittest.TestCase):
         ),
         props_by_converted_module_type,
         use_queryview=False,
+        bp2build_metrics=bp2build_metrics,
     )
 
     all_unconverted_modules = collections.defaultdict(set)
@@ -993,6 +1020,7 @@ class Bp2BuildProgressTest(unittest.TestCase):
             'unconverted properties: [Flags, Stability]',
             'unconverted dependencies',
         }),
+        reason_from_metric='PROPERTY_UNSUPPORTED',
     )
     b = bp2build_progress.ModuleInfo(
         name='b',
@@ -1009,6 +1037,7 @@ class Bp2BuildProgressTest(unittest.TestCase):
         num_deps=0,
         created_by=None,
         reasons_from_heuristics=frozenset({'type missing converter'}),
+        reason_from_metric='TYPE_UNSUPPORTED',
     )
 
     module_graph = collections.defaultdict(set)
@@ -1021,6 +1050,10 @@ class Bp2BuildProgressTest(unittest.TestCase):
         frozenset(('Name', 'Srcs', 'Resource_dirs', 'Defaults'))
     )
 
+    bp2build_metrics = Bp2BuildMetrics()
+    bp2build_metrics.unconvertedModules['a'].type = 4
+    bp2build_metrics.unconvertedModules['c'].type = 3
+
     report_data = bp2build_progress.generate_report_data(
         module_graph,
         {'b'},
@@ -1028,6 +1061,7 @@ class Bp2BuildProgressTest(unittest.TestCase):
         props_by_converted_module_type,
         use_queryview=False,
         show_converted=True,
+        bp2build_metrics=bp2build_metrics,
     )
 
     all_unconverted_modules = collections.defaultdict(set)
@@ -1149,6 +1183,7 @@ class Bp2BuildProgressTest(unittest.TestCase):
         ),
         props_by_converted_module_type,
         use_queryview=False,
+        bp2build_metrics=Bp2BuildMetrics(),
     )
 
     expected_message = bp2build_pb2.Bp2buildConversionProgress(
@@ -1264,6 +1299,7 @@ class Bp2BuildProgressTest(unittest.TestCase):
         props_by_converted_module_type,
         use_queryview=False,
         show_converted=True,
+        bp2build_metrics=Bp2BuildMetrics(),
     )
 
     expected_message = bp2build_pb2.Bp2buildConversionProgress(

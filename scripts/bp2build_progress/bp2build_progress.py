@@ -24,7 +24,7 @@ import subprocess
 import sys
 from typing import DefaultDict, Dict, FrozenSet, List, Optional, Set, Tuple
 import xml
-
+from bp2build_metrics_proto.bp2build_metrics_pb2 import Bp2BuildMetrics, UnconvertedReasonType
 import bp2build_pb2
 import dependency_analysis
 
@@ -44,6 +44,7 @@ class ModuleInfo:
   dirname: str
   created_by: Optional[str]
   reasons_from_heuristics: FrozenSet[str] = frozenset()
+  reason_from_metric: str = ""
   props: FrozenSet[str] = frozenset()
   num_deps: int = 0
   converted: bool = False
@@ -219,6 +220,7 @@ def generate_report_data(
     graph_filter: GraphFilterInfo,
     props_by_converted_module_type: DefaultDict[str, Set[str]],
     use_queryview: bool,
+    bp2build_metrics: Bp2BuildMetrics,
     show_converted: bool = False,
 ) -> ReportData:
   # Map of [number of unconverted deps] to list of entries,
@@ -249,7 +251,15 @@ def generate_report_data(
         transitive_deps_by_dep_info, module, modules, converted
     )
 
-    unconverted_module_reasons = (
+    # ModuleInfo.reason_from_metric will be an empty string if the module is converted or --use-queryview flag is passed
+    unconverted_module_reason_from_metrics = ""
+    if module.name in bp2build_metrics.unconvertedModules and not use_queryview:
+      # TODO(b/291642059): Concatenate the value of UnconvertedReason.detail field with unconverted_module_reason_from_metrics.
+      unconverted_module_reason_from_metrics = UnconvertedReasonType.Name(
+          bp2build_metrics.unconvertedModules[module.name].type
+      )
+
+    unconverted_module_reasons_from_heuristics = (
         unconverted_reasons_from_heuristics(
             module, unconverted_transitive_deps, props_by_converted_module_type
         )
@@ -267,7 +277,8 @@ def generate_report_data(
         module.kind,
         module.dirname,
         module.created_by,
-        unconverted_module_reasons,
+        unconverted_module_reasons_from_heuristics,
+        unconverted_module_reason_from_metrics,
         module.props,
         len(dep_info.all_deps()),
         module.is_converted(converted),
@@ -750,6 +761,15 @@ def main():
           " converted dependencies are not shown"
       ),
   )
+  parser.add_argument(
+      # This flag is only relevant when used by the CI script. Don't use it when running b command independently.
+      "--bp2build-metrics-location",
+      default=os.path.join(dependency_analysis.SRC_ROOT_DIR, "out"),
+      help=(
+          "Path to get bp2build_metrics, if omitted, gets bp2build_metrics from"
+          " the SRC_ROOT_DIR/out directory"
+      ),
+  )
   args = parser.parse_args()
 
   if args.proto_file and args.mode == "graph":
@@ -768,6 +788,7 @@ def main():
       if args.package_dir
       else args.package_dir
   )
+  bp2build_metrics_location = args.bp2build_metrics_location
   graph_filter = GraphFilterInfo(modules, types, package_dir, recursive)
 
   if package_dir is None:
@@ -790,6 +811,9 @@ def main():
     sys.exit(f"Cannot support --type with mode {args.mode}")
 
   converted = dependency_analysis.get_bp2build_converted_modules()
+  bp2build_metrics = dependency_analysis.get_bp2build_metrics(
+      bp2build_metrics_location
+  )
 
   module_adjacency_list, props_by_converted_module_type = (
       get_module_adjacency_list_and_props_by_converted_module_type(
@@ -824,6 +848,7 @@ def main():
         graph_filter,
         props_by_converted_module_type,
         args.use_queryview,
+        bp2build_metrics,
         args.show_converted,
     )
     report = generate_report(report_data)
