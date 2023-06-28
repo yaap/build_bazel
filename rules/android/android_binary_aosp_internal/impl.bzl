@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 load("@rules_android//rules:java.bzl", "java")
 load(
     "@rules_android//rules:processing_pipeline.bzl",
@@ -21,9 +22,108 @@ load(
     "processing_pipeline",
 )
 load("@rules_android//rules:resources.bzl", _resources = "resources")
-load("@rules_android//rules:utils.bzl", "get_android_toolchain")
+load("@rules_android//rules:utils.bzl", "get_android_toolchain", "utils")
 load("@rules_android//rules/android_binary_internal:impl.bzl", "finalize", _BASE_PROCESSORS = "PROCESSORS")
+load("//build/bazel/rules/cc:cc_stub_library.bzl", "CcStubInfo")
 load("//build/bazel/rules/common:api.bzl", "api")
+
+CollectedCcStubsInfo = provider(
+    "Tracks cc stub libraries to exclude from APK packaging.",
+    fields = {
+        "stubs": "A depset of Cc stub library files",
+    },
+)
+
+_ATTR_ASPECTS = ["deps", "dynamic_deps", "implementation_dynamic_deps", "system_dynamic_deps", "src", "shared_debuginfo", "shared"]
+
+def _collect_cc_stubs_aspect_impl(_target, ctx):
+    """An aspect that traverses the dep tree along _ATTR_ASPECTS and collects all deps with cc stubs.
+
+    For all discovered deps with cc stubs, add its linker_input and all dynamic_deps' linker_inputs to the returned list.
+
+    Args:
+        _target: Unused
+        ctx: The current aspect context.
+
+    Returns:
+        A list of CollectedCcStubsInfos which point to linker_inputs of discovered cc stubs.
+    """
+    stubs = []
+    extra_infos = []
+    for attr in _ATTR_ASPECTS:
+        if hasattr(ctx.rule.attr, attr):
+            gotten_attr = getattr(ctx.rule.attr, attr)
+            attr_as_list = gotten_attr
+            if type(getattr(ctx.rule.attr, attr)) == "Target":
+                attr_as_list = [gotten_attr]
+            for dep in attr_as_list:
+                if CcStubInfo in dep:
+                    stubs.append(dep[CcSharedLibraryInfo].linker_input)
+            extra_infos.extend(utils.collect_providers(CollectedCcStubsInfo, attr_as_list))
+
+    for info in extra_infos:
+        stubs.extend(info.stubs.to_list())
+    return [CollectedCcStubsInfo(stubs = depset(stubs))]
+
+collect_cc_stubs_aspect = aspect(
+    implementation = _collect_cc_stubs_aspect_impl,
+    attr_aspects = _ATTR_ASPECTS,
+)
+
+def _get_lib_name_from_ctx(ctx):
+    # Use the device ABI for the arch name when naming subdirectories within the APK's lib/ dir
+    # Note that the value from _product_config_abi[BuildSettingInfo].value is a string that's
+    # actually a comma-separated list of strings, where only the first element matters.
+    return ctx.attr._product_config_device_abi[BuildSettingInfo].value.split(",")[0]
+
+def _process_native_deps_aosp(ctx, **_unused_ctxs):
+    """AOSP-specific native dep processof for android_binary.
+
+    Bypasses any C++ toolchains or compiling or linking, as AOSP's JNI dependencies are all
+    built via the cc_library_shared() macro, which already handles compilation and linking.
+
+    Args:
+        ctx: The build context
+        **_unused_ctxs: Unused
+
+    Returns:
+        An AndroidBinaryNativeLibsInfo provider that informs downstream native.android_binary of the native libs.
+    """
+
+    # determine where in the APK to put the .so files
+    lib_dir_name = _get_lib_name_from_ctx(ctx)
+
+    # determine list of stub cc libraries
+    stubs_to_ignore = []
+    for dep in ctx.attr.deps:
+        if CollectedCcStubsInfo in dep:
+            stubs_to_ignore = dep[CollectedCcStubsInfo].stubs.to_list()
+
+    # get all CcSharedLibraryInfo linker_inputs
+    shared_libs = []
+    for dep in ctx.attr.deps:
+        if CcSharedLibraryInfo in dep:
+            shared_libs.append(dep[CcSharedLibraryInfo].linker_input)
+
+            for dyndep in dep[CcSharedLibraryInfo].dynamic_deps.to_list():
+                if dyndep.linker_input not in stubs_to_ignore:
+                    shared_libs.append(dyndep.linker_input)
+
+    shared_lib_files = [lib.libraries[0].dynamic_library for lib in shared_libs]
+
+    libs = dict()
+    libs[lib_dir_name] = depset(shared_lib_files)
+
+    return struct(
+        name = "native_libs_ctx",
+        value = struct(providers = [
+            AndroidBinaryNativeLibsInfo(
+                libs,
+                None,
+                None,
+            ),
+        ]),
+    )
 
 def _process_manifest_aosp(ctx, **unused_ctxs):
     manifest_ctx = _resources.set_default_min_sdk(
@@ -42,6 +142,7 @@ def _process_manifest_aosp(ctx, **unused_ctxs):
 PROCESSORS = processing_pipeline.replace(
     _BASE_PROCESSORS,
     ManifestProcessor = _process_manifest_aosp,
+    NativeLibsProcessor = _process_native_deps_aosp,
 )
 
 _PROCESSING_PIPELINE = processing_pipeline.make_processing_pipeline(
