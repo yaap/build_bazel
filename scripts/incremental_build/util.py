@@ -320,7 +320,7 @@ def any_match_under(root: Path, *patterns: str) -> (Path, list[str]):
   raise RuntimeError(f'No suitable directory for {patterns}')
 
 
-def hhmmss(t: datetime.timedelta, decimal_precision: bool) -> str:
+def hhmmss(t: datetime.timedelta, decimal_precision: bool = False) -> str:
   """pretty prints time periods, prefers mm:ss.sss and resorts to hh:mm:ss.sss
   only if t >= 1 hour.
   Examples(non_decimal_precision): 02:12, 1:12:13
