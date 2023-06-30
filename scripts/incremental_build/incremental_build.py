@@ -116,29 +116,6 @@ def _build_file_size(target_product: str) -> int:
   return os.path.getsize(build_file) if build_file.exists() else 0
 
 
-@skip_for(BuildType.SOONG_ONLY)
-def _query_buildroot_deps() -> int:
-  cmd = f'{util.get_top_dir().joinpath("build/bazel/bin/bazel")} ' \
-        f'--output_base={util.get_out_dir().joinpath("bazel/output")} ' \
-        'cquery "deps(@soong_injection//mixed_builds:buildroot)" ' \
-        '| wc -l'
-  env = {
-      'HOME': util.get_out_dir().joinpath('bazel/bazelhome'),
-      'BUILD_DIR': util.get_out_dir().joinpath('soong'),
-      'OUT_DIR': util.get_out_dir(),
-      'BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN': '1'
-  }
-  p = subprocess.run(cmd, check=False,
-                     cwd=util.get_out_dir().joinpath('soong/workspace'),
-                     env=env, shell=True, capture_output=True)
-  if p.returncode:
-    if len(p.stderr):
-      logging.error('bazel cquery errors: %s', p.stderr)
-    return -1
-
-  return int(p.stdout)
-
-
 def _pretty_env(env: Mapping[str, str]) -> str:
   env_copy = [f'{k}={v}' for (k, v) in env.items()]
   env_copy.sort()
@@ -173,7 +150,6 @@ def _build(build_type: BuildType, run_dir: Path) -> BuildInfo:
 
   return BuildInfo(
       actions=action_count_delta,
-      build_root_deps=_query_buildroot_deps(),
       build_type=build_type,
       build_result=BuildResult.FAILED if p.returncode else BuildResult.SUCCESS,
       build_ninja_hash=_build_file_sha(target_product),
