@@ -50,7 +50,8 @@ BUILD_STARTED_TIME=`date +%s%3N`
 B_ARGS=$*
 UUID=`uuidgen`
 set +e
-USE_RBE=false "$TOP/build/soong/soong_ui.bash" --build-mode --all-modules --dir="$(pwd)" $skip_tests bp2build USE_BAZEL_ANALYSIS= --build-command="b ${B_ARGS}" --skip-metrics-upload --build-started-time-unix-millis=$BUILD_STARTED_TIME
+
+"$TOP/build/soong/soong_ui.bash" --build-mode --all-modules --dir="$(pwd)" $skip_tests bp2build USE_BAZEL_ANALYSIS= --build-command="b ${B_ARGS}" --skip-metrics-upload --build-started-time-unix-millis=$BUILD_STARTED_TIME
 exit_code=$?
 if [[ $exit_code -ne 0 ]]; then
    exit $exit_code
