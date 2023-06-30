@@ -42,10 +42,11 @@ BUILD_INFO_JSON: Final[str] = 'build_info.json'
 @functools.cache
 def _is_important(column) -> bool:
   patterns = {
-      'actions', r'build_ninja_(?:hash|size)', 'build_root_deps', 'build_type',
-      'cquery_out_size', 'description', r'mixed\.enabled', 'log', 'time',
-      'targets', 'soong/soong', r'kati/kati (?:build|package)',
-      'bp2build', 'symlink_forest', r'soong_build/\*(?:\.bazel)?', 'ninja/ninja'
+      'actions', r'build_ninja_(?:hash|size)', 'build_type',
+      'cquery_out_size', 'description', 'log', r'mixed\.enabled', 'targets',
+      # the following are time-based values
+      'bp2build', r'kati/kati (?:build|package)', 'ninja/ninja', 'soong/soong',
+      r'soong_build/\*(?:\.bazel)?', 'symlink_forest', 'time'
   }
   for pattern in patterns:
     if re.fullmatch(pattern, column):
@@ -100,7 +101,6 @@ class BuildInfo:
   product: str
   time: datetime.timedelta
   actions: int
-  build_root_deps: int
   cquery_out_size: int = None
   description: str = '<unset>'
   warmup: bool = False
