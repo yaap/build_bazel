@@ -379,7 +379,7 @@ _apex_aab = rule(
             allow_single_file = True,
             cfg = "exec",
             executable = True,
-            default = "//prebuilts/build-tools:linux-x86/bin/merge_zips",
+            default = "//build/soong/cmd/merge_zips",
         ),
         "_openssl": attr.label(
             allow_single_file = True,

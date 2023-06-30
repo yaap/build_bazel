@@ -155,7 +155,7 @@ java_system_modules = rule(
             cfg = "exec",
             allow_single_file = True,
             doc = "The tool merge_zips.",
-            default = "//prebuilts/build-tools:linux-x86/bin/merge_zips",
+            default = "//build/soong/cmd/merge_zips",
             executable = True,
         ),
         "_runtime": attr.label(
