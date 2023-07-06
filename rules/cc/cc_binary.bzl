@@ -197,6 +197,9 @@ def cc_binary(
         stamp_build_number = use_version_lib,
         tags = ["manual"],
         testonly = generate_cc_test,
+        # Potentially have internal cc_test dependency so keep
+        # --trim_test_configuration optimization working. See b/288969037 for more info
+        transitive_configs = ["//command_line_option/fragment:test"] if generate_cc_test else [],
     )
 
     stripped_cc_rule(
