@@ -276,7 +276,8 @@ def main():
   for build_type in user_input.build_types:
     util.CURRENT_BUILD_TYPE = build_type
     # warm-up run reduces variations attributable to OS caches
-    run_cuj_group(cuj_catalog.Warmup)
+    if not user_input.no_warmup:
+      run_cuj_group(cuj_catalog.Warmup)
     for i in user_input.chosen_cujgroups:
       run_cuj_group(cuj_catalog.get_cujgroups()[i])
 
