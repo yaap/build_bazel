@@ -14,7 +14,7 @@
 import argparse
 import csv
 import datetime
-import itertools
+import enum
 import logging
 import re
 import statistics
@@ -22,19 +22,18 @@ import subprocess
 import textwrap
 from pathlib import Path
 
-from typing.io import TextIO
+from typing import Iterable, NewType, TextIO, TypeVar
 
 import util
 
-Row = dict[str, str]
+Row = NewType("Row", dict[str, str])
 
 
-# note we are modify the row in-place and not making a copy
-def _normalize_rebuild(row: Row) -> Row:
+# modify the row in-place
+def _normalize_rebuild(row: Row):
     row["description"] = re.sub(
         r"^(rebuild)-[\d+](.*)$", "\\1\\2", row.get("description")
     )
-    return row
 
 
 def _build_types(rows: list[Row]) -> list[str]:
@@ -45,17 +44,29 @@ def _write_table(lines: list[list[str]]) -> str:
     def join_cells(line: list[str]) -> str:
         return ",".join(str(cell) for cell in line)
 
-    return "\n".join(join_cells(line) for line in lines)
+    return "\n".join(join_cells(line) for line in lines) + "\n"
 
 
-def _acceptable(row: Row) -> bool:
-    failure = row.get("build_result") == "FAILED"
-    if failure:
-        logging.error(f"Skipping {row.get('description')}/{row.get('build_type')}")
-    return not failure
+class Aggregation(enum.Enum):
+    # naked function as value assignment doesn't seem to work,
+    # hence wrapping in a singleton tuple
+    AVG = (statistics.mean,)
+    MAX = (max,)
+    MEDIAN = (statistics.median,)
+    MIN = (min,)
+    STDEV = (statistics.stdev,)
+
+    N = TypeVar("N", int, float)
+
+    def fn(self, xs: Iterable[N]) -> N:
+        return self.value[0](xs)
 
 
-def _median_value(prop: str, rows: list[Row]) -> str:
+def _aggregate(prop: str, rows: list[Row], agg: Aggregation) -> str:
+    """
+    compute the requested aggregation
+    :return formatted values
+    """
     if not rows:
         return ""
     vals = [x.get(prop) for x in rows]
@@ -63,40 +74,45 @@ def _median_value(prop: str, rows: list[Row]) -> str:
     if len(vals) == 0:
         return ""
 
-    isnum = sum(1 for x in vals if x.isnumeric()) == len(vals)
+    isnum = any(x.isnumeric() for x in vals)
     if isnum:
         vals = [int(x) for x in vals]
-        cell = f"{(statistics.median(vals)):.0f}"
+        cell = f"{(agg.fn(vals)):.0f}"
     else:
         vals = [util.period_to_seconds(x) for x in vals]
-        cell = util.hhmmss(datetime.timedelta(seconds=statistics.median(vals)))
+        cell = util.hhmmss(datetime.timedelta(seconds=agg.fn(vals)))
 
     if len(vals) > 1:
         cell = f"{cell}[N={len(vals)}]"
     return cell
 
 
-def summarize_metrics(metrics: TextIO, summary: TextIO):
+def acceptable(row: Row) -> bool:
+    failure = row.get("build_result") == "FAILED"
+    if failure:
+        logging.error(f"Skipping {row.get('description')}/{row.get('build_type')}")
+    return not failure
+
+
+def summarize_helper(metrics: TextIO, regex: str, agg: Aggregation) -> dict[str, str]:
     """
     Args:
       metrics: csv detailed input, each row corresponding to a build
-      summary: csv summarized output
+      regex: regex matching properties to be summarized
+      agg: aggregation to use
     """
-    summary.write(summarize(metrics, "^time$").get("time"))
-
-
-def summarize(metrics: TextIO, *regexes: str) -> dict[str, str]:
-    assert len(regexes) > 0
-    reader = csv.DictReader(metrics)
+    reader: csv.DictReader = csv.DictReader(metrics)
 
     # get all matching properties
-    def expand(regex: str):
-        p = re.compile(regex)
-        return (f for f in reader.fieldnames if p.search(f))
+    p = re.compile(regex)
+    properties = [f for f in reader.fieldnames if p.search(f)]
+    if len(properties) == 0:
+        logging.error("no matching properties found")
+        return {}
 
-    all_rows: list[Row] = [
-        _normalize_rebuild(row) for row in reader if _acceptable(row)
-    ]
+    all_rows: list[Row] = [row for row in reader if acceptable(row)]
+    for row in all_rows:
+        _normalize_rebuild(row)
     build_types: list[str] = _build_types(all_rows)
     by_cuj: dict[str, list[Row]] = util.groupby(
         all_rows, lambda l: l.get("description")
@@ -108,7 +124,7 @@ def summarize(metrics: TextIO, *regexes: str) -> dict[str, str]:
         for targets, target_rows in by_targets.items():
             by_build_type = util.groupby(target_rows, lambda l: l.get("build_type"))
             vals = [
-                _median_value(prop, by_build_type.get(build_type))
+                _aggregate(prop, by_build_type.get(build_type), agg)
                 for build_type in build_types
             ]
             lines.append([cuj, targets, *vals])
@@ -121,33 +137,50 @@ def summarize(metrics: TextIO, *regexes: str) -> dict[str, str]:
             lines.extend(extract_lines_for_cuj(prop, cuj, cuj_rows))
         return _write_table(lines)
 
-    # flatten all expansions
-    properties = itertools.chain.from_iterable(expand(r) for r in regexes)
-    # remove duplicates while preserving insertion order
-    properties = dict.fromkeys(list(properties)).keys()
-    if len(properties) == 0:
-        raise Exception("no matching properties found")
     return {prop: tabulate(prop) for prop in properties}
 
 
-def display_summarized_metrics(log_dir: Path):
-    f = log_dir.joinpath(util.SUMMARY_TABLE)
-    cmd = f'grep -v "WARMUP\\|rebuild\\|revert\\|delete" {f}' f" | column -t -s,"
+def _display_summarized_metrics(summary_csv: Path, filter_cujs: bool):
+    cmd = (
+        (
+            f'grep -v "WARMUP\\|rebuild\\|revert\\|delete" {summary_csv}'
+            f" | column -t -s,"
+        )
+        if filter_cujs
+        else f"column -t -s, {summary_csv}"
+    )
     output = subprocess.check_output(cmd, shell=True, text=True)
     logging.info(
         textwrap.dedent(
-            f"""
-  %s
-  TIPS:
-    To view condensed summary:
-    %s
-    --OR--
-    pretty.sh {log_dir.joinpath(util.METRICS_TABLE)}
-  """
+            f"""\
+            %s
+            %s
+            """
         ),
-        output,
         cmd,
+        output,
     )
+
+
+def summarize(
+    metrics_csv: Path,
+    regex: str,
+    output_dir: Path,
+    agg: Aggregation = Aggregation.MEDIAN,
+    filter_cujs: bool = True,
+):
+    """
+    writes `summary_data` value as a csv files under `output_dir`
+    if `filter_cujs` is False, then does not filter out WARMUP and rebuild cuj steps
+    """
+    with open(metrics_csv, "rt") as input_file:
+        summary_data = summarize_helper(input_file, regex, agg)
+    for k, v in summary_data.items():
+        summary_csv = output_dir.joinpath(f"{k}.{agg.name}.csv")
+        summary_csv.parent.mkdir(parents=True, exist_ok=True)
+        with open(summary_csv, mode="wt") as f:
+            f.write(v)
+        _display_summarized_metrics(summary_csv, filter_cujs)
 
 
 def main():
@@ -155,9 +188,9 @@ def main():
     p.add_argument(
         "-p",
         "--properties",
-        default=["^time$"],
-        nargs="*",
-        help="properties to extract, should be time period based",
+        default="^time$",
+        nargs="?",
+        help="regex to select properties",
     )
     p.add_argument(
         "metrics",
@@ -165,29 +198,34 @@ def main():
         default=util.get_default_log_dir().joinpath(util.METRICS_TABLE),
         help="metrics.csv file to parse",
     )
-    p.add_argument("--csv", action="store_true")
+    p.add_argument(
+        "--statistic",
+        nargs="?",
+        type=lambda arg: Aggregation[arg],
+        default=Aggregation.MEDIAN,
+        help=f"Defaults to {Aggregation.MEDIAN.name}. "
+        f"Choose from {[a.name for a in Aggregation]}",
+    )
+    p.add_argument(
+        "--filter",
+        default=True,
+        action=argparse.BooleanOptionalAction,
+        help="Filter out 'rebuild-' and 'WARMUP' builds?",
+    )
     options = p.parse_args()
-    input_file = Path(options.metrics)
-    if input_file.exists() and input_file.is_dir():
-        input_file = input_file.joinpath(util.METRICS_TABLE)
-    if not input_file.exists():
-        raise RuntimeError(f"{input_file} does not exit")
-    with open(input_file, mode="rt") as mf:
-        for prop, s in summarize(mf, *options.properties).items():
-            logging.info("Displaying %s", prop)
-            if options.csv:
-                logging.info(s)
-            else:
-                p = subprocess.run(
-                    f'echo "{s}"  | grep -v "rebuild" | column -t -s,',
-                    shell=True,
-                    text=True,
-                    check=True,
-                    capture_output=True,
-                )
-                logging.info("\n%s", p.stdout)
-                if p.returncode:
-                    logging.error(p.stderr)
+    metrics_csv = Path(options.metrics)
+    aggregation: Aggregation = options.statistic
+    if metrics_csv.exists() and metrics_csv.is_dir():
+        metrics_csv = metrics_csv.joinpath(util.METRICS_TABLE)
+    if not metrics_csv.exists():
+        raise RuntimeError(f"{metrics_csv} does not exit")
+    summarize(
+        metrics_csv=metrics_csv,
+        regex=options.regex,
+        agg=aggregation,
+        output_dir=metrics_csv.parent.joinpath("perf"),
+        filter_cujs=options.filter,
+    )
 
 
 if __name__ == "__main__":
