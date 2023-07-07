@@ -35,6 +35,7 @@ class UserInput:
   chosen_cujgroups: tuple[int, ...]
   description: Optional[str]
   log_dir: Path
+  no_warmup: bool
   targets: tuple[str, ...]
   ci_mode: bool
 
@@ -89,6 +90,7 @@ def get_user_input() -> UserInput:
                  help='Index number(s) for the CUJ(s) from the following list. '
                       'Or substring matches for the CUJ description.'
                       f'Note the ordering will be respected:\n{cuj_list}')
+  p.add_argument('--no-warmup', default=False, action='store_true')
   p.add_argument('-d', '--description', type=str, default='',
                  help='Any additional tag/description for the set of builds')
 
@@ -194,10 +196,14 @@ def get_user_input() -> UserInput:
                        'Remove --ci-mode flag to skip this check.')
       sys.exit(1)
 
+  if options.no_warmup:
+    logging.warning('WARMUP runs will be skipped. Note this is not advised '
+                    'as it gives unreliable results.')
   return UserInput(
       build_types=build_types,
       chosen_cujgroups=chosen_cujgroups,
       description=options.description,
       log_dir=Path(options.log_dir).resolve(),
+      no_warmup=options.no_warmup,
       targets=options.targets,
       ci_mode=options.ci_mode)
