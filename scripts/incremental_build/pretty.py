@@ -69,8 +69,7 @@ def _median_value(prop: str, rows: list[Row]) -> str:
     cell = f'{(statistics.median(vals)):.0f}'
   else:
     vals = [util.period_to_seconds(x) for x in vals]
-    cell = util.hhmmss(datetime.timedelta(seconds=statistics.median(vals)),
-                       decimal_precision=False)
+    cell = util.hhmmss(datetime.timedelta(seconds=statistics.median(vals)))
 
   if len(vals) > 1:
     cell = f'{cell}[N={len(vals)}]'
