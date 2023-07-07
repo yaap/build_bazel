@@ -24,6 +24,7 @@ from pathlib import Path
 
 from typing import Iterable, NewType, TextIO, TypeVar
 
+import plot_metrics
 import util
 
 Row = NewType("Row", dict[str, str])
@@ -168,6 +169,7 @@ def summarize(
     output_dir: Path,
     agg: Aggregation = Aggregation.MEDIAN,
     filter_cujs: bool = True,
+    plot_format: str = "svg",
 ):
     """
     writes `summary_data` value as a csv files under `output_dir`
@@ -181,6 +183,8 @@ def summarize(
         with open(summary_csv, mode="wt") as f:
             f.write(v)
         _display_summarized_metrics(summary_csv, filter_cujs)
+        plot_file = output_dir.joinpath(f"{k}.{agg.name}.{plot_format}")
+        plot_metrics.plot(v, plot_file, filter_cujs)
 
 
 def main():
@@ -212,6 +216,12 @@ def main():
         action=argparse.BooleanOptionalAction,
         help="Filter out 'rebuild-' and 'WARMUP' builds?",
     )
+    p.add_argument(
+        "--format",
+        nargs="?",
+        default="svg",
+        help="graph output format, e.g. png, svg etc"
+    )
     options = p.parse_args()
     metrics_csv = Path(options.metrics)
     aggregation: Aggregation = options.statistic
@@ -223,8 +233,9 @@ def main():
         metrics_csv=metrics_csv,
         regex=options.properties,
         agg=aggregation,
-        output_dir=metrics_csv.parent.joinpath("perf"),
         filter_cujs=options.filter,
+        output_dir=metrics_csv.parent.joinpath("perf"),
+        plot_format=options.format,
     )
 
 
