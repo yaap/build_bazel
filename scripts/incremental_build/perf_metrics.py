@@ -250,9 +250,7 @@ def tabulate_metrics_csv(log_dir: Path):
     prefix_row['targets'] = ' '.join(prefix_row.get('targets', []))
     extra, events = read_pbs(d)
     prefix_row = prefix_row | extra
-    row = {
-        e.id: util.hhmmss(e.real_time, decimal_precision=True) for e in events
-    }
+    row = {e.id: util.hhmmss(e.real_time) for e in events}
     prefix_rows.append(prefix_row)
     rows.append(row)
 
