@@ -134,6 +134,8 @@ def read_pbs(d: Path) -> tuple[dict[str, any], list[PerfInfoOrEvent]]:
   retval = {}
   if soong_build_metrics.mixed_builds_info:
     ms = soong_build_metrics.mixed_builds_info.mixed_build_enabled_modules
+    retval['modules'] = soong_build_metrics.modules
+    retval['variants'] = soong_build_metrics.variants
     if ms:
       retval['mixed.enabled'] = len(ms)
       with open(d.joinpath('mixed.enabled.txt'), 'w') as f:
