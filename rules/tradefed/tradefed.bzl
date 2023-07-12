@@ -102,6 +102,7 @@ def _create_result_reporter_config(ctx):
     result_reporters = [
         "com.android.tradefed.result.BazelExitCodeResultReporter",
         "com.android.tradefed.result.BazelXmlResultReporter",
+        "com.android.tradefed.result.proto.FileProtoResultReporter",
     ]
     for result_reporter in result_reporters:
         config_lines.append("    <result_reporter class=\"%s\" />" % result_reporter)
