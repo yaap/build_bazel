@@ -18,7 +18,6 @@ load("//build/bazel/rules/java:sdk_library.bzl", "JavaSdkLibraryInfo")
 
 METALAVA_ARGS = [
     "--quiet",
-    "--no-banner",
     "--format=v2",
 ]
 
