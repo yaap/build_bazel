@@ -62,6 +62,9 @@ def _prepare_env() -> Mapping[str, str]:
         f'USING {target_product}-{variant} INSTEAD OF {default_product}-eng')
   env['TARGET_PRODUCT'] = target_product
   env['TARGET_BUILD_VARIANT'] = variant
+
+  if 'USE_PERSISTENT_BAZEL' not in env:
+    env['USE_PERSISTENT_BAZEL'] = '1'
   return env
 
 
