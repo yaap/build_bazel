@@ -23,7 +23,7 @@ import os.path
 import subprocess
 import sys
 import xml
-from typing import Dict, List, Set, Optional
+from typing import Dict, List, Set, Optional, FrozenSet, DefaultDict, Tuple
 
 import bp2build_pb2
 import dependency_analysis
@@ -41,6 +41,8 @@ class ModuleInfo:
   kind: str
   dirname: str
   created_by: Optional[str]
+  reasons_from_heuristics: FrozenSet[str] = frozenset()
+  props: FrozenSet[str] = frozenset()
   num_deps: int = 0
   converted: bool = False
 
@@ -55,14 +57,15 @@ class ModuleInfo:
   def is_converted(self, converted: Set[str]):
     return self.name in converted
 
-  def is_converted_or_skipped(self, converted: Set[str]):
-    if self.is_converted(converted):
-      return True
+  def is_skipped(self):
     # these are implementation details of another module type that can never be
     # created in a BUILD file
     return ".go_android/soong" in self.kind and (
         self.kind.endswith("__loadHookModule") or
         self.kind.endswith("__topDownMutatorModule"))
+
+  def is_converted_or_skipped(self, converted: Set[str]):
+    return self.is_converted(converted) or self.is_skipped()
 
 @dataclasses.dataclass(frozen=True, order=True)
 class DepInfo:
@@ -166,10 +169,28 @@ def module_matches_filter(module, graph_filter):
       return dirname == graph_filter.package_dir
   return module.name in graph_filter.module_names or module.kind in graph_filter.module_types
 
+
+def unconverted_reasons_from_heuristics(module, unconverted_transitive_deps, props_by_converted_module_type):
+  """ Heuristics for determining the reason for unconverted module"""
+  reasons = []
+  if module.converted:
+    raise RuntimeError("Heuristics should not be run on converted module %s" % module.name)
+  if module.kind in props_by_converted_module_type:
+    props_diff = module.props.difference(props_by_converted_module_type[module.kind])
+    if len(props_diff) != 0:
+      reasons.append("Module is not convertible due to the missing converters for the props: [%s]" % ", ".join(sorted(props_diff)))
+  else:
+    reasons.append("Module type is missing converter")
+  if len(unconverted_transitive_deps) > 0:
+    reasons.append("Module is not convertible due to unconverted dependencies")
+  return frozenset(reasons)
+
 # Generate a report for each module in the transitive closure, and the blockers for each module
 def generate_report_data(modules: Dict[ModuleInfo, DepInfo],
                          converted: Set[str],
                          graph_filter: GraphFilterInfo,
+                         props_by_converted_module_type: DefaultDict[str, Set[str]],
+                         use_queryview: bool,
                          show_converted: bool = False) -> ReportData:
   # Map of [number of unconverted deps] to list of entries,
   # with each entry being the string: "<module>: <comma separated list of unconverted modules>"
@@ -196,21 +217,28 @@ def generate_report_data(modules: Dict[ModuleInfo, DepInfo],
 
     unconverted_transitive_deps = get_transitive_unconverted_deps(transitive_deps_by_dep_info, module, modules, converted)
 
+    unconverted_module_reasons = (
+      unconverted_reasons_from_heuristics(module, unconverted_transitive_deps,props_by_converted_module_type)
+      if not (module.is_skipped() or module.is_converted(converted) or use_queryview)
+      else frozenset()
+    )
+
     # replace deps count with transitive deps rather than direct deps count
     module = ModuleInfo(
         module.name,
         module.kind,
         module.dirname,
         module.created_by,
+        unconverted_module_reasons,
+        module.props,
         len(dep_info.all_deps()),
-        module.is_converted(converted),
+        module.is_converted(converted)
     )
 
     for dep in unconverted_transitive_deps:
       all_unconverted_modules[dep].add(module)
 
-    if not module.is_converted_or_skipped(converted) or (
-        show_converted and not module.is_converted_or_skipped(set())):
+    if not module.is_skipped() and (not module.is_converted(converted) or show_converted):
       if show_converted:
         full_deps = set(dep for dep in deps)
         blocked_modules[module].update(full_deps)
@@ -247,24 +275,22 @@ def generate_report_data(modules: Dict[ModuleInfo, DepInfo],
       package_dir=graph_filter.package_dir
   )
 
-
-def generate_proto(report_data, file_name):
+def generate_proto(report_data):
   message = bp2build_pb2.Bp2buildConversionProgress(
       root_modules=[m.module.name for m in report_data.input_modules],
       num_deps=len(report_data.total_deps),
   )
   for module, unconverted_deps in report_data.blocked_modules_transitive.items():
     message.unconverted.add(
-        name=module.name,
-        directory=module.dirname,
-        type=module.kind,
-        unconverted_deps={d.name for d in unconverted_deps},
-        num_deps=module.num_deps,
-    )
-
-  with open(file_name, "wb") as f:
-    f.write(message.SerializeToString())
-
+      name=module.name,
+      directory=module.dirname,
+      type=module.kind,
+      unconverted_deps={d.name for d in unconverted_deps},
+      num_deps=module.num_deps,
+      # when the module is converted or queryview is being used, an empty list will be assigned
+      unconverted_reasons_from_heuristics=list(module.reasons_from_heuristics)
+  )
+  return message
 
 def generate_report(report_data):
   report_lines = []
@@ -337,7 +363,6 @@ def generate_report(report_data):
 
   return "\n".join(report_lines)
 
-
 def adjacency_list_from_json(
     module_graph: ...,
     ignore_by_name: List[str],
@@ -366,6 +391,7 @@ def adjacency_list_from_json(
             name=name,
             created_by=module["CreatedBy"],
             kind=module["Type"],
+            props=frozenset(prop for prop in dependency_analysis.get_property_names(module)),
             dirname=os.path.dirname(module["Blueprint"]),
             num_deps=len(deps_names),
         ))
@@ -386,7 +412,7 @@ def adjacency_list_from_json(
         module_adjacency_list[module_info].transitive_deps.update(transitive_dep_info.all_deps())
 
   dependency_analysis.visit_json_module_graph_post_order(
-      module_graph, ignore_by_name, ignore_java_auto_deps, filtering, collect_dependencies)
+    module_graph, ignore_by_name, ignore_java_auto_deps, filtering, collect_dependencies)
 
   return module_adjacency_list
 
@@ -432,16 +458,39 @@ def adjacency_list_from_queryview_xml(
 
   return module_adjacency_list
 
+# this function gets map of converted module types to set of properties for heuristics
+def get_props_by_converted_module_type(module_graph, converted, ignore_by_name):
+  props_by_converted_module_type = collections.defaultdict(set)
 
-def get_module_adjacency_list(
+  def collect_module_props(module):
+        props = set(prop for prop in dependency_analysis.get_property_names(module))
+        if module["Type"] not in props_by_converted_module_type:
+          props_by_converted_module_type[module["Type"]] = props
+        else:
+          props_by_converted_module_type[module["Type"]].update(props)
+
+  for module in module_graph:
+    if module["Name"] not in converted or dependency_analysis.ignore_json_module(module, ignore_by_name):
+      continue
+    collect_module_props(module)
+
+  return props_by_converted_module_type
+
+def get_module_adjacency_list_and_props_by_converted_module_type(
     graph_filter: GraphFilterInfo,
     use_queryview: bool,
     ignore_by_name: List[str],
+    converted: Set[str],
     ignore_java_auto_deps: bool = False,
     collect_transitive_dependencies: bool = True,
-    banchan_mode: bool = False) -> Dict[ModuleInfo, DepInfo]:
+    banchan_mode: bool = False) -> Tuple[Dict[ModuleInfo, DepInfo], DefaultDict[str, Set[str]]]:
   # The main module graph containing _all_ modules in the Soong build,
   # and the list of converted modules.
+
+  # Map of converted modules types to the set of properties.
+  # This is only used in heuristics implementation.
+  props_by_converted_module_type = collections.defaultdict(set)
+
   try:
     if use_queryview:
       if len(graph_filter.module_names) > 0:
@@ -463,6 +512,7 @@ def get_module_adjacency_list(
           graph_filter,
           collect_transitive_dependencies,
       )
+      props_by_converted_module_type = get_props_by_converted_module_type(module_graph, converted, ignore_by_name)
   except subprocess.CalledProcessError as err:
     sys.exit(f"""Error running: '{' '.join(err.cmd)}':"
 Stdout:
@@ -470,7 +520,8 @@ Stdout:
 Stderr:
 {err.stderr.decode('utf-8') if err.stderr else ''}""")
 
-  return module_adjacency_list
+
+  return module_adjacency_list, props_by_converted_module_type
 
 
 def add_created_by_to_converted(
@@ -606,10 +657,11 @@ def main():
 
   converted = dependency_analysis.get_bp2build_converted_modules()
 
-  module_adjacency_list = get_module_adjacency_list(
+  module_adjacency_list, props_by_converted_module_type = get_module_adjacency_list_and_props_by_converted_module_type(
       graph_filter,
       use_queryview,
       ignore_by_name,
+      converted,
       ignore_java_auto_deps,
       collect_transitive_dependencies=mode != "graph",
       banchan_mode=banchan_mode)
@@ -626,11 +678,13 @@ def main():
     output_file.write(dot_file)
   elif mode == "report":
     report_data = generate_report_data(module_adjacency_list, converted,
-                                       graph_filter, args.show_converted)
+                                       graph_filter, props_by_converted_module_type, args.use_queryview, args.show_converted)
     report = generate_report(report_data)
     output_file.write(report)
     if args.proto_file:
-      generate_proto(report_data, args.proto_file)
+      bp2build_conversion_progress_message = generate_proto(report_data)
+      with open(args.proto_file, "wb") as f:
+        f.write(bp2build_conversion_progress_message.SerializeToString())
   else:
     raise RuntimeError("unknown mode: %s" % mode)
 
