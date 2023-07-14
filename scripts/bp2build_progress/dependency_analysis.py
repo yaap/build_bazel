@@ -120,6 +120,8 @@ def get_properties(json_module):
     return set_properties
   if "SetProperties" not in json_module["Module"]["Android"]:
     return set_properties
+  if json_module['Module']['Android']['SetProperties'] is None:
+    return set_properties
 
   for prop in json_module['Module']['Android']['SetProperties']:
     if prop["Values"]:
@@ -127,6 +129,7 @@ def get_properties(json_module):
     else:
       value = prop["Value"]
     set_properties[prop["Name"]] = value
+
   return set_properties
 
 
@@ -196,7 +199,7 @@ out/soong/module-graph.json
 JSONDecodeError: {err}""")
 
 
-def _ignore_json_module(json_module, ignore_by_name):
+def ignore_json_module(json_module, ignore_by_name):
   # windows is not a priority currently
   if is_windows_variation(json_module):
     return True
@@ -230,7 +233,7 @@ def visit_json_module_graph_post_order(
   for module in module_graph:
     name = module["Name"]
     key = _ModuleKey(name, module["Variations"])
-    if _ignore_json_module(module, ignore_by_name):
+    if ignore_json_module(module, ignore_by_name):
       ignored.add(key)
       continue
     name_to_keys[name].add(key)
