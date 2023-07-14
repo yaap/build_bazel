@@ -150,7 +150,7 @@ def cc_library_shared(
         })
 
         # TODO(b/233660582): deal with the cases where the default lib shouldn't be used
-        whole_archive_deps = whole_archive_deps + select({
+        deps = deps + select({
             "//build/bazel/rules/cc:android_coverage_lib_flag": ["//system/extras/toolchain-extras:libprofile-clang-extras"],
             "//build/bazel/rules/cc:android_coverage_lib_flag_cfi": ["//system/extras/toolchain-extras:libprofile-clang-extras_cfi_support"],
             "//conditions:default": [],
@@ -341,20 +341,9 @@ def _correct_cc_shared_library_linking(ctx, shared_info, new_output):
     # library that has been post-processed
     new_linker_input = _create_dynamic_library_linker_input_for_file(ctx, shared_info, new_output)
 
-    # TODO: b/291090629 - this should instead be handled systematically
-    do_not_export = {
-        "@//system/extras/toolchain-extras:libprofile-clang-extras": True,
-        "@//system/extras/toolchain-extras:libprofile-clang-extras_cfi_support": True,
-    }
-    exports = []
-    for export in shared_info.exports:
-        if export in do_not_export:
-            continue
-        exports.append(export)
-
     return CcSharedLibraryInfo(
         dynamic_deps = shared_info.dynamic_deps,
-        exports = exports,
+        exports = shared_info.exports,
         link_once_static_libs = shared_info.link_once_static_libs,
         linker_input = new_linker_input,
     )
