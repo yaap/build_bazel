@@ -26,6 +26,8 @@ load("//build/bazel/rules/kotlin:kt_jvm_library.bzl", "make_kt_compiler_opt")
 def android_library(
         name,
         sdk_version = None,
+        errorprone_force_enable = None,
+        javacopts = [],
         java_version = None,
         tags = [],
         target_compatible_with = [],
@@ -38,6 +40,10 @@ def android_library(
       name: the wrapper rule name.
       sdk_version: string representing which sdk_version to build against. See
       //build/bazel/rules/common/sdk_version.bzl for formatting and semantics.
+      errorprone_force_enable: set this to true to always run Error Prone
+      on this target (overriding the value of environment variable
+      RUN_ERROR_PRONE). Error Prone can be force disabled for an individual
+      module by adding the "-XepDisableAllChecks" flag to javacopts
       java_version: string representing which version of java the java code in this rule should be
       built with.
       tags, target_compatible_with and visibility have Bazel's traditional semantics.
@@ -46,8 +52,14 @@ def android_library(
     lib_name = name + "_private"
     custom_kotlincopts = make_kt_compiler_opt(name, kotlincflags)
 
+    opts = javacopts
+    if errorprone_force_enable == None:
+        # TODO (b/227504307) temporarily disable errorprone until environment variable is handled
+        opts = opts + ["-XepDisableAllChecks"]
+
     android_library_aosp_internal_macro(
         name = lib_name,
+        javacopts = opts,
         tags = tags + ["manual"],
         target_compatible_with = target_compatible_with,
         visibility = ["//visibility:private"],
