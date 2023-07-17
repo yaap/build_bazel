@@ -25,10 +25,10 @@ load(
 )
 load(":cc_library_static.bzl", "cc_library_static")
 load(":clang_tidy.bzl", "collect_deps_clang_tidy_info")
-load(":composed_transitions.bzl", "lto_and_sanitizer_deps_transition")
 load(
     ":composed_transitions.bzl",
     "lto_and_fdo_profile_incoming_transition",
+    "lto_and_sanitizer_deps_transition",
 )
 load(
     ":fdo_profile_transitions.bzl",
@@ -335,19 +335,22 @@ def _create_dynamic_library_linker_input_for_file(ctx, shared_info, output):
     )
     return new_linker_input
 
-def _correct_cc_shared_library_linking(ctx, shared_info, new_output, static_root):
+def _correct_cc_shared_library_linking(ctx, shared_info, new_output):
     # we may have done some post-processing of the shared library
     # replace the linker_input that has not been post-processed with the
     # library that has been post-processed
     new_linker_input = _create_dynamic_library_linker_input_for_file(ctx, shared_info, new_output)
 
-    # only export the static internal root, we include other libraries as roots
-    # that should be linked as alwayslink; however, if they remain as exports,
-    # they will be linked dynamically, not statically when they should be
-    static_root_label = str(static_root.label)
-    if static_root_label not in shared_info.exports:
-        fail("Expected %s in exports %s" % (static_root_label, shared_info.exports))
-    exports = [static_root_label]
+    # TODO: b/291090629 - this should instead be handled systematically
+    do_not_export = {
+        "@//system/extras/toolchain-extras:libprofile-clang-extras": True,
+        "@//system/extras/toolchain-extras:libprofile-clang-extras_cfi_support": True,
+    }
+    exports = []
+    for export in shared_info.exports:
+        if export in do_not_export:
+            continue
+        exports.append(export)
 
     return CcSharedLibraryInfo(
         dynamic_deps = shared_info.dynamic_deps,
@@ -424,7 +427,7 @@ def _cc_library_shared_proxy_impl(ctx):
             files = depset(direct = files),
             runfiles = ctx.runfiles(files = [ctx.outputs.output_file]),
         ),
-        _correct_cc_shared_library_linking(ctx, ctx.attr.shared[0][CcSharedLibraryInfo], ctx.outputs.output_file, ctx.attr.deps[0]),
+        _correct_cc_shared_library_linking(ctx, ctx.attr.shared[0][CcSharedLibraryInfo], ctx.outputs.output_file),
         toc_info,
         # The _only_ linker_input is the statically linked root itself. We need to propagate this
         # as cc_shared_library identifies which libraries can be linked dynamically based on the
