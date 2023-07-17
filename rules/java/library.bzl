@@ -28,15 +28,25 @@ def java_library(
         javacopts = [],
         sdk_version = None,
         java_version = None,
+        errorprone_force_enable = None,
         tags = [],
         target_compatible_with = [],
         visibility = None,
         **kwargs):
+    """ java_library macro wrapper that handles custom attrs needed in AOSP
+
+        Attributes:
+            errorprone_force_enable: set this to true to always run Error Prone
+            on this target (overriding the value of environment variable
+            RUN_ERROR_PRONE). Error Prone can be force disabled for an individual
+            module by adding the "-XepDisableAllChecks" flag to javacopts
+        """
     lib_name = name + "_private"
 
-    #    Disable the error prone check of HashtableContains by default. See https://errorprone.info/bugpattern/HashtableContains
-    #    HashtableContains error is reported when compiling //external/bouncycastle:bouncycastle-bcpkix-unbundled
-    opts = ["-Xep:HashtableContains:OFF"] + javacopts
+    opts = javacopts
+    if errorprone_force_enable == None:
+        # TODO (b/227504307) temporarily disable errorprone until environment variable is handled
+        opts = opts + ["-XepDisableAllChecks"]
 
     _java_library(
         name = lib_name,

@@ -54,6 +54,8 @@ def android_binary(
         certificate = None,
         certificate_name = None,
         sdk_version = None,
+        errorprone_force_enable = None,
+        javacopts = [],
         java_version = None,
         tags = [],
         target_compatible_with = [],
@@ -73,8 +75,18 @@ def android_binary(
     Arguments:
         certificate: Bazel target
         certificate_name: string, name of private key file in default certificate directory
+        errorprone_force_enable: set this to true to always run Error Prone
+        on this target (overriding the value of environment variable
+        RUN_ERROR_PRONE). Error Prone can be force disabled for an individual
+        module by adding the "-XepDisableAllChecks" flag to javacopts
         **kwargs: map, additional args to pass to android_binary
+
     """
+
+    opts = javacopts
+    if errorprone_force_enable == None:
+        # TODO (b/227504307) temporarily disable errorprone until environment variable is handled
+        opts = opts + ["-XepDisableAllChecks"]
 
     if certificate and certificate_name:
         fail("Cannot use both certificate_name and certificate attributes together. Use only one of them.")
@@ -102,6 +114,7 @@ def android_binary(
     _android_binary_helper(
         name = bin_name,
         debug_signing_keys = debug_signing_keys,
+        javacopts = opts,
         target_compatible_with = target_compatible_with,
         tags = tags + ["manual"],
         visibility = ["//visibility:private"],

@@ -86,11 +86,20 @@ def kt_jvm_library(
         kotlincflags = None,
         java_version = None,
         sdk_version = None,
+        javacopts = [],
+        errorprone_force_enable = None,
         tags = [],
         target_compatible_with = [],
         visibility = None,
         **kwargs):
-    "Bazel macro wrapping for kt_jvm_library"
+    """Bazel macro wrapping for kt_jvm_library
+
+        Attributes:
+            errorprone_force_enable: set this to true to always run Error Prone
+            on this target (overriding the value of environment variable
+            RUN_ERROR_PRONE). Error Prone can be force disabled for an individual
+            module by adding the "-XepDisableAllChecks" flag to javacopts
+        """
     if resource_strip_prefix != None:
         java_import_name = name + "resources"
         kt_res_jar_name = name + "resources_jar"
@@ -109,11 +118,17 @@ def kt_jvm_library(
 
     custom_kotlincopts = make_kt_compiler_opt(name, kotlincflags)
 
+    opts = javacopts
+    if errorprone_force_enable == None:
+        # TODO (b/227504307) temporarily disable errorprone until environment variable is handled
+        opts = opts + ["-XepDisableAllChecks"]
+
     lib_name = name + "_private"
     _kt_jvm_library(
         name = lib_name,
         deps = deps,
         custom_kotlincopts = custom_kotlincopts,
+        javacopts = opts,
         tags = tags + ["manual"],
         target_compatible_with = target_compatible_with,
         visibility = ["//visibility:private"],
