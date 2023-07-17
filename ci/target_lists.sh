@@ -87,3 +87,23 @@ EXAMPLE_WRAPPER_TARGETS=(
   # aar_import wrapper
   //build/bazel/examples/android_app/java/com/app:import
 )
+
+# These targets are used for CI and are expected to be very
+# unlikely to become incompatible or broken.
+STABLE_BUILD_TARGETS=(
+  //packages/modules/adb/crypto/tests:adb_crypto_test
+  //packages/modules/adb/pairing_auth/tests:adb_pairing_auth_test
+  //packages/modules/adb/pairing_connection/tests:adb_pairing_connection_test
+  //packages/modules/adb/tls/tests:adb_tls_connection_test
+  //packages/modules/adb:adbd_test
+  //frameworks/base/api:api_fingerprint
+  //packages/modules/adb/apex:com.android.adbd
+  //packages/modules/NeuralNetworks/apex:com.android.neuralnetworks
+  //system/timezone/apex:com.android.tzdata
+  //packages/modules/NeuralNetworks/runtime:libneuralnetworks
+  //packages/modules/NeuralNetworks/runtime:libneuralnetworks_static
+  //system/timezone/testing/data/test1/apex:test1_com.android.tzdata
+  //system/timezone/testing/data/test3/apex:test3_com.android.tzdata
+  //packages/modules/adb/apex:test_com.android.adbd
+  //packages/modules/NeuralNetworks/apex/testing:test_com.android.neuralnetworks
+)
