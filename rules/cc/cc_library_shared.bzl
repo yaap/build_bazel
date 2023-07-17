@@ -230,6 +230,7 @@ def cc_library_shared(
         name = unstripped_name,
         user_link_flags = linkopts + [soname_flag],
         dynamic_deps = shared_dynamic_deps,
+        experimental_disable_topo_sort_do_not_use_remove_before_7_0 = True,  # TODO(b/280902394) remove
         additional_linker_inputs = additional_linker_inputs,
         deps = [shared_root_name] + whole_archive_deps + [imp_deps_stub],
         features = features,
