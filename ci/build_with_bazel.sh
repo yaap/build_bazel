@@ -91,11 +91,13 @@ function build_for_device() {
   done
 }
 
-function build_for_host() {
+function build_and_test_for_host() {
   targets=("$@")
   # We can safely build and test all targets on the host linux config, and rely on
   # incompatible target skipping for tests that cannot run on the host.
   build/bazel/bin/bazel \
-    "${STARTUP_FLAGS[@]}" test ${FLAGS[@]} --build_tests_only=false \
+    "${STARTUP_FLAGS[@]}" test ${FLAGS[@]} \
+    --build_tests_only=false \
+    --test_lang_filters=-tradefed_device_driven,-tradefed_host_driven_device \
     -- ${targets[@]}
 }
