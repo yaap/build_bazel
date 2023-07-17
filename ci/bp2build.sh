@@ -40,7 +40,7 @@ host_targets+=( "${BUILD_TARGETS[@]}" )
 host_targets+=( "${TEST_TARGETS[@]}" )
 host_targets+=( "${HOST_ONLY_TEST_TARGETS[@]}" )
 
-build_for_host ${host_targets[@]}
+build_and_test_for_host ${host_targets[@]}
 
 #########################################################################
 # Check that rule wrappers have the same providers as the rules they wrap

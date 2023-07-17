@@ -1,9 +1,9 @@
 #!/bin/bash
 set -e
 
-TEST_PATH="${TEST_SRCDIR}"
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 PATH_ADDITIONS="{PATH_ADDITIONS}"
+read -a ADDITIONAL_TRADEFED_OPTIONS <<< "{additional_tradefed_options}"
 
 export PATH="$SCRIPT_DIR:${PATH}"
 # Prepend the REMOTE_JAVA_HOME environment variable to the path to ensure
@@ -18,7 +18,7 @@ exit_code_file="$(mktemp /tmp/tf-exec-XXXXXXXXXX)"
 atest_tradefed.sh template/atest_local_min \
     --template:map test=atest \
     --template:map reporters="${SCRIPT_DIR}/result-reporters.xml" \
-    --tests-dir "$TEST_PATH" \
+    --tests-dir "$TEST_SRCDIR/__main__/{root_relative_tests_dir}" \
     --logcat-on-failure \
     --no-enable-granular-attempts \
     --no-early-device-release \
@@ -28,7 +28,6 @@ atest_tradefed.sh template/atest_local_min \
     "${ADDITIONAL_TRADEFED_OPTIONS[@]}" \
     --bazel-exit-code-result-reporter:file=${exit_code_file} \
     --bazel-xml-result-reporter:file=${XML_OUTPUT_FILE} \
-    --proto-output-file="${TEST_UNDECLARED_OUTPUTS_DIR}/proto-results" \
     --log-file-path="${TEST_UNDECLARED_OUTPUTS_DIR}" \
     "$@"
 
