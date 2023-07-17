@@ -17,6 +17,7 @@ limitations under the License.
 load("@bazel_skylib//rules:common_settings.bzl", "string_setting")
 load("@bazel_tools//tools/jdk:default_java_toolchain.bzl", "DEFAULT_JAVACOPTS", "default_java_toolchain")
 load("@soong_injection//java_toolchain:constants.bzl", "constants")
+load("//build/bazel/rules/java/errorprone:errorprone.bzl", "errorprone_global_flags")
 load(":bootclasspath_test.bzl", "bootclasspath_test_suite")
 load(":host_for_device_test.bzl", "host_for_device_test_suite")
 load(":java_system_modules_test.bzl", "java_system_modules_test_suite")
@@ -102,7 +103,7 @@ default_java_toolchain(
     name = "jdk17_host_toolchain_java",
     # TODO(b/218720643): Support switching between multiple JDKs.
     java_runtime = "//prebuilts/jdk/jdk17:jdk17_runtime",
-    misc = DEFAULT_JAVACOPTS + constants.CommonJdkFlags,
+    misc = errorprone_global_flags + DEFAULT_JAVACOPTS + constants.CommonJdkFlags,
     source_version = select(java_version_select_dict),
     target_version = select(java_version_select_dict),
     toolchain_definition = False,
