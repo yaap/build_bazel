@@ -186,9 +186,8 @@ _cfi_deps_cfi_include_paths_test = analysistest.make(
     attrs = transition_deps_test_attrs,
     extra_target_under_test_aspects = [_compile_action_argv_aspect],
     config_settings = {
-        transition_constants.cfi_include_paths_key: ["build/bazel/rules/cc"],
         transition_constants.cli_platforms_key: [
-            "@//build/bazel/tests/products:aosp_x86_for_testing",
+            "@//build/bazel/tests/products:aosp_x86_for_testing_cfi_include_path",
         ],
     },
 )
@@ -218,9 +217,8 @@ _cfi_deps_cfi_includes_paths_host_no_cfi_test = analysistest.make(
     attrs = transition_deps_test_attrs,
     extra_target_under_test_aspects = [_compile_action_argv_aspect],
     config_settings = {
-        transition_constants.cfi_include_paths_key: ["build/bazel/rules/cc"],
         transition_constants.cli_platforms_key: [
-            "@//build/bazel/tests/products:aosp_x86_for_testing_linux_x86",
+            "@//build/bazel/tests/products:aosp_x86_for_testing_cfi_include_path_linux_x86",
         ],
     },
 )
@@ -250,7 +248,9 @@ _cfi_exclude_paths_no_cfi_test = analysistest.make(
     attrs = transition_deps_test_attrs,
     extra_target_under_test_aspects = [_compile_action_argv_aspect],
     config_settings = {
-        transition_constants.cfi_exclude_paths_key: ["build/bazel/rules/cc"],
+        transition_constants.cli_platforms_key: [
+            "@//build/bazel/tests/products:aosp_x86_for_testing_cfi_exclude_path",
+        ],
     },
 )
 

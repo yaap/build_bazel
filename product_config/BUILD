@@ -1,4 +1,4 @@
-load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag", "string_flag")
 load(":android_product.bzl", "all_android_product_labels")
 
 package(default_visibility = ["//visibility:public"])
@@ -46,4 +46,21 @@ alias(
 string_flag(
     name = "apex_global_min_sdk_version_override",
     build_setting_default = "",
+)
+
+# TODO: cfi_include/exclude_paths should be string_list_settings, but there's currently a
+# bazel crash: https://github.com/bazelbuild/bazel/issues/18977
+string_flag(
+    name = "cfi_include_paths",
+    build_setting_default = "",
+)
+
+string_flag(
+    name = "cfi_exclude_paths",
+    build_setting_default = "",
+)
+
+bool_flag(
+    name = "enable_cfi",
+    build_setting_default = True,
 )
