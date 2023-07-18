@@ -1093,7 +1093,7 @@ APEX is truly updatable. To be updatable, min_sdk_version should be set as well.
             doc = "If specified, override 'version: 0' in apex_manifest.json with this value instead of the branch default. Non-zero versions will not be changed.",
         ),
         "_apex_global_min_sdk_version_override": attr.label(
-            default = "//build/bazel/rules/apex:apex_global_min_sdk_version_override",
+            default = "//build/bazel/product_config:apex_global_min_sdk_version_override",
             doc = "If specified, override the min_sdk_version of this apex and in the transition and checks for dependencies.",
         ),
         "_product_variables": attr.label(

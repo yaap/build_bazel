@@ -26,8 +26,8 @@ load("//build/bazel/rules/cc:cc_library_headers.bzl", "cc_library_headers")
 load("//build/bazel/rules/cc:cc_library_shared.bzl", "cc_library_shared")
 load("//build/bazel/rules/cc:cc_library_static.bzl", "cc_library_static")
 load("//build/bazel/rules/cc:cc_stub_library.bzl", "cc_stub_suite")
-load("//build/bazel/rules/test_common:rules.bzl", "expect_failure_test", "target_under_test_exist_test")
 load("//build/bazel/rules/test_common:flags.bzl", "action_flags_present_only_for_mnemonic_test")
+load("//build/bazel/rules/test_common:rules.bzl", "expect_failure_test", "target_under_test_exist_test")
 load(":apex_deps_validation.bzl", "ApexDepsInfo", "apex_dep_infos_to_allowlist_strings")
 load(":apex_info.bzl", "ApexInfo", "ApexMkInfo")
 load(":apex_test_helpers.bzl", "test_apex")
@@ -503,7 +503,7 @@ apex_manifest_global_min_sdk_current_test = analysistest.make(
 
 apex_manifest_global_min_sdk_override_tiramisu_test = analysistest.make(
     config_settings = {
-        "@//build/bazel/rules/apex:apex_global_min_sdk_version_override": "Tiramisu",
+        "//command_line_option:platforms": "@//build/bazel/tests/products:aosp_arm64_for_testing_min_sdk_version_override_tiramisu",
         "@//build/bazel/rules/apex:unbundled_build_target_sdk_with_api_fingerprint": False,
     },
     **apex_manifest_test_attr
@@ -1468,7 +1468,7 @@ min_sdk_version_apex_inherit_test = analysistest.make(
 
 min_sdk_version_apex_inherit_override_min_sdk_tiramisu_test = analysistest.make(
     config_settings = {
-        "@//build/bazel/rules/apex:apex_global_min_sdk_version_override": "Tiramisu",
+        "//command_line_option:platforms": "@//build/bazel/tests/products:aosp_arm64_for_testing_min_sdk_version_override_tiramisu",
     },
     **min_sdk_version_apex_inherit_test_attrs
 )
