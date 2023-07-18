@@ -1,3 +1,4 @@
+load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 load(":android_product.bzl", "all_android_product_labels")
 
 package(default_visibility = ["//visibility:public"])
@@ -40,4 +41,9 @@ alias(
         label + "_constraint_value": label + "_product_vars"
         for label in all_android_product_labels
     }),
+)
+
+string_flag(
+    name = "apex_global_min_sdk_version_override",
+    build_setting_default = "",
 )

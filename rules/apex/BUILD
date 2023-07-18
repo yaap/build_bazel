@@ -1,7 +1,6 @@
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag", "bool_setting", "string_list_setting", "string_setting")
 load("@env//:env.bzl", "env")
 load("@soong_injection//api_levels:platform_versions.bzl", "platform_versions")
-load("@soong_injection//product_config:product_variables.bzl", "product_vars")
 load("//build/bazel/flags:common.bzl", "is_env_true")
 load("//build/bazel/product_variables:constants.bzl", "constants")
 load("//build/bazel/rules:metadata.bzl", "metadata")
@@ -38,13 +37,6 @@ string_setting(
 string_setting(
     name = "override_apex_manifest_default_version",
     build_setting_default = env.get("OVERRIDE_APEX_MANIFEST_DEFAULT_VERSION", ""),
-    visibility = ["//visibility:public"],
-)
-
-string_setting(
-    name = "apex_global_min_sdk_version_override",
-    # TODO(b/269577299): Make this read from //build/bazel/product_config:product_vars instead.
-    build_setting_default = product_vars.get("ApexGlobalMinSdkVersionOverride", ""),
     visibility = ["//visibility:public"],
 )
 

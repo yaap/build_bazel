@@ -30,8 +30,8 @@ top-down ApexInfoMutator:
 https://cs.android.com/android/platform/superproject/+/master:build/soong/apex/apex.go;l=948-962;drc=539d41b686758eeb86236c0e0dcf75478acb77f3
 """
 
-load("@bazel_skylib//lib:dicts.bzl", "dicts")
 load("@bazel_skylib//lib:collections.bzl", "collections")
+load("@bazel_skylib//lib:dicts.bzl", "dicts")
 load("//build/bazel/rules/apex:sdk_versions.bzl", "maybe_override_min_sdk_version")
 
 def _get_api_domain(apex_name, base_apex_name):
@@ -50,7 +50,7 @@ def _get_api_domain(apex_name, base_apex_name):
 def _create_apex_configuration(settings, attr, additional = {}):
     min_sdk_version = maybe_override_min_sdk_version(
         attr.min_sdk_version,
-        settings["//build/bazel/rules/apex:apex_global_min_sdk_version_override"],
+        settings["//build/bazel/product_config:apex_global_min_sdk_version_override"],
     )
 
     apex_name = attr.name
@@ -80,7 +80,7 @@ def _impl(settings, attr):
     })
 
 _TRANSITION_INPUTS = [
-    "//build/bazel/rules/apex:apex_global_min_sdk_version_override",
+    "//build/bazel/product_config:apex_global_min_sdk_version_override",
 ]
 
 _TRANSITION_OUTPUTS = [
