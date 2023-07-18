@@ -14,10 +14,13 @@
 
 load("@bazel_skylib//lib:selects.bzl", "selects")
 load(":config_setting_boolean_algebra_test.bzl", "config_setting_boolean_algebra_test_suite")
+load(":schema_validation_test.bzl", "schema_validation_test_suite")
 
 config_setting_boolean_algebra_test_suite(
     name = "config_setting_boolean_algebra_test_suite",
 )
+
+schema_validation_test_suite(name = "schema_validation_test_suite")
 
 # Stamp is a random flag that can only be 1 of 2 values, so it can be used to make
 # the always_on/off_config_settings. This concept is copied from skylib, but skylib
