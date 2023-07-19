@@ -163,7 +163,7 @@ def get_cmd_to_display_tabulated_metrics(d: Path, ci_mode: bool) -> str:
   #    `--,--,--,hi,--,--,--,` =>
   #    `--,--,--,hi,--,--,--,--`
   # Note sed doesn't support lookahead or lookbehinds
-  return f'grep -v "WARMUP\\|rebuild-\\|FAILED" "{csv_file}" | ' \
+  return f'grep -v "WARMUP\\|rebuild-" "{csv_file}" | ' \
          f'sed "s/,,/,--,/g" | ' \
          f'sed "s/,,/,--,/g" | ' \
          f'sed "s/^,/--,/" | ' \
