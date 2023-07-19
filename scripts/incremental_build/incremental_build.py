@@ -16,6 +16,7 @@
 A tool for running builds (soong or b) and measuring the time taken.
 """
 import datetime
+import enum
 import functools
 import hashlib
 import itertools
@@ -30,6 +31,7 @@ import time
 from pathlib import Path
 from typing import Final
 from typing import Mapping
+from typing import Optional
 from typing import TextIO
 
 import cuj_catalog
@@ -59,7 +61,7 @@ def _prepare_env() -> Mapping[str, str]:
 
   if target_product != default_product or variant != 'eng':
     logging.warning(
-        f'USING {target_product}-{variant} INSTEAD OF {default_product}-eng')
+      f'USING {target_product}-{variant} INSTEAD OF {default_product}-eng')
   env['TARGET_PRODUCT'] = target_product
   env['TARGET_BUILD_VARIANT'] = variant
 
@@ -91,19 +93,19 @@ def _recompact_ninja_log(f: TextIO):
   env = _prepare_env()
   target_product = env["TARGET_PRODUCT"]
   subprocess.run([
-      util.get_top_dir().joinpath(
-          'prebuilts/build-tools/linux-x86/bin/ninja'),
-      '-f',
-      util.get_out_dir().joinpath(
-          f'combined-{target_product}.ninja'),
-      '-t', 'recompact'],
-      check=False, cwd=util.get_top_dir(), env=env, shell=False,
-      stdout=f, stderr=f)
+    util.get_top_dir().joinpath(
+      'prebuilts/build-tools/linux-x86/bin/ninja'),
+    '-f',
+    util.get_out_dir().joinpath(
+      f'combined-{target_product}.ninja'),
+    '-t', 'recompact'],
+    check=False, cwd=util.get_top_dir(), env=env, shell=False,
+    stdout=f, stderr=f)
 
 
 def _build_file_sha(target_product: str) -> str:
   build_file = util.get_out_dir().joinpath(
-      f'soong/build.{target_product}.ninja')
+    f'soong/build.{target_product}.ninja')
   if not build_file.exists():
     return ''
   with open(build_file, mode="rb") as f:
@@ -115,7 +117,7 @@ def _build_file_sha(target_product: str) -> str:
 
 def _build_file_size(target_product: str) -> int:
   build_file = util.get_out_dir().joinpath(
-      f'soong/build.{target_product}.ninja')
+    f'soong/build.{target_product}.ninja')
   return os.path.getsize(build_file) if build_file.exists() else 0
 
 
@@ -152,13 +154,13 @@ def _build(build_type: BuildType, run_dir: Path) -> BuildInfo:
       action_count_delta = _new_action_count(af, action_count_before)
 
   return BuildInfo(
-      actions=action_count_delta,
-      build_type=build_type,
-      build_result=BuildResult.FAILED if p.returncode else BuildResult.SUCCESS,
-      build_ninja_hash=_build_file_sha(target_product),
-      build_ninja_size=_build_file_size(target_product),
-      product=f'{target_product}-{env["TARGET_BUILD_VARIANT"]}',
-      time=datetime.timedelta(microseconds=elapsed_ns / 1000)
+    actions=action_count_delta,
+    build_type=build_type,
+    build_result=BuildResult.FAILED if p.returncode else BuildResult.SUCCESS,
+    build_ninja_hash=_build_file_sha(target_product),
+    build_ninja_size=_build_file_size(target_product),
+    product=f'{target_product}-{env["TARGET_BUILD_VARIANT"]}',
+    time=datetime.timedelta(microseconds=elapsed_ns / 1000)
   )
 
 
@@ -221,7 +223,12 @@ def main():
   '''))
 
   run_dir_gen = util.next_path(user_input.log_dir.joinpath(util.RUN_DIR_PREFIX))
-  stop_building = False
+
+  class StopBuilding(enum.Enum):
+    CI_MODE = enum.auto()
+    DUE_TO_ERROR = enum.auto()
+
+  stop_building: Optional[StopBuilding] = None
 
   def run_cuj_group(cuj_group: cuj_catalog.CujGroup):
     nonlocal stop_building
@@ -249,16 +256,19 @@ def main():
 
         logging.info(json.dumps(build_info, indent=2, cls=util.CustomEncoder))
 
-        if user_input.ci_mode:
-          if build_info.build_result == BuildResult.FAILED:
-            logging.critical(
-                f'Failed CI build runs detected! Please see logs in: {run_dir}')
-            sys.exit(1)
-          if cuj_group != cuj_catalog.Warmup:
-            stop_building = True
-            logs_dir_for_ci = user_input.log_dir.parent.joinpath('logs')
-            if logs_dir_for_ci.exists():
-              perf_metrics.archive_run(logs_dir_for_ci, build_info)
+        if user_input.ci_mode and cuj_group != cuj_catalog.Warmup:
+          stop_building = StopBuilding.CI_MODE
+          logs_dir_for_ci = user_input.log_dir.parent.joinpath('logs')
+          if logs_dir_for_ci.exists():
+            perf_metrics.archive_run(logs_dir_for_ci, build_info)
+
+        if build_info.build_result == BuildResult.FAILED:
+          stop_building = StopBuilding.DUE_TO_ERROR
+          logging.critical(
+            f'Failed cuj run! Please see logs in: {run_dir}')
+        elif run == MAX_RUN_COUNT - 1:
+          stop_building = StopBuilding.DUE_TO_ERROR
+          logging.critical(f'Build did not stabilize in {run} attempts')
 
         perf_metrics.archive_run(run_dir, build_info)
         # we are doing tabulation and summary after each run
@@ -273,8 +283,8 @@ def main():
         if build_info.actions == 0:
           # build has stabilized
           break
-        if run == MAX_RUN_COUNT - 1:
-          sys.exit(f'Build did not stabilize in {run} attempts')
+    if stop_building == StopBuilding.DUE_TO_ERROR:
+      sys.exit(1)
 
   for build_type in user_input.build_types:
     util.CURRENT_BUILD_TYPE = build_type
@@ -299,11 +309,11 @@ class ColoredLoggingFormatter(logging.Formatter):
   BASIC = '%(asctime)s %(levelname)s: %(message)s'
 
   FORMATS = {
-      logging.DEBUG: f'{YELLOW}%(asctime)s %(levelname)s:{RESET} %(message)s',
-      logging.INFO: f'{GREEN}%(asctime)s %(levelname)s:{RESET} %(message)s',
-      logging.WARNING: f'{PURPLE}{BASIC}{RESET}',
-      logging.ERROR: f'{RED}{BASIC}{RESET}',
-      logging.CRITICAL: f'{RED}{BASIC}{RESET}'
+    logging.DEBUG: f'{YELLOW}%(asctime)s %(levelname)s:{RESET} %(message)s',
+    logging.INFO: f'{GREEN}%(asctime)s %(levelname)s:{RESET} %(message)s',
+    logging.WARNING: f'{PURPLE}{BASIC}{RESET}',
+    logging.ERROR: f'{RED}{BASIC}{RESET}',
+    logging.CRITICAL: f'{RED}{BASIC}{RESET}'
   }
 
   def format(self, record):
