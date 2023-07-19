@@ -409,24 +409,24 @@ class Bp2BuildProgressTest(unittest.TestCase):
   def test_generate_report_data(self):
     a = bp2build_progress.ModuleInfo(
         name='a', kind='type1', dirname='pkg', num_deps=4, created_by=None,
-        reasons_from_heuristics=frozenset({'Module is not convertible due to unconverted dependencies', 'Module type is missing converter'}))
+        reasons_from_heuristics=frozenset({'unconverted dependencies', 'type missing converter'}))
     b = bp2build_progress.ModuleInfo(
         name='b', kind='type2', dirname='pkg', num_deps=1, created_by=None,
         props=frozenset({"Name", "Srcs", "BaseName"}),
-        reasons_from_heuristics=frozenset({'Module is not convertible due to the missing converters for the props: [BaseName]'}))
+        reasons_from_heuristics=frozenset({'unconverted properties: [BaseName]'}))
     c = bp2build_progress.ModuleInfo(
         name='c', kind='type2', dirname='other', num_deps=1, created_by=None,
         props=frozenset({"Name", "Defaults"}),
-        reasons_from_heuristics=frozenset({'Module is not convertible due to unconverted dependencies'}))
+        reasons_from_heuristics=frozenset({'unconverted dependencies'}))
     d = bp2build_progress.ModuleInfo(
         name='d', kind='type2', dirname='pkg', num_deps=0, created_by=None)
     e = bp2build_progress.ModuleInfo(
         name='e', kind='type3', dirname='other', num_deps=0, created_by=None,
-        reasons_from_heuristics=frozenset({'Module type is missing converter'}))
+        reasons_from_heuristics=frozenset({'type missing converter'}))
     f = bp2build_progress.ModuleInfo(
         name='f', kind='type4', dirname='pkg2', num_deps=3, created_by=None,
         props=frozenset({"Name", "Sdk_version", "Visibility", "Backend.Java.Platform_apis"}),
-        reasons_from_heuristics=frozenset({'Module is not convertible due to unconverted dependencies'}))
+        reasons_from_heuristics=frozenset({'unconverted dependencies'}))
     g = bp2build_progress.ModuleInfo(
         name='g', kind='type4', dirname='pkg2', num_deps=2, created_by=None)
 
@@ -487,22 +487,22 @@ class Bp2BuildProgressTest(unittest.TestCase):
     a = bp2build_progress.ModuleInfo(
         name='a', kind='type1', dirname='pkg', num_deps=4, created_by=None,
         props=frozenset({'Flags', 'Stability'}),
-        reasons_from_heuristics=frozenset({'Module is not convertible due to the missing converters for the props: [Flags, Stability]','Module is not convertible due to unconverted dependencies'}))
+        reasons_from_heuristics=frozenset({'unconverted properties: [Flags, Stability]','unconverted dependencies'}))
     b = bp2build_progress.ModuleInfo(
         name='b', kind='type2', dirname='pkg', num_deps=1, created_by=None,
-        reasons_from_heuristics=frozenset({'Module type is missing converter'}))
+        reasons_from_heuristics=frozenset({'type missing converter'}))
     c = bp2build_progress.ModuleInfo(
         name='c', kind='type2', dirname='other', num_deps=1, created_by=None,
-        reasons_from_heuristics=frozenset({'Module is not convertible due to unconverted dependencies', 'Module type is missing converter'}))
+        reasons_from_heuristics=frozenset({'unconverted dependencies', 'type missing converter'}))
     d = bp2build_progress.ModuleInfo(
         name='d', kind='type2', dirname='pkg', num_deps=0, created_by=None)
     e = bp2build_progress.ModuleInfo(
         name='e', kind='type3', dirname='other', num_deps=0, created_by=None,
-        reasons_from_heuristics=frozenset({'Module type is missing converter'}))
+        reasons_from_heuristics=frozenset({'type missing converter'}))
     f = bp2build_progress.ModuleInfo(
         name='f', kind='type4', dirname='pkg2', num_deps=3, created_by=None,
         props=frozenset({"Name", "Visibility"}),
-        reasons_from_heuristics=frozenset({'Module is not convertible due to unconverted dependencies'}))
+        reasons_from_heuristics=frozenset({'unconverted dependencies'}))
     g = bp2build_progress.ModuleInfo(
         name='g', kind='type4', dirname='pkg2', num_deps=0, created_by=None, converted=True)
 
@@ -565,12 +565,12 @@ class Bp2BuildProgressTest(unittest.TestCase):
     a = bp2build_progress.ModuleInfo(
         name='a', kind='type1', dirname='pkg', num_deps=2, created_by=None,
           props=frozenset({'Flags', 'Stability', 'Resource_dirs'}),
-        reasons_from_heuristics=frozenset({'Module is not convertible due to the missing converters for the props: [Flags, Stability]', 'Module is not convertible due to unconverted dependencies'}))
+        reasons_from_heuristics=frozenset({'unconverted properties: [Flags, Stability]', 'unconverted dependencies'}))
     b = bp2build_progress.ModuleInfo(
         name='b', kind='type2', dirname='pkg2', num_deps=0, created_by=None, converted=True)
     c = bp2build_progress.ModuleInfo(
         name='c', kind='type3', dirname='other', num_deps=0, created_by=None,
-        reasons_from_heuristics=frozenset({'Module type is missing converter'}))
+        reasons_from_heuristics=frozenset({'type missing converter'}))
 
     module_graph = collections.defaultdict(set)
     module_graph[a] = bp2build_progress.DepInfo(direct_deps=set([b, c]))
