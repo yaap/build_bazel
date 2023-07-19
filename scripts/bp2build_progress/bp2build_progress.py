@@ -178,11 +178,11 @@ def unconverted_reasons_from_heuristics(module, unconverted_transitive_deps, pro
   if module.kind in props_by_converted_module_type:
     props_diff = module.props.difference(props_by_converted_module_type[module.kind])
     if len(props_diff) != 0:
-      reasons.append("Module is not convertible due to the missing converters for the props: [%s]" % ", ".join(sorted(props_diff)))
+      reasons.append("unconverted properties: [%s]" % ", ".join(sorted(props_diff)))
   else:
-    reasons.append("Module type is missing converter")
+    reasons.append("type missing converter")
   if len(unconverted_transitive_deps) > 0:
-    reasons.append("Module is not convertible due to unconverted dependencies")
+    reasons.append("unconverted dependencies")
   return frozenset(reasons)
 
 # Generate a report for each module in the transitive closure, and the blockers for each module
