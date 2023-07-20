@@ -57,6 +57,21 @@ class ModuleInfo:
     converted = " (c)" if self.is_converted(converted) else ""
     return f"{self.name} [{self.kind}]{converted}"
 
+  def get_reasons_from_heuristics(self):
+    if len(self.reasons_from_heuristics) == 0:
+      return ""
+    return (
+        " unconverted reasons from heuristics: {reasons_from_heuristics}"
+        .format(reasons_from_heuristics=", ".join(self.reasons_from_heuristics))
+    )
+
+  def get_reason_from_metric(self):
+    if len(self.reason_from_metric) == 0:
+      return ""
+    return " unconverted reason from metric: {reason_from_metric}".format(
+        reason_from_metric=self.reason_from_metric
+    )
+
   def is_converted(self, converted: Set[str]):
     return self.name in converted
 
@@ -107,6 +122,7 @@ class ReportData:
   kind_of_unconverted_modules: Set[str]
   converted: Set[str]
   show_converted: bool
+  hide_unconverted_modules_reasons: bool
   package_dir: str
   input_modules: Set[InputModule] = dataclasses.field(default_factory=set)
   input_types: Set[str] = dataclasses.field(default_factory=set)
@@ -221,6 +237,7 @@ def generate_report_data(
     props_by_converted_module_type: DefaultDict[str, Set[str]],
     use_queryview: bool,
     bp2build_metrics: Bp2BuildMetrics,
+    hide_unconverted_modules_reasons: bool = False,
     show_converted: bool = False,
 ) -> ReportData:
   # Map of [number of unconverted deps] to list of entries,
@@ -253,7 +270,11 @@ def generate_report_data(
 
     # ModuleInfo.reason_from_metric will be an empty string if the module is converted or --use-queryview flag is passed
     unconverted_module_reason_from_metrics = ""
-    if module.name in bp2build_metrics.unconvertedModules and not use_queryview:
+    if (
+        module.name in bp2build_metrics.unconvertedModules
+        and not use_queryview
+        and not hide_unconverted_modules_reasons
+    ):
       # TODO(b/291642059): Concatenate the value of UnconvertedReason.detail field with unconverted_module_reason_from_metrics.
       unconverted_module_reason_from_metrics = UnconvertedReasonType.Name(
           bp2build_metrics.unconvertedModules[module.name].type
@@ -267,6 +288,7 @@ def generate_report_data(
             module.is_skipped()
             or module.is_converted(converted)
             or use_queryview
+            or hide_unconverted_modules_reasons
         )
         else frozenset()
     )
@@ -330,6 +352,7 @@ def generate_report_data(
       kind_of_unconverted_modules=kinds,
       converted=converted,
       show_converted=show_converted,
+      hide_unconverted_modules_reasons=hide_unconverted_modules_reasons,
       package_dir=graph_filter.package_dir,
   )
 
@@ -403,11 +426,20 @@ def generate_report(report_data):
     unconverted_deps = set(
         d.short_string(report_data.converted) for d in unconverted_deps
     )
-    report_lines.append(
-        "{module} direct deps: {deps}".format(
-            module=module, deps=", ".join(sorted(unconverted_deps))
-        )
-    )
+    report_lines.append(f"{module}")
+    if not report_data.hide_unconverted_modules_reasons:
+      reason_from_metric = module.get_reason_from_metric()
+      reasons_from_heuristics = module.get_reasons_from_heuristics()
+      if reason_from_metric != "":
+        report_lines.append(f"{reason_from_metric}")
+      if reasons_from_heuristics != "":
+        report_lines.append(f"{reasons_from_heuristics}")
+    if len(unconverted_deps) == 0:
+      report_lines.append('direct deps:')
+    else:
+      report_lines.append(
+        "direct deps: {deps}".format(deps=", ".join(sorted(unconverted_deps)))
+      )
 
   report_lines.append("\n")
   report_lines.append("# Unconverted deps of {}:\n".format(input_module_str))
@@ -770,6 +802,15 @@ def main():
           " the SRC_ROOT_DIR/out directory"
       ),
   )
+  parser.add_argument(
+      "--hide-unconverted-modules-reasons",
+      action="store_true",
+      help=(
+          "Hide unconverted modules reasons of heuristics and"
+          " bp2build_metrics.pb. By default unconverted modules reasons are"
+          " shown"
+      ),
+  )
   args = parser.parse_args()
 
   if args.proto_file and args.mode == "graph":
@@ -800,15 +841,25 @@ def main():
     if args.use_queryview:
       sys.exit("Can only support the package directory with json module graph")
     if args.mode == "graph":
-      sys.exit(f"Cannot support --package-dir with mode {args.mode}")
+      sys.exit(f"Cannot support --package-dir with mode graph")
     if len(modules) > 0 or len(types) > 0:
       sys.exit("Can only support either modules, types or package directory")
   if len(modules) > 0 and len(types) > 0 and args.use_queryview:
-    sys.exit("Can only support either of modules or types with use-queryview")
+    sys.exit("Can only support either of modules or types with --use-queryview")
   if len(modules) > 1 and args.mode == "graph":
-    sys.exit(f"Can only support one module with mode {args.mode}")
+    sys.exit(f"Can only support one module with mode graph")
   if len(types) and args.mode == "graph":
-    sys.exit(f"Cannot support --type with mode {args.mode}")
+    sys.exit(f"Cannot support --type with mode graph")
+  if args.hide_unconverted_modules_reasons:
+    if args.use_queryview:
+      sys.exit(
+          "Cannot support --hide-unconverted-modules-reasons with"
+          " --use-queryview"
+      )
+    if args.mode == "graph":
+      sys.exit(
+          f"Cannot support --hide-unconverted-modules-reasons with mode graph"
+      )
 
   converted = dependency_analysis.get_bp2build_converted_modules()
   bp2build_metrics = dependency_analysis.get_bp2build_metrics(
@@ -849,6 +900,7 @@ def main():
         props_by_converted_module_type,
         args.use_queryview,
         bp2build_metrics,
+        args.hide_unconverted_modules_reasons,
         args.show_converted,
     )
     report = generate_report(report_data)
