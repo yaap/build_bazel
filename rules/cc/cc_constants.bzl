@@ -43,9 +43,9 @@ constants = struct(
 _FEATURES_ATTR_KEY = "features"
 _CLI_FEATURES_KEY = "//command_line_option:features"
 _CLI_PLATFORMS_KEY = "//command_line_option:platforms"
-_CFI_INCLUDE_PATHS_KEY = "@//build/bazel/rules/cc:cfi_include_paths"
-_CFI_EXCLUDE_PATHS_KEY = "@//build/bazel/rules/cc:cfi_exclude_paths"
-_ENABLE_CFI_KEY = "@//build/bazel/rules/cc:enable_cfi"
+_CFI_INCLUDE_PATHS_KEY = "@//build/bazel/product_config:cfi_include_paths"
+_CFI_EXCLUDE_PATHS_KEY = "@//build/bazel/product_config:cfi_exclude_paths"
+_ENABLE_CFI_KEY = "@//build/bazel/product_config:enable_cfi"
 _CFI_ASSEMBLY_KEY = "@//build/bazel/rules/cc:cfi_assembly"
 
 transition_constants = struct(
