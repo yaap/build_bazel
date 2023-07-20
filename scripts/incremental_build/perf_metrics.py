@@ -52,25 +52,22 @@ class PerfInfoOrEvent:
           microseconds=self.start_time / 1000)
 
 
-SOONG_PB = 'soong_metrics'
-SOONG_BUILD_PB = 'soong_build_metrics.pb'
 BP2BUILD_PB = 'bp2build_metrics.pb'
+BUILD_TRACE_GZ = 'build.trace.gz'
+SOONG_BUILD_PB = 'soong_build_metrics.pb'
+SOONG_PB = 'soong_metrics'
 
 
-def _copy_pbs_to(d: Path):
-  soong_pb = util.get_out_dir().joinpath(SOONG_PB)
-  soong_build_pb = util.get_out_dir().joinpath(SOONG_BUILD_PB)
-  bp2build_pb = util.get_out_dir().joinpath(BP2BUILD_PB)
-  if soong_pb.exists():
-    shutil.copy(soong_pb, d.joinpath(SOONG_PB))
-  if soong_build_pb.exists():
-    shutil.copy(soong_build_pb, d.joinpath(SOONG_BUILD_PB))
-  if bp2build_pb.exists():
-    shutil.copy(bp2build_pb, d.joinpath(BP2BUILD_PB))
+def _copy_metrics_to(d: Path):
+  metrics_to_copy = [BP2BUILD_PB, BUILD_TRACE_GZ, SOONG_BUILD_PB, SOONG_PB]
+  for metric_name in metrics_to_copy:
+    metric = util.get_out_dir().joinpath(metric_name)
+    if metric.exists():
+      shutil.copy(metric, d.joinpath(metric_name))
 
 
 def archive_run(d: Path, build_info: util.BuildInfo):
-  _copy_pbs_to(d)
+  _copy_metrics_to(d)
   with open(d.joinpath(util.BUILD_INFO_JSON), 'w') as f:
     json.dump(build_info, f, indent=True, cls=util.CustomEncoder)
 
