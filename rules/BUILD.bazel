@@ -19,6 +19,7 @@ sh_test(
     data = [
         "test.pem",
         ":staging_dir_builder",
+        "//build/soong/zip/cmd:soong_zip",
         "//external/avb:avbtool",
         "//external/e2fsprogs/contrib/android:e2fsdroid",
         "//external/e2fsprogs/debugfs",
@@ -27,7 +28,6 @@ sh_test(
         "//external/erofs-utils:fsck.erofs",
         "//external/selinux/libselinux:sefcontext_compile",
         "//frameworks/base/tools/aapt2",
-        "//prebuilts/build-tools:linux-x86/bin/soong_zip",
         "//prebuilts/sdk/current:public/android.jar",
         "//system/apex/apexer",
         "//system/apex/apexer:conv_apex_manifest",
