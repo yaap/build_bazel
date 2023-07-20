@@ -134,11 +134,10 @@ local_repository(
     path = "prebuilts/bazel/common/android_tools",
 )
 
-# The rules_java repository is stubbed and points to the native Java rules until
-# it can be properly vendored.
+# The vendored rules_java repository.
 local_repository(
     name = "rules_java",
-    path = "build/bazel_common_rules/rules/java/rules_java",
+    path = "external/bazelbuild-rules_java",
 )
 
 register_toolchains(
