@@ -37,6 +37,14 @@ products = {
         },
     ),
     "aosp_x86_for_testing": _soong_variables_x86,
+    "aosp_x86_for_testing_cfi_include_path": dicts.add(
+        _soong_variables_x86,
+        {"CFIIncludePaths": ["build/bazel/rules/cc"]},
+    ),
+    "aosp_x86_for_testing_cfi_exclude_path": dicts.add(
+        _soong_variables_x86,
+        {"CFIExcludePaths": ["build/bazel/rules/cc"]},
+    ),
     "aosp_x86_64_for_testing": _soong_variables_x86_64,
     "aosp_arm64_for_testing_min_sdk_version_override_tiramisu": dicts.add(
         _soong_variables_arm64,

@@ -14,12 +14,7 @@ limitations under the License.
 """
 
 load("@bazel_skylib//lib:selects.bzl", "selects")
-load(
-    "@bazel_skylib//rules:common_settings.bzl",
-    "bool_setting",
-    "string_list_setting",
-)
-load("@soong_injection//product_config:product_variables.bzl", "product_vars")
+load("@bazel_skylib//rules:common_settings.bzl", "bool_setting")
 load(":cc_aidl_library_test.bzl", "cc_aidl_library_test_suite")
 load(":cc_binary_test.bzl", "cc_binary_test_suite")
 load(":cc_hidl_library_test.bzl", "cc_hidl_library_test_suite")
@@ -80,24 +75,6 @@ selects.config_setting_group(
         ":coverage_lib_flag",
         "//build/bazel/platforms/os:android_config_setting",
     ],
-)
-
-# These settings exist so that the referenced product variables can be
-# overridden for tests. This is a temporary solution.
-# TODO(b/283130542): Implement long term solution
-string_list_setting(
-    name = "cfi_include_paths",
-    build_setting_default = product_vars.get("CFIIncludePaths", []),
-)
-
-string_list_setting(
-    name = "cfi_exclude_paths",
-    build_setting_default = product_vars.get("CFIExcludePaths", []),
-)
-
-bool_setting(
-    name = "enable_cfi",
-    build_setting_default = product_vars.get("EnableCFI", True),
 )
 
 platform(
