@@ -24,6 +24,7 @@ from typing import Final
 from typing import Optional
 
 import clone
+import finder
 import ui
 import util
 from cuj import CujGroup
@@ -291,20 +292,20 @@ PKG_FREE = ['!**/Android.bp', '!**/BUILD', '!**/BUILD.bazel']
 def _kept_build_cujs() -> list[CujGroup]:
   # Bp2BuildKeepExistingBuildFile(build/bazel) is True(recursive)
   kept = src('build/bazel')
-  pkg = util.any_dir_under(kept, *PKG)
+  pkg = finder.any_dir_under(kept, *PKG)
   examples = [pkg.joinpath('BUILD'),
               pkg.joinpath('BUILD.bazel')]
 
   return [
       *[create_delete_kept_build_file(build_file) for build_file in examples],
       create_delete(pkg.joinpath('BUILD/kept-dir'), InWorkspace.SYMLINK),
-      modify_revert_kept_build_file(util.any_file_under(kept, 'BUILD'))]
+      modify_revert_kept_build_file(finder.any_file_under(kept, 'BUILD'))]
 
 
 def _unkept_build_cujs() -> list[CujGroup]:
   # Bp2BuildKeepExistingBuildFile(bionic) is False(recursive)
   unkept = src('bionic')
-  pkg = util.any_dir_under(unkept, *PKG)
+  pkg = finder.any_dir_under(unkept, *PKG)
   return [
       *[create_delete_unkept_build_file(build_file) for build_file in [
           pkg.joinpath('BUILD'),
@@ -323,10 +324,10 @@ def get_cujgroups() -> list[CujGroup]:
   # we are choosing "package" directories that have Android.bp but
   # not BUILD nor BUILD.bazel because
   # we can't tell if ShouldKeepExistingBuildFile would be True or not
-  pkg, p_why = util.any_match(NON_LEAF, *PKG)
-  pkg_free, f_why = util.any_match(NON_LEAF, *PKG_FREE)
-  leaf_pkg_free, _ = util.any_match(LEAF, *PKG_FREE)
-  ancestor, a_why = util.any_match('!Android.bp', '!BUILD', '!BUILD.bazel',
+  pkg, p_why = finder.any_match(NON_LEAF, *PKG)
+  pkg_free, f_why = finder.any_match(NON_LEAF, *PKG_FREE)
+  leaf_pkg_free, _ = finder.any_match(LEAF, *PKG_FREE)
+  ancestor, a_why = finder.any_match('!Android.bp', '!BUILD', '!BUILD.bazel',
                                    '**/Android.bp')
   logging.info(textwrap.dedent(f'''Choosing:
             package: {de_src(pkg)} has {p_why}
@@ -375,8 +376,8 @@ def get_cujgroups() -> list[CujGroup]:
 
       # TODO (usta): find targets that should be affected
       *[delete_restore(f, InWorkspace.SYMLINK) for f in [
-          util.any_file('version_script.txt'),
-          util.any_file('AndroidManifest.xml')]],
+          finder.any_file('version_script.txt'),
+          finder.any_file('AndroidManifest.xml')]],
 
       *unreferenced_file_cujs,
       *mixed_build_launch_cujs,
