@@ -228,6 +228,7 @@ def _sign_bundle(ctx, aapt2, avbtool, module_name, bundle_file, apex_info):
                     ctx.executable._deapexer.dirname,
                     avbtool.files_to_run.executable.dirname,
                     ctx.executable._openssl.dirname,
+                    ctx.executable._zip2zip.dirname,
                     java_bin,
                 ],
             ),
