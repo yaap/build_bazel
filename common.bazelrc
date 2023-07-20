@@ -100,6 +100,8 @@ build --compilation_mode=opt
 
 common --incompatible_remove_rule_name_parameter=false
 
+common --override_repository=rules_java_builtin=%workspace%/external/bazelbuild-rules_java
+
 # TODO(b/264304464): Remove when bugs with java_binary starlark impl are fixed.
 
 common --experimental_builtins_injection_override=-java_binary
