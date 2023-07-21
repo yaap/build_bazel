@@ -31,11 +31,6 @@ _gtest_copts = select({
     "-Wno-unused-result",  # TODO(b/244433518): Figure out why this is necessary in the bazel compile action.
 ]
 
-_gtest_deps = [
-    "//external/googletest/googletest:libgtest_main",
-    "//external/googletest/googletest:libgtest",
-]
-
 def cc_test(
         name,
         copts = [],
@@ -61,7 +56,6 @@ def cc_test(
     if gtest:
         # TODO(b/244433197): handle ctx.useSdk() && ctx.Device() case to link against the ndk variants of the gtest libs.
         # TODO(b/244432609): handle isolated = True to link against libgtest_isolated_main and liblog (dynamically)
-        deps = deps + _gtest_deps
         copts = copts + _gtest_copts
 
     # A cc_test is essentially the same as a cc_binary. Let's reuse the
