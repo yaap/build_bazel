@@ -26,109 +26,114 @@ Verifier: TypeAlias = Callable[[], None]
 
 
 def de_src(p: Path) -> str:
-  return str(p.relative_to(util.get_top_dir()))
+    return str(p.relative_to(util.get_top_dir()))
 
 
 def src(p: str) -> Path:
-  return util.get_top_dir().joinpath(p)
+    return util.get_top_dir().joinpath(p)
 
 
 class InWorkspace(enum.Enum):
-  """For a given file in the source tree, the counterpart in the symlink forest
-   could be one of these kinds.
-  """
-  SYMLINK = enum.auto()
-  NOT_UNDER_SYMLINK = enum.auto()
-  UNDER_SYMLINK = enum.auto()
-  OMISSION = enum.auto()
+    """For a given file in the source tree, the counterpart in the symlink forest
+    could be one of these kinds.
+    """
 
-  @staticmethod
-  def ws_counterpart(src_path: Path) -> Path:
-    return util.get_out_dir().joinpath('soong/workspace').joinpath(
-        de_src(src_path))
+    SYMLINK = enum.auto()
+    NOT_UNDER_SYMLINK = enum.auto()
+    UNDER_SYMLINK = enum.auto()
+    OMISSION = enum.auto()
 
-  def verifier(self, src_path: Path) -> Verifier:
-    @skip_for(BuildType.SOONG_ONLY)
-    def f():
-      ws_path = InWorkspace.ws_counterpart(src_path)
-      actual: InWorkspace | None = None
-      if ws_path.is_symlink():
-        actual = InWorkspace.SYMLINK
-        if not ws_path.exists():
-          logging.warning('Dangling symlink %s', ws_path)
-      elif not ws_path.exists():
-        actual = InWorkspace.OMISSION
-      else:
-        for p in ws_path.parents:
-          if not p.is_relative_to(util.get_out_dir()):
-            actual = InWorkspace.NOT_UNDER_SYMLINK
-            break
-          if p.is_symlink():
-            actual = InWorkspace.UNDER_SYMLINK
-            break
+    @staticmethod
+    def ws_counterpart(src_path: Path) -> Path:
+        return util.get_out_dir().joinpath("soong/workspace").joinpath(de_src(src_path))
 
-      if self != actual:
-        raise AssertionError(
-            f'{ws_path} expected {self.name} but got {actual.name}')
-      logging.info(f'VERIFIED {de_src(ws_path)} {self.name}')
+    def verifier(self, src_path: Path) -> Verifier:
+        @skip_for(BuildType.SOONG_ONLY)
+        def f():
+            ws_path = InWorkspace.ws_counterpart(src_path)
+            actual: InWorkspace | None = None
+            if ws_path.is_symlink():
+                actual = InWorkspace.SYMLINK
+                if not ws_path.exists():
+                    logging.warning("Dangling symlink %s", ws_path)
+            elif not ws_path.exists():
+                actual = InWorkspace.OMISSION
+            else:
+                for p in ws_path.parents:
+                    if not p.is_relative_to(util.get_out_dir()):
+                        actual = InWorkspace.NOT_UNDER_SYMLINK
+                        break
+                    if p.is_symlink():
+                        actual = InWorkspace.UNDER_SYMLINK
+                        break
 
-    return f
+            if self != actual:
+                raise AssertionError(
+                    f"{ws_path} expected {self.name} but got {actual.name}"
+                )
+            logging.info(f"VERIFIED {de_src(ws_path)} {self.name}")
+
+        return f
 
 
 def skip_for(build_type: util.BuildType):
-  def decorator(func: Callable[[], any]) -> Callable[[], any]:
-    def wrapper():
-      if util.CURRENT_BUILD_TYPE != build_type:
-        return func()
+    def decorator(func: Callable[[], any]) -> Callable[[], any]:
+        def wrapper():
+            if util.CURRENT_BUILD_TYPE != build_type:
+                return func()
 
-    return wrapper
+        return wrapper
 
-  return decorator
+    return decorator
 
 
 @skip_for(BuildType.SOONG_ONLY)
 def verify_symlink_forest_has_only_symlink_leaves():
-  """Verifies that symlink forest has only symlinks or directories but no
-  files except for merged BUILD.bazel files"""
+    """Verifies that symlink forest has only symlinks or directories but no
+    files except for merged BUILD.bazel files"""
 
-  top_in_ws = InWorkspace.ws_counterpart(util.get_top_dir())
+    top_in_ws = InWorkspace.ws_counterpart(util.get_top_dir())
 
-  for root, dirs, files in os.walk(top_in_ws, topdown=True, followlinks=False):
-    for file in files:
-      if file == 'symlink_forest_version' and top_in_ws.samefile(root):
-        continue
-      f = Path(root).joinpath(file)
-      if file != 'BUILD.bazel' and not f.is_symlink():
-        raise AssertionError(f'{f} unexpected in symlink forest')
+    for root, dirs, files in os.walk(top_in_ws, topdown=True, followlinks=False):
+        for file in files:
+            if file == "symlink_forest_version" and top_in_ws.samefile(root):
+                continue
+            f = Path(root).joinpath(file)
+            if file != "BUILD.bazel" and not f.is_symlink():
+                raise AssertionError(f"{f} unexpected in symlink forest")
 
-  logging.info('VERIFIED Symlink Forest has no real files except BUILD.bazel')
+    logging.info("VERIFIED Symlink Forest has no real files except BUILD.bazel")
 
 
 @dataclasses.dataclass(frozen=True)
 class CujStep:
-  verb: str
-  """a human-readable description"""
-  apply_change: Action
-  """user action(s) that are performed prior to a build attempt"""
-  verify: Verifier = verify_symlink_forest_has_only_symlink_leaves
-  """post-build assertions, i.e. tests.
+    verb: str
+    """a human-readable description"""
+    apply_change: Action
+    """user action(s) that are performed prior to a build attempt"""
+    verify: Verifier = verify_symlink_forest_has_only_symlink_leaves
+    """post-build assertions, i.e. tests.
   Should raise `Exception` for failures.
   """
 
 
 @dataclasses.dataclass(frozen=True)
 class CujGroup:
-  """A sequence of steps to be performed, such that at the end of all steps the
-  initial state of the source tree is attained.
-  NO attempt is made to achieve atomicity programmatically. It is left as the
-  responsibility of the user.
-  """
-  description: str
-  steps: list[CujStep]
+    """A sequence of steps to be performed, such that at the end of all steps the
+    initial state of the source tree is attained.
+    NO attempt is made to achieve atomicity programmatically. It is left as the
+    responsibility of the user.
+    """
 
-  def __str__(self) -> str:
-    if len(self.steps) < 2:
-      return f'{self.steps[0].verb} {self.description}'.strip()
-    return ' '.join(
-        [f'({chr(ord("a") + i)}) {step.verb} {self.description}'.strip() for
-         i, step in enumerate(self.steps)])
+    description: str
+    steps: list[CujStep]
+
+    def __str__(self) -> str:
+        if len(self.steps) < 2:
+            return f"{self.steps[0].verb} {self.description}".strip()
+        return " ".join(
+            [
+                f'({chr(ord("a") + i)}) {step.verb} {self.description}'.strip()
+                for i, step in enumerate(self.steps)
+            ]
+        )
