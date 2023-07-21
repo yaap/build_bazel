@@ -56,7 +56,7 @@ common_attrs = {
         cfg = "exec",
         doc = "The build number stamp tool.",
         executable = True,
-        default = "//prebuilts/build-tools:linux-x86/bin/symbol_inject",
+        default = "//build/soong/symbol_inject/cmd:symbol_inject",
         allow_single_file = True,
     ),
     "_android_constraint": attr.label(
