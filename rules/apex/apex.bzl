@@ -1061,7 +1061,7 @@ APEX is truly updatable. To be updatable, min_sdk_version should be set as well.
             cfg = "exec",
             allow_single_file = True,
             doc = "The tool merge_zips. Used to combine base zip and config file into a single zip for mixed build aab creation.",
-            default = "//prebuilts/build-tools:linux-x86/bin/merge_zips",
+            default = "//build/soong/cmd/merge_zips",
             executable = True,
         ),
         "_platform_utils": attr.label(
