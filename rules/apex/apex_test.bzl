@@ -437,7 +437,6 @@ def _test_canned_fs_config_runtime_deps():
             "/apex_manifest.pb 1000 1000 0644",
             "/lib{64_OR_BLANK}/%s_runtime_dep_1.so 1000 1000 0644" % name,
             "/lib{64_OR_BLANK}/%s_runtime_dep_2.so 1000 1000 0644" % name,
-            "/lib{64_OR_BLANK}/%s_runtime_dep_3.so 1000 1000 0644" % name,
             "/lib{64_OR_BLANK}/libc++.so 1000 1000 0644",
             "/bin/%s_bin_cc 0 2000 0755" % name,
             "/bin 0 2000 0755",
