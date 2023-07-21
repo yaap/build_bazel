@@ -15,6 +15,9 @@
 load("@bazel_skylib//lib:dicts.bzl", "dicts")
 load("@bazel_skylib//lib:paths.bzl", "paths")
 
+LANGUAGE_CC = "cc"
+LANGUAGE_JAVA = "java"
+
 # A transition to force the target device platforms configuration. This is
 # used in the tradefed -> cc_test edge (for example).
 #
@@ -71,10 +74,15 @@ _TRADEFED_TEST_ATTRIBUTES = {
         default = "/data/local/tmp",
         doc = "Directory to install tests onto the device for generated config",
     ),
+    "test_language": attr.string(
+        default = "",
+        values = ["", LANGUAGE_CC, LANGUAGE_JAVA],
+        doc = "the programming language the test uses",
+    ),
 }
 
 # Get test config if specified or generate test config from template.
-def _get_or_generate_test_config(ctx, tf_test_dir, test_executable):
+def _get_or_generate_test_config(ctx, tf_test_dir, test_executable, test_language):
     # Validate input
     total = 0
     if ctx.file.test_config:
@@ -107,6 +115,9 @@ def _get_or_generate_test_config(ctx, tf_test_dir, test_executable):
 
     # No test config specified, generate config from template. Join extra
     # configs together and add xml spacing indent.
+    if test_language == LANGUAGE_JAVA:
+        # rm ".jar" extension since it's "{MODULE}.jar" in Java config template
+        basename = basename.rstrip(".jar")
     ctx.actions.expand_template(
         template = ctx.file.template_test_config,
         output = out,
@@ -145,16 +156,20 @@ def _tradefed_test_impl(ctx, tradefed_options = []):
     # host driven device test transitions ctx.attr.test to device config,
     # which turns the test attr into a label list.
     test_target = ctx.attr.test[0] if type(ctx.attr.test) == "list" else ctx.attr.test
+    test_language = ctx.attr.test_language
 
     # For Java, a library may make more sense here than the executable. When
     # expanding tradefed_test_impl to accept more rule types, this could be
     # turned into a provider, whether set by the rule or an aspect visiting the
     # rule.
-    test_executable = test_target.files_to_run.executable
+    if test_language == LANGUAGE_JAVA:
+        test_executable = test_target.files.to_list()[0]
+    else:
+        test_executable = test_target.files_to_run.executable
     test_basename = test_executable.basename
 
     # Get or generate test config.
-    test_config = _get_or_generate_test_config(ctx, tf_test_dir, test_executable)
+    test_config = _get_or_generate_test_config(ctx, tf_test_dir, test_executable, test_language)
 
     # Generate result reporter config file.
     report_config = _create_result_reporter_config(ctx)
@@ -303,6 +318,7 @@ def tradefed_test_suite(
         template_install_base,
         tags,
         visibility,
+        test_language = "",
         deviceless_test_config = None,
         device_driven_test_config = None,
         host_driven_device_test_config = None):
@@ -331,6 +347,8 @@ def tradefed_test_suite(
             ("template_configs", template_configs),
             # Path to install the test executable on device.
             ("template_install_base", template_install_base),
+            # Test language helps to determine test_executable and fit test into config templates.
+            ("test_language", test_language),
             # There shouldn't be package-external dependencies on the internal tests.
             ("visibility", ["//visibility:private"]),
             # The internal tests shouldn't run with ... or :all target patterns
