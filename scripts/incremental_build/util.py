@@ -104,10 +104,12 @@ CURRENT_BUILD_TYPE: BuildType
 @dataclasses.dataclass
 class BuildInfo:
     actions: int
+    bp_size_total: int
     build_ninja_hash: str  # hash
     build_ninja_size: int
     build_result: BuildResult
     build_type: BuildType
+    bz_size_total: int
     cquery_out_size: int
     description: str
     product: str
@@ -160,7 +162,7 @@ def get_cmd_to_display_tabulated_metrics(d: Path, ci_mode: bool) -> str:
                 cols.append(i)
 
     if len(cols) == 0:
-        # syntactically correct command even if the file doesn't exist or is empty
+        # syntactically correct command even if the file doesn't exist
         cols.append(1)
 
     f = ",".join(str(i) for i in cols)

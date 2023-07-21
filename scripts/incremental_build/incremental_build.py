@@ -135,6 +135,28 @@ def _pretty_env(env: Mapping[str, str]) -> str:
     return "\n".join(env_copy)
 
 
+def _total_size(filetype: str) -> int | None:
+    match filetype:
+        case "Android.bp":
+            top = util.get_top_dir().resolve()
+            out = util.get_out_dir().resolve()
+            ignore_out = f'-not -path "{out}" ' if out.is_relative_to(top) else ""
+            cmd = f'find {top} -name Android.bp {ignore_out} | xargs stat -L -c "%s"'
+        case "BUILD.bazel":
+            ws = util.get_out_dir().joinpath("soong", "workspace")
+            cmd = f'find {ws} -name BUILD.bazel | xargs stat -L -c "%s"'
+        case _:
+            raise RuntimeError(f"Android.bp or BUILD.bazel expected: {filetype}")
+    logging.debug(f"Running {cmd}")
+    p = subprocess.run(cmd, shell=True, text=True, capture_output=True)
+    if p.returncode:
+        logging.error(
+            "Failed to compute total size of %s files:\n%s", filetype, p.stderr
+        )
+        return None
+    return sum(int(line) for line in p.stdout.splitlines())
+
+
 def _build(build_type: BuildType, run_dir: Path) -> BuildInfo:
     logfile = run_dir.joinpath("output.txt")
     run_dir.mkdir(parents=True, exist_ok=False)
@@ -191,10 +213,12 @@ def _build(build_type: BuildType, run_dir: Path) -> BuildInfo:
 
     return BuildInfo(
         actions=action_count_delta,
+        bp_size_total=_total_size("Android.bp"),
         build_type=build_type,
         build_result=BuildResult.FAILED if p.returncode else BuildResult.SUCCESS,
         build_ninja_hash=_build_file_sha(target_product),
         build_ninja_size=_build_file_size(target_product),
+        bz_size_total=_total_size("BUILD.bazel"),
         cquery_out_size=get_cquery_size(),
         description="<placeholder>",
         product=f'{target_product}-{env["TARGET_BUILD_VARIANT"]}',
