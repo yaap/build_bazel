@@ -14,7 +14,7 @@
 
 """cc_test macro for building native tests with Bazel."""
 
-load("//build/bazel/rules/tradefed:tradefed.bzl", "tradefed_test_suite")
+load("//build/bazel/rules/tradefed:tradefed.bzl", "LANGUAGE_CC", "tradefed_test_suite")
 load(":cc_binary.bzl", "cc_binary")
 
 # TODO(b/244559183): Keep this in sync with cc/test.go#linkerFlags
@@ -94,4 +94,5 @@ def cc_test(
         device_driven_test_config = "//build/make/core:native_test_config_template.xml",
         tags = tags,
         visibility = visibility,
+        test_language = LANGUAGE_CC,
     )
