@@ -48,8 +48,8 @@ string_flag(
     build_setting_default = "",
 )
 
-# TODO: cfi_include/exclude_paths should be string_list_settings, but there's currently a
-# bazel crash: https://github.com/bazelbuild/bazel/issues/18977
+# TODO: cfi_include/exclude_paths/device_abi should be string_list_settings, but there's
+# currently a bazel crash: https://github.com/bazelbuild/bazel/issues/18977
 string_flag(
     name = "cfi_include_paths",
     build_setting_default = "",
@@ -63,4 +63,9 @@ string_flag(
 bool_flag(
     name = "enable_cfi",
     build_setting_default = True,
+)
+
+string_flag(
+    name = "device_abi",
+    build_setting_default = "",
 )
