@@ -235,6 +235,7 @@ def _stripped_binary_impl(ctx):
         DefaultInfo(
             files = depset([out_file]),
             executable = out_file,
+            runfiles = ctx.attr.src[0][DefaultInfo].default_runfiles,
         ),
     ] + common_providers
 
