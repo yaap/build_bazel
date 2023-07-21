@@ -12,17 +12,38 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_java//java:defs.bzl", _java_test = "java_test")
+load("@rules_java//java:defs.bzl", "java_binary")
+load("//build/bazel/rules/tradefed:tradefed.bzl", "LANGUAGE_JAVA", "tradefed_test_suite")
+
+HOST_TEST_TEMPLATE = "//build/make/core:java_host_unit_test_config_template.xml"
 
 def java_test(
         name = "",
-        runtime_deps = [],
+        srcs = [],
+        deps = [],
+        tags = [],
+        visibility = None,
         target_compatible_with = [],
         **kwargs):
-    # forward arguments to _java_test because we'll need to hook into tradefed.
-    _java_test(
+    # tradefed_test_suite uses the .jar from this java_binary to execute tests.
+    java_binary(
         name = name,
-        runtime_deps = runtime_deps,
+        srcs = srcs,
+        deps = deps,
+        create_executable = False,
+        tags = tags + ["manual"],
+        visibility = visibility,
         target_compatible_with = target_compatible_with,
         **kwargs
+    )
+    tradefed_test_suite(
+        name = name + "_suite",
+        test_dep = name,
+        test_config = None,
+        template_configs = None,
+        template_install_base = None,
+        tags = tags,
+        test_language = LANGUAGE_JAVA,
+        visibility = visibility,
+        deviceless_test_config = HOST_TEST_TEMPLATE,
     )
