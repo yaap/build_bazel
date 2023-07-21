@@ -570,7 +570,7 @@ _bssl_hash_injection = rule(
             cfg = "exec",
             doc = "The BSSL hash injection tool.",
             executable = True,
-            default = "//prebuilts/build-tools:linux-x86/bin/bssl_inject_hash",
+            default = "//external/boringssl:bssl_inject_hash",
             allow_single_file = True,
         ),
     },
