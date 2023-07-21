@@ -229,12 +229,9 @@ This apex should likely use stubs of the target instead." % (target, ctx.attr._a
         if hasattr(ctx.rule.attr, "shared"):
             transitive_deps.append(ctx.rule.attr.shared[0])
     elif ctx.rule.kind in ["cc_shared_library", "cc_binary"]:
-        # Propagate along the dynamic_deps and deps edges for binaries and shared libs
+        # Propagate along the dynamic_deps edges for binaries and shared libs
         if hasattr(ctx.rule.attr, "dynamic_deps"):
             for dep in ctx.rule.attr.dynamic_deps:
-                transitive_deps.append(dep)
-        if hasattr(ctx.rule.attr, "deps"):
-            for dep in ctx.rule.attr.deps:
                 transitive_deps.append(dep)
     elif ctx.rule.kind in rules_propagate_src and hasattr(ctx.rule.attr, "src"):
         # Propagate along the src edge
@@ -243,7 +240,9 @@ This apex should likely use stubs of the target instead." % (target, ctx.attr._a
         else:
             transitive_deps.append(ctx.rule.attr.src)
 
-    if ctx.rule.kind in ["stripped_binary", "_cc_library_shared_proxy", "_cc_library_combiner"] and hasattr(ctx.rule.attr, "runtime_deps"):
+    # We only collect runtime dependencies from binaries and shared libraries,
+    # we _explicitly_ omit static libraries (kind = _cc_library_combiner)
+    if ctx.rule.kind in ["stripped_binary", "_cc_library_shared_proxy"] and hasattr(ctx.rule.attr, "runtime_deps"):
         for dep in ctx.rule.attr.runtime_deps:
             unstripped = None
             if CcUnstrippedInfo in dep:
