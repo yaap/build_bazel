@@ -27,7 +27,7 @@ def java_test(
         **kwargs):
     # tradefed_test_suite uses the .jar from this java_binary to execute tests.
     java_binary(
-        name = name,
+        name = name + "__tf_internal",
         srcs = srcs,
         deps = deps,
         create_executable = False,
@@ -37,8 +37,8 @@ def java_test(
         **kwargs
     )
     tradefed_test_suite(
-        name = name + "_suite",
-        test_dep = name,
+        name = name,
+        test_dep = name + "__tf_internal",
         test_config = None,
         template_configs = None,
         template_install_base = None,
