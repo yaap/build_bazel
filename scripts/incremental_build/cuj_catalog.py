@@ -374,6 +374,7 @@ def get_cujgroups() -> list[CujGroup]:
         modify_revert(src("bionic/libc/stdio/stdio.cpp")),
         modify_revert(src("packages/modules/adb/daemon/main.cpp")),
         modify_revert(src("frameworks/base/core/java/android/view/View.java")),
+        modify_revert(src("frameworks/base/core/java/android/provider/Settings.java")),
     ]
     unreferenced_file_cujs = [
         *[
