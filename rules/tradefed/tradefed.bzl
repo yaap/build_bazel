@@ -330,10 +330,8 @@ def tradefed_test_suite(
     """
 
     # Validate names.
-    if not name.endswith("_suite"):
-        fail("tradefed_test_suite.name must end with the '_test_suite' suffix, but got %s" % name)
-    if test_dep + "_suite" != name:
-        fail("tradefed_test_suite.name must be prefixed with tradefed_test_suite.test_dep, " +
+    if not test_dep.endswith("__tf_internal") or test_dep.removesuffix("__tf_internal") != name:
+        fail("tradefed_test_suite.test_dep must be named %s__tf_internal, " % name +
              "but got %s" % test_dep)
 
     # Shared attributes between all three test types. The only difference between them
@@ -359,7 +357,7 @@ def tradefed_test_suite(
     )
 
     # Tradefed deviceless test. Device NOT necessary. Tradefed will be invoked with --null-device.
-    tradefed_deviceless_test_name = test_dep + "__tf_deviceless_test"
+    tradefed_deviceless_test_name = name + "__tf_deviceless_test"
     tests = [tradefed_deviceless_test_name]
     tradefed_deviceless_test(
         name = tradefed_deviceless_test_name,
@@ -381,7 +379,7 @@ def tradefed_test_suite(
 
     # Tradefed host or device driven device test. Device necessary.
     if device_driven_test_config or host_driven_device_test_config:
-        tradefed_device_test_name = test_dep + "__tf_device_test"
+        tradefed_device_test_name = name + "__tf_device_test"
         tests.append(tradefed_device_test_name)
         if device_driven_test_config:
             tradefed_device_driven_test(
