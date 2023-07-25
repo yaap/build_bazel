@@ -35,9 +35,9 @@ BUILD_TARGETS=(
   # TODO(b/266459895): remove these after re-enabling libunwindstack
   -//bionic/libc/malloc_debug:libc_malloc_debug
   -//bionic/libfdtrack:libfdtrack
-  -//frameworks/av/media/codec2/hidl/1.0/utils:libcodec2_hidl@1.0
-  -//frameworks/av/media/codec2/hidl/1.1/utils:libcodec2_hidl@1.1
-  -//frameworks/av/media/codec2/hidl/1.2/utils:libcodec2_hidl@1.2
+  -//frameworks/av/media/codec2/hal/hidl/1.0/utils:libcodec2_hidl@1.0
+  -//frameworks/av/media/codec2/hal/hidl/1.1/utils:libcodec2_hidl@1.1
+  -//frameworks/av/media/codec2/hal/hidl/1.2/utils:libcodec2_hidl@1.2
   -//frameworks/av/media/module/bqhelper:libstagefright_bufferqueue_helper_novndk
   -//frameworks/av/media/module/codecserviceregistrant:libmedia_codecserviceregistrant
   -//frameworks/av/services/mediacodec:mediaswcodec
