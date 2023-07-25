@@ -143,3 +143,9 @@ build --incompatible_visibility_private_attributes_at_definition
 # Some targets in rules_go use config_setting(s) that are not visible to them
 # TODO -  b/289074954: Fix the visibility defs in rules_go and re-enable this enforcement.
 build --incompatible_enforce_config_setting_visibility=false
+
+# By default, b test will run all tests regardless of deviceless or device variants.
+# Use these configs to filter the tests to run, e.g. b test //system/... --config=deviceless_tests
+# The filter value is the name of the rule, but without the "_test" suffix.
+test:deviceless_tests --test_lang_filters=tradefed_deviceless
+test:device_tests --test_lang_filters=tradefed_device_driven,tradefed_host_driven_device
