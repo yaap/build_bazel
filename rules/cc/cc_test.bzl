@@ -66,8 +66,9 @@ def cc_test(
 
     # A cc_test is essentially the same as a cc_binary. Let's reuse the
     # implementation for now and factor the common bits out as necessary.
+    test_dep_name = name + "__tf_internal"
     cc_binary(
-        name = name,
+        name = test_dep_name,
         copts = copts,
         deps = deps,
         dynamic_deps = dynamic_deps,
@@ -85,8 +86,8 @@ def cc_test(
     )
 
     tradefed_test_suite(
-        name = name + "_suite",
-        test_dep = name,
+        name = name,
+        test_dep = test_dep_name,
         test_config = test_config,
         template_configs = template_configs,
         template_install_base = template_install_base,
