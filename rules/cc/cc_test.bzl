@@ -37,7 +37,6 @@ def cc_test(
         deps = [],
         dynamic_deps = [],
         gtest = True,
-        isolated = True,  # TODO(b/244432609): currently no-op. @unused
         tags = [],
         tidy = None,
         tidy_checks = None,
@@ -55,7 +54,6 @@ def cc_test(
     # NOTE: Keep this in sync with cc/test.go#linkerDeps
     if gtest:
         # TODO(b/244433197): handle ctx.useSdk() && ctx.Device() case to link against the ndk variants of the gtest libs.
-        # TODO(b/244432609): handle isolated = True to link against libgtest_isolated_main and liblog (dynamically)
         copts = copts + _gtest_copts
 
     # A cc_test is essentially the same as a cc_binary. Let's reuse the
