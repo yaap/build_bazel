@@ -227,7 +227,7 @@ def visit_json_module_graph_post_order(
   # name to all module variants
   module_graph_map = {}
   root_module_keys = []
-  name_to_keys = collections.defaultdict(set)
+  name_to_keys = collections.defaultdict(list)
 
   # Do a single pass to find all top-level modules to be ignored
   for module in module_graph:
@@ -236,7 +236,7 @@ def visit_json_module_graph_post_order(
     if ignore_json_module(module, ignore_by_name):
       ignored.add(key)
       continue
-    name_to_keys[name].add(key)
+    name_to_keys[name].append(key)
     module_graph_map[key] = module
     if filter_predicate(module):
       root_module_keys.append(key)
@@ -251,7 +251,6 @@ def visit_json_module_graph_post_order(
     deps = set()
     module = module_graph_map[module_key]
     created_by = module["CreatedBy"]
-    to_visit = set()
 
     if created_by:
       for key in name_to_keys[created_by]:
@@ -263,20 +262,36 @@ def visit_json_module_graph_post_order(
         deps.add(created_by)
         json_module_graph_post_traversal(key)
 
-    for dep in module["Deps"]:
+    # collect all variants and dependencies from those variants
+    # we want to visit all deps before other variants
+    all_variants = {}
+    all_deps = []
+    for k in name_to_keys[module["Name"]]:
+      visited.add(k)
+      m = module_graph_map[k]
+      all_variants[k] = m
+      all_deps.extend(m["Deps"])
+
+    deps_visited = set()
+    for dep in all_deps:
+      dep_name = dep["Name"]
+      dep_key = _ModuleKey(dep_name, dep["Variations"])
+      # only check if we need to ignore or visit each dep once but it might
+      # appear multiple times due to different variants
+      if dep_key in deps_visited:
+        continue
+      deps_visited.add(dep_key)
+
       if ignore_json_dep(
           dep, module["Name"], ignored, ignore_java_auto_deps
       ):
         continue
 
-      dep_name = dep["Name"]
       deps.add(dep_name)
-      dep_key = _ModuleKey(dep_name, dep["Variations"])
+      json_module_graph_post_traversal(dep_key)
 
-      if dep_key not in visited:
-        json_module_graph_post_traversal(dep_key)
-
-    visit(module, deps)
+    for k, m in all_variants.items():
+      visit(m, deps)
 
   for module_key in root_module_keys:
     json_module_graph_post_traversal(module_key)
