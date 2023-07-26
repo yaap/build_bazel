@@ -43,29 +43,59 @@ alias(
     }),
 )
 
-string_flag(
-    name = "apex_global_min_sdk_version_override",
-    build_setting_default = "",
-)
+# TODO: b/292563629 - The following variables should be string_list_settings, but there's currently
+# a bazel crash: https://github.com/bazelbuild/bazel/issues/18977
+#   - build_version_tags
+#   - certificate_overrides
+#   - cfi_exclude_paths
+#   - cfi_include_paths
+#   - device_abi
+#   - manifest_package_name_overrides
+#   - unbundled_build_apps
+_string_variables = [
+    "apex_global_min_sdk_version_override",
+    "build_id",
+    "build_version_tags",
+    "certificate_overrides",
+    "cfi_exclude_paths",
+    "cfi_include_paths",
+    "default_app_certificate",
+    "device_abi",
+    "device_max_page_size_supported",
+    "device_name",
+    "device_product",
+    "manifest_package_name_overrides",
+    "platform_version_name",
+    "product_brand",
+    "product_manufacturer",
+    "target_build_variant",
+    "tidy_checks",
+    "unbundled_build_apps",
+]
 
-# TODO: b/292563629 - cfi_include/exclude_paths/device_abi should be string_list_settings, but
-# there's currently a bazel crash: https://github.com/bazelbuild/bazel/issues/18977
-string_flag(
-    name = "cfi_include_paths",
-    build_setting_default = "",
-)
+_bool_variables = [
+    "always_use_prebuilt_sdks",
+    "compressed_apex",
+    "unbundled_build",
+]
 
-string_flag(
-    name = "cfi_exclude_paths",
-    build_setting_default = "",
-)
+[
+    string_flag(
+        name = name,
+        build_setting_default = "",
+    )
+    for name in _string_variables
+]
+
+[
+    bool_flag(
+        name = name,
+        build_setting_default = False,
+    )
+    for name in _bool_variables
+]
 
 bool_flag(
     name = "enable_cfi",
     build_setting_default = True,
-)
-
-string_flag(
-    name = "device_abi",
-    build_setting_default = "",
 )
