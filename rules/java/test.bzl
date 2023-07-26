@@ -13,7 +13,7 @@
 # limitations under the License.
 
 load("@rules_java//java:defs.bzl", "java_binary")
-load("//build/bazel/rules/tradefed:tradefed.bzl", "LANGUAGE_JAVA", "tradefed_test_suite")
+load("//build/bazel/rules/tradefed:tradefed.bzl", "LANGUAGE_JAVA", "TEST_DEP_SUFFIX", "tradefed_test_suite")
 
 HOST_TEST_TEMPLATE = "//build/make/core:java_host_unit_test_config_template.xml"
 
@@ -25,9 +25,11 @@ def java_test(
         visibility = None,
         target_compatible_with = [],
         **kwargs):
+    test_dep_name = name + TEST_DEP_SUFFIX
+
     # tradefed_test_suite uses the .jar from this java_binary to execute tests.
     java_binary(
-        name = name + "__tf_internal",
+        name = test_dep_name,
         srcs = srcs,
         deps = deps,
         create_executable = False,
@@ -38,7 +40,7 @@ def java_test(
     )
     tradefed_test_suite(
         name = name,
-        test_dep = name + "__tf_internal",
+        test_dep = test_dep_name,
         test_config = None,
         template_configs = None,
         template_install_base = None,
