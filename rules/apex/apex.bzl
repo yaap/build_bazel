@@ -16,7 +16,6 @@ load("@bazel_skylib//lib:paths.bzl", "paths")
 load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 load("@soong_injection//apex_toolchain:constants.bzl", "default_manifest_version")
 load("//build/bazel/platforms:platform_utils.bzl", "platforms")
-load("//build/bazel/product_config:product_variables_providing_rule.bzl", "ProductVariablesInfo")
 load("//build/bazel/rules:common.bzl", "get_dep_targets")
 load("//build/bazel/rules:metadata.bzl", "MetadataFileInfo")
 load("//build/bazel/rules:prebuilt_file.bzl", "PrebuiltFileInfo")
@@ -414,10 +413,9 @@ def _generate_notices(ctx, apex_toolchain):
     return notice_file
 
 def _use_api_fingerprint(ctx):
-    product_vars = ctx.attr._product_variables[ProductVariablesInfo]
-    if not product_vars.Unbundled_build:
+    if not ctx.attr._unbundled_build[BuildSettingInfo].value:
         return False
-    if product_vars.Always_use_prebuilt_sdks:
+    if ctx.attr._always_use_prebuilt_sdks[BuildSettingInfo].value:
         return False
     if not ctx.attr._unbundled_build_target_sdk_with_api_fingerprint[BuildSettingInfo].value:
         return False
@@ -627,7 +625,8 @@ def _run_signapk(ctx, unsigned_file, signed_file, private_key, public_key, mnemo
 # https://cs.android.com/android/platform/superproject/+/master:build/soong/apex/builder.go;l=1000;drc=241e738c7156d928e9a993b15993cb3297face45
 def _override_manifest_package_name(ctx):
     apex_name = ctx.attr.name
-    overrides = ctx.attr._product_variables[ProductVariablesInfo].ManifestPackageNameOverrides
+    overrides = ctx.attr._manifest_package_name_overrides[BuildSettingInfo].value
+    overrides = overrides.split(",") if overrides else []
     if not overrides:
         return None
 
@@ -647,9 +646,11 @@ def _override_manifest_package_name(ctx):
 # TODO(b/271474456): Eventually we might default to unbundled mode in bazel-only mode
 # so that we don't need to check Unbundled_apps.
 def _compression_enabled(ctx):
-    product_vars = ctx.attr._product_variables[ProductVariablesInfo]
+    compressed_apex = ctx.attr._compressed_apex[BuildSettingInfo].value
+    unbundled_apps = ctx.attr._unbundled_build_apps[BuildSettingInfo].value
+    unbundled_apps = unbundled_apps.split(",") if unbundled_apps else []
 
-    return product_vars.CompressedApex and len(product_vars.Unbundled_apps) == 0
+    return compressed_apex and len(unbundled_apps) == 0
 
 # Compress a file with apex_compression_tool.
 def _run_apex_compression_tool(ctx, apex_toolchain, input_file, output_file_name):
@@ -827,16 +828,17 @@ def _generate_sbom(ctx, file_mapping, metadata_file_mapping, apex_file):
     inputs += file_mapping.values()
     inputs += metadata_files
 
-    product_vars = ctx.attr._product_variables[ProductVariablesInfo]
+    build_version_tags = ctx.attr._build_version_tags[BuildSettingInfo].value
+    build_version_tags = build_version_tags.split(",") if build_version_tags else []
     build_fingerprint = "%s/%s/%s:%s/%s/%s:%s/%s" % (
-        product_vars.ProductBrand,
-        product_vars.DeviceProduct,
-        product_vars.DeviceName,
-        product_vars.Platform_version_name,
-        product_vars.BuildId,
+        ctx.attr._product_brand[BuildSettingInfo].value,
+        ctx.attr._device_product[BuildSettingInfo].value,
+        ctx.attr._device_name[BuildSettingInfo].value,
+        ctx.attr._platform_version_name[BuildSettingInfo].value,
+        ctx.attr._build_id[BuildSettingInfo].value,
         "",
-        product_vars.TargetBuildVariant,
-        "_".join(product_vars.BuildVersionTags),
+        ctx.attr._target_build_variant[BuildSettingInfo].value,
+        "_".join(build_version_tags),
     )
     ctx.actions.run(
         inputs = inputs,
@@ -849,7 +851,7 @@ def _generate_sbom(ctx, file_mapping, metadata_file_mapping, apex_file):
             "--build_version",
             build_fingerprint,
             "--product_mfr",
-            product_vars.ProductManufacturer,
+            ctx.attr._product_manufacturer[BuildSettingInfo].value,
             "--json",
             "--unbundled_apex",
         ],
@@ -1084,20 +1086,56 @@ APEX is truly updatable. To be updatable, min_sdk_version should be set as well.
         ),
 
         # Build settings.
-        "_apexer_verbose": attr.label(
-            default = "//build/bazel/rules/apex:apexer_verbose",
-            doc = "If enabled, make apexer log verbosely.",
-        ),
-        "_override_apex_manifest_default_version": attr.label(
-            default = "//build/bazel/rules/apex:override_apex_manifest_default_version",
-            doc = "If specified, override 'version: 0' in apex_manifest.json with this value instead of the branch default. Non-zero versions will not be changed.",
+        "_always_use_prebuilt_sdks": attr.label(
+            default = "//build/bazel/product_config:always_use_prebuilt_sdks",
         ),
         "_apex_global_min_sdk_version_override": attr.label(
             default = "//build/bazel/product_config:apex_global_min_sdk_version_override",
             doc = "If specified, override the min_sdk_version of this apex and in the transition and checks for dependencies.",
         ),
-        "_product_variables": attr.label(
-            default = "//build/bazel/product_config:product_vars",
+        "_apexer_verbose": attr.label(
+            default = "//build/bazel/rules/apex:apexer_verbose",
+            doc = "If enabled, make apexer log verbosely.",
+        ),
+        "_build_id": attr.label(
+            default = "//build/bazel/product_config:build_id",
+        ),
+        "_build_version_tags": attr.label(
+            default = "//build/bazel/product_config:build_version_tags",
+        ),
+        "_compressed_apex": attr.label(
+            default = "//build/bazel/product_config:compressed_apex",
+        ),
+        "_device_product": attr.label(
+            default = "//build/bazel/product_config:device_product",
+        ),
+        "_device_name": attr.label(
+            default = "//build/bazel/product_config:device_name",
+        ),
+        "_manifest_package_name_overrides": attr.label(
+            default = "//build/bazel/product_config:manifest_package_name_overrides",
+        ),
+        "_override_apex_manifest_default_version": attr.label(
+            default = "//build/bazel/rules/apex:override_apex_manifest_default_version",
+            doc = "If specified, override 'version: 0' in apex_manifest.json with this value instead of the branch default. Non-zero versions will not be changed.",
+        ),
+        "_platform_version_name": attr.label(
+            default = "//build/bazel/product_config:platform_version_name",
+        ),
+        "_product_brand": attr.label(
+            default = "//build/bazel/product_config:product_brand",
+        ),
+        "_product_manufacturer": attr.label(
+            default = "//build/bazel/product_config:product_manufacturer",
+        ),
+        "_target_build_variant": attr.label(
+            default = "//build/bazel/product_config:target_build_variant",
+        ),
+        "_unbundled_build_apps": attr.label(
+            default = "//build/bazel/product_config:unbundled_build_apps",
+        ),
+        "_unbundled_build": attr.label(
+            default = "//build/bazel/product_config:unbundled_build",
         ),
 
         # Api_fingerprint
