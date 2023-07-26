@@ -15,22 +15,24 @@
 # limitations under the License.
 """Tests for bp2build-progress."""
 
-import bp2build_progress
 import collections
-import dependency_analysis
-import queryview_xml
-import soong_module_json
 import unittest
 import unittest.mock
 import bp2build_pb2
+import bp2build_progress
+import dependency_analysis
+import queryview_xml
+import soong_module_json
 
 _queryview_graph = queryview_xml.make_graph([
     queryview_xml.make_module(
-        '//pkg:a', 'a', 'type1', dep_names=['//pkg:b', '//other:c']),
+        '//pkg:a', 'a', 'type1', dep_names=['//pkg:b', '//other:c']
+    ),
     queryview_xml.make_module('//pkg:b', 'b', 'type2', dep_names=['//pkg:d']),
     queryview_xml.make_module('//pkg:d', 'd', 'type2'),
     queryview_xml.make_module(
-        '//other:c', 'c', 'type2', dep_names=['//other:e']),
+        '//other:c', 'c', 'type2', dep_names=['//other:e']
+    ),
     queryview_xml.make_module('//other:e', 'e', 'type3'),
     queryview_xml.make_module('//pkg2:f', 'f', 'type4'),
     queryview_xml.make_module('//pkg3:g', 'g', 'type5'),
@@ -41,38 +43,54 @@ _soong_module_graph = [
         'a',
         'type1',
         blueprint='pkg/Android.bp',
-        deps=[soong_module_json.make_dep('b'),
-              soong_module_json.make_dep('c')]),
+        deps=[soong_module_json.make_dep('b'), soong_module_json.make_dep('c')],
+    ),
     soong_module_json.make_module(
         'b',
         'type2',
         blueprint='pkg/Android.bp',
-        deps=[soong_module_json.make_dep('d')], json_props=[
+        deps=[soong_module_json.make_dep('d')],
+        json_props=[
             soong_module_json.make_property('Name'),
             soong_module_json.make_property('Sdk_version'),
-        ]),
+        ],
+    ),
     soong_module_json.make_module('d', 'type2', blueprint='pkg/Android.bp'),
     soong_module_json.make_module(
         'c',
         'type2',
         blueprint='other/Android.bp',
-        deps=[soong_module_json.make_dep('e')], json_props=[
-          soong_module_json.make_property('Visibility'),
-        ]),
+        deps=[soong_module_json.make_dep('e')],
+        json_props=[
+            soong_module_json.make_property('Visibility'),
+        ],
+    ),
     soong_module_json.make_module('e', 'type3', blueprint='other/Android.bp'),
-    soong_module_json.make_module('f', 'type4', blueprint='pkg2/Android.bp', json_props=[
-          soong_module_json.make_property('Manifest'),
-    ]),
+    soong_module_json.make_module(
+        'f',
+        'type4',
+        blueprint='pkg2/Android.bp',
+        json_props=[
+            soong_module_json.make_property('Manifest'),
+        ],
+    ),
     soong_module_json.make_module('g', 'type5', blueprint='pkg3/Android.bp'),
-    soong_module_json.make_module('h', 'type3', blueprint='pkg/pkg4/Android.bp'),
+    soong_module_json.make_module(
+        'h', 'type3', blueprint='pkg/pkg4/Android.bp'
+    ),
 ]
 
 _soong_module_graph_created_by_no_loop = [
     soong_module_json.make_module(
-        'a', 'type1', blueprint='pkg/Android.bp', created_by='b', json_props=[
-        soong_module_json.make_property('Name'),
-        soong_module_json.make_property('Srcs'),
-    ]),
+        'a',
+        'type1',
+        blueprint='pkg/Android.bp',
+        created_by='b',
+        json_props=[
+            soong_module_json.make_property('Name'),
+            soong_module_json.make_property('Srcs'),
+        ],
+    ),
     soong_module_json.make_module('b', 'type2', blueprint='pkg/Android.bp'),
 ]
 
@@ -81,12 +99,18 @@ _soong_module_graph_created_by_loop = [
         'a',
         'type1',
         deps=[soong_module_json.make_dep('b')],
-        blueprint='pkg/Android.bp'),
+        blueprint='pkg/Android.bp',
+    ),
     soong_module_json.make_module(
-        'b', 'type2', blueprint='pkg/Android.bp', created_by='a', json_props=[
-        soong_module_json.make_property('Name'),
-        soong_module_json.make_property('Defaults'),
-    ]),
+        'b',
+        'type2',
+        blueprint='pkg/Android.bp',
+        created_by='a',
+        json_props=[
+            soong_module_json.make_property('Name'),
+            soong_module_json.make_property('Defaults'),
+        ],
+    ),
 ]
 
 
@@ -95,26 +119,45 @@ class Bp2BuildProgressTest(unittest.TestCase):
   @unittest.mock.patch(
       'dependency_analysis.get_queryview_module_info',
       autospec=True,
-      return_value=_queryview_graph)
-  def test_get_module_adjacency_list_queryview_transitive_deps_and_props_by_converted_module_type(self, _):
-    adjacency_dict, props_by_converted_module_type = bp2build_progress.get_module_adjacency_list_and_props_by_converted_module_type(
-        bp2build_progress.GraphFilterInfo(module_names=set(['a', 'f'])), True, set(), set(), False, True, False
+      return_value=_queryview_graph,
+  )
+  def test_get_module_adjacency_list_queryview_transitive_deps_and_props_by_converted_module_type(
+      self, _
+  ):
+    adjacency_dict, props_by_converted_module_type = (
+        bp2build_progress.get_module_adjacency_list_and_props_by_converted_module_type(
+            bp2build_progress.GraphFilterInfo(module_names=set(['a', 'f'])),
+            True,
+            set(),
+            set(),
+            False,
+            True,
+            False,
+        )
     )
 
     a = bp2build_progress.ModuleInfo(
-        name='a', kind='type1', dirname='pkg', num_deps=2, created_by=None)
+        name='a', kind='type1', dirname='pkg', num_deps=2, created_by=None
+    )
     b = bp2build_progress.ModuleInfo(
-        name='b', kind='type2', dirname='pkg', num_deps=1, created_by=None)
+        name='b', kind='type2', dirname='pkg', num_deps=1, created_by=None
+    )
     c = bp2build_progress.ModuleInfo(
-        name='c', kind='type2', dirname='other', num_deps=1, created_by=None)
+        name='c', kind='type2', dirname='other', num_deps=1, created_by=None
+    )
     d = bp2build_progress.ModuleInfo(
-        name='d', kind='type2', dirname='pkg', num_deps=0, created_by=None)
+        name='d', kind='type2', dirname='pkg', num_deps=0, created_by=None
+    )
     e = bp2build_progress.ModuleInfo(
-        name='e', kind='type3', dirname='other', num_deps=0, created_by=None)
+        name='e', kind='type3', dirname='other', num_deps=0, created_by=None
+    )
     f = bp2build_progress.ModuleInfo(
-        name='f', kind='type4', dirname='pkg2', num_deps=0, created_by=None)
+        name='f', kind='type4', dirname='pkg2', num_deps=0, created_by=None
+    )
     expected_adjacency_dict = {}
-    expected_adjacency_dict[a] = bp2build_progress.DepInfo(direct_deps=set([b, c]), transitive_deps=set([d, e]))
+    expected_adjacency_dict[a] = bp2build_progress.DepInfo(
+        direct_deps=set([b, c]), transitive_deps=set([d, e])
+    )
     expected_adjacency_dict[b] = bp2build_progress.DepInfo(direct_deps=set([d]))
     expected_adjacency_dict[c] = bp2build_progress.DepInfo(direct_deps=set([e]))
     expected_adjacency_dict[d] = bp2build_progress.DepInfo()
@@ -124,32 +167,52 @@ class Bp2BuildProgressTest(unittest.TestCase):
     expected_props_by_converted_module_type = collections.defaultdict(set)
 
     self.assertDictEqual(adjacency_dict, expected_adjacency_dict)
-    self.assertDictEqual(props_by_converted_module_type, expected_props_by_converted_module_type)
+    self.assertDictEqual(
+        props_by_converted_module_type, expected_props_by_converted_module_type
+    )
 
   @unittest.mock.patch(
       'dependency_analysis.get_queryview_module_info',
       autospec=True,
-      return_value=_queryview_graph)
-  def test_get_module_adjacency_list_queryview_direct_deps_and_props_by_converted_module_type(self, _):
-    adjacency_dict, props_by_converted_module_type = bp2build_progress.get_module_adjacency_list_and_props_by_converted_module_type(
-        bp2build_progress.GraphFilterInfo(module_names=(['a', 'f'])), True, set(), set(), False, False
+      return_value=_queryview_graph,
+  )
+  def test_get_module_adjacency_list_queryview_direct_deps_and_props_by_converted_module_type(
+      self, _
+  ):
+    adjacency_dict, props_by_converted_module_type = (
+        bp2build_progress.get_module_adjacency_list_and_props_by_converted_module_type(
+            bp2build_progress.GraphFilterInfo(module_names=(['a', 'f'])),
+            True,
+            set(),
+            set(),
+            False,
+            False,
+        )
     )
 
     a = bp2build_progress.ModuleInfo(
-        name='a', kind='type1', dirname='pkg', num_deps=2, created_by=None)
+        name='a', kind='type1', dirname='pkg', num_deps=2, created_by=None
+    )
     b = bp2build_progress.ModuleInfo(
-        name='b', kind='type2', dirname='pkg', num_deps=1, created_by=None)
+        name='b', kind='type2', dirname='pkg', num_deps=1, created_by=None
+    )
     c = bp2build_progress.ModuleInfo(
-        name='c', kind='type2', dirname='other', num_deps=1, created_by=None)
+        name='c', kind='type2', dirname='other', num_deps=1, created_by=None
+    )
     d = bp2build_progress.ModuleInfo(
-        name='d', kind='type2', dirname='pkg', num_deps=0, created_by=None)
+        name='d', kind='type2', dirname='pkg', num_deps=0, created_by=None
+    )
     e = bp2build_progress.ModuleInfo(
-        name='e', kind='type3', dirname='other', num_deps=0, created_by=None)
+        name='e', kind='type3', dirname='other', num_deps=0, created_by=None
+    )
     f = bp2build_progress.ModuleInfo(
-        name='f', kind='type4', dirname='pkg2', num_deps=0, created_by=None)
+        name='f', kind='type4', dirname='pkg2', num_deps=0, created_by=None
+    )
 
     expected_adjacency_dict = {}
-    expected_adjacency_dict[a] = bp2build_progress.DepInfo(direct_deps=set([b, c]))
+    expected_adjacency_dict[a] = bp2build_progress.DepInfo(
+        direct_deps=set([b, c])
+    )
     expected_adjacency_dict[b] = bp2build_progress.DepInfo(direct_deps=set([d]))
     expected_adjacency_dict[c] = bp2build_progress.DepInfo(direct_deps=set([e]))
     expected_adjacency_dict[d] = bp2build_progress.DepInfo()
@@ -159,32 +222,54 @@ class Bp2BuildProgressTest(unittest.TestCase):
     expected_props_by_converted_module_type = collections.defaultdict(set)
 
     self.assertDictEqual(adjacency_dict, expected_adjacency_dict)
-    self.assertDictEqual(props_by_converted_module_type, expected_props_by_converted_module_type)
+    self.assertDictEqual(
+        props_by_converted_module_type, expected_props_by_converted_module_type
+    )
 
   @unittest.mock.patch(
       'dependency_analysis.get_queryview_module_info_by_type',
       autospec=True,
-      return_value=_queryview_graph)
-  def test_get_module_adjacency_list_queryview_direct_deps_and_props_by_converted_module_type(self, _):
-    adjacency_dict, props_by_converted_module_type = bp2build_progress.get_module_adjacency_list_and_props_by_converted_module_type(
-        bp2build_progress.GraphFilterInfo(module_types=set(['type1', 'type4'])), True, set(), set(), False, False
+      return_value=_queryview_graph,
+  )
+  def test_get_module_adjacency_list_queryview_direct_deps_and_props_by_converted_module_type(
+      self, _
+  ):
+    adjacency_dict, props_by_converted_module_type = (
+        bp2build_progress.get_module_adjacency_list_and_props_by_converted_module_type(
+            bp2build_progress.GraphFilterInfo(
+                module_types=set(['type1', 'type4'])
+            ),
+            True,
+            set(),
+            set(),
+            False,
+            False,
+        )
     )
 
     a = bp2build_progress.ModuleInfo(
-        name='a', kind='type1', dirname='pkg', num_deps=2, created_by=None)
+        name='a', kind='type1', dirname='pkg', num_deps=2, created_by=None
+    )
     b = bp2build_progress.ModuleInfo(
-        name='b', kind='type2', dirname='pkg', num_deps=1, created_by=None)
+        name='b', kind='type2', dirname='pkg', num_deps=1, created_by=None
+    )
     c = bp2build_progress.ModuleInfo(
-        name='c', kind='type2', dirname='other', num_deps=1, created_by=None)
+        name='c', kind='type2', dirname='other', num_deps=1, created_by=None
+    )
     d = bp2build_progress.ModuleInfo(
-        name='d', kind='type2', dirname='pkg', num_deps=0, created_by=None)
+        name='d', kind='type2', dirname='pkg', num_deps=0, created_by=None
+    )
     e = bp2build_progress.ModuleInfo(
-        name='e', kind='type3', dirname='other', num_deps=0, created_by=None)
+        name='e', kind='type3', dirname='other', num_deps=0, created_by=None
+    )
     f = bp2build_progress.ModuleInfo(
-        name='f', kind='type4', dirname='pkg2', num_deps=0, created_by=None)
+        name='f', kind='type4', dirname='pkg2', num_deps=0, created_by=None
+    )
 
     expected_adjacency_dict = {}
-    expected_adjacency_dict[a] = bp2build_progress.DepInfo(direct_deps=set([b, c]))
+    expected_adjacency_dict[a] = bp2build_progress.DepInfo(
+        direct_deps=set([b, c])
+    )
     expected_adjacency_dict[b] = bp2build_progress.DepInfo(direct_deps=set([d]))
     expected_adjacency_dict[c] = bp2build_progress.DepInfo(direct_deps=set([e]))
     expected_adjacency_dict[d] = bp2build_progress.DepInfo()
@@ -194,30 +279,69 @@ class Bp2BuildProgressTest(unittest.TestCase):
     expected_props_by_converted_module_type = collections.defaultdict(set)
 
     self.assertDictEqual(adjacency_dict, expected_adjacency_dict)
-    self.assertDictEqual(props_by_converted_module_type, expected_props_by_converted_module_type)
+    self.assertDictEqual(
+        props_by_converted_module_type, expected_props_by_converted_module_type
+    )
 
   @unittest.mock.patch(
       'dependency_analysis.get_json_module_info',
       autospec=True,
-      return_value=_soong_module_graph)
-  def test_get_module_adjacency_list_soong_module_transitive_deps_and_props_by_converted_module_type(self, _):
-    adjacency_dict, props_by_converted_module_type = bp2build_progress.get_module_adjacency_list_and_props_by_converted_module_type(
-        bp2build_progress.GraphFilterInfo(module_names=set(['a', 'f']), package_dir=None), False, set(), set(['b', 'c', 'e', 'f']), False, True, False)
+      return_value=_soong_module_graph,
+  )
+  def test_get_module_adjacency_list_soong_module_transitive_deps_and_props_by_converted_module_type(
+      self, _
+  ):
+    adjacency_dict, props_by_converted_module_type = (
+        bp2build_progress.get_module_adjacency_list_and_props_by_converted_module_type(
+            bp2build_progress.GraphFilterInfo(
+                module_names=set(['a', 'f']), package_dir=None
+            ),
+            False,
+            set(),
+            set(['b', 'c', 'e', 'f']),
+            False,
+            True,
+            False,
+        )
+    )
     a = bp2build_progress.ModuleInfo(
-        name='a', kind='type1', dirname='pkg', num_deps=2, created_by='')
+        name='a', kind='type1', dirname='pkg', num_deps=2, created_by=''
+    )
     b = bp2build_progress.ModuleInfo(
-        name='b', kind='type2', dirname='pkg', num_deps=1, created_by='', props=frozenset(["Name", "Sdk_version"]))
+        name='b',
+        kind='type2',
+        dirname='pkg',
+        num_deps=1,
+        created_by='',
+        props=frozenset(['Name', 'Sdk_version']),
+    )
     c = bp2build_progress.ModuleInfo(
-        name='c', kind='type2', dirname='other', num_deps=1, created_by='', props=frozenset(["Visibility"]))
+        name='c',
+        kind='type2',
+        dirname='other',
+        num_deps=1,
+        created_by='',
+        props=frozenset(['Visibility']),
+    )
     d = bp2build_progress.ModuleInfo(
-        name='d', kind='type2', dirname='pkg', num_deps=0, created_by='')
+        name='d', kind='type2', dirname='pkg', num_deps=0, created_by=''
+    )
     e = bp2build_progress.ModuleInfo(
-        name='e', kind='type3', dirname='other', num_deps=0, created_by='')
+        name='e', kind='type3', dirname='other', num_deps=0, created_by=''
+    )
     f = bp2build_progress.ModuleInfo(
-        name='f', kind='type4', dirname='pkg2', num_deps=0, created_by='', props=frozenset(["Manifest"]))
+        name='f',
+        kind='type4',
+        dirname='pkg2',
+        num_deps=0,
+        created_by='',
+        props=frozenset(['Manifest']),
+    )
 
     expected_adjacency_dict = {}
-    expected_adjacency_dict[a] = bp2build_progress.DepInfo(direct_deps=set([b, c]), transitive_deps=set([d, e]))
+    expected_adjacency_dict[a] = bp2build_progress.DepInfo(
+        direct_deps=set([b, c]), transitive_deps=set([d, e])
+    )
     expected_adjacency_dict[b] = bp2build_progress.DepInfo(direct_deps=set([d]))
     expected_adjacency_dict[c] = bp2build_progress.DepInfo(direct_deps=set([e]))
     expected_adjacency_dict[d] = bp2build_progress.DepInfo()
@@ -225,36 +349,77 @@ class Bp2BuildProgressTest(unittest.TestCase):
     expected_adjacency_dict[f] = bp2build_progress.DepInfo()
 
     expected_props_by_converted_module_type = collections.defaultdict(set)
-    expected_props_by_converted_module_type["type2"].update(set(["Name", "Sdk_version", "Visibility"]))
-    expected_props_by_converted_module_type["type3"] = set()
-    expected_props_by_converted_module_type["type4"].update(set(["Manifest"]))
+    expected_props_by_converted_module_type['type2'].update(
+        set(['Name', 'Sdk_version', 'Visibility'])
+    )
+    expected_props_by_converted_module_type['type3'] = set()
+    expected_props_by_converted_module_type['type4'].update(set(['Manifest']))
 
     self.assertDictEqual(adjacency_dict, expected_adjacency_dict)
-    self.assertDictEqual(props_by_converted_module_type, expected_props_by_converted_module_type)
+    self.assertDictEqual(
+        props_by_converted_module_type, expected_props_by_converted_module_type
+    )
 
   @unittest.mock.patch(
       'dependency_analysis.get_json_module_info',
       autospec=True,
-      return_value=_soong_module_graph)
-  def test_get_module_adjacency_list_soong_module_transitive_deps_and_props_by_converted_module_type(self, _):
-    adjacency_dict, props_by_converted_module_type = bp2build_progress.get_module_adjacency_list_and_props_by_converted_module_type(
-        bp2build_progress.GraphFilterInfo(module_types=set(['type1', 'type4']), package_dir=None), False, set(), set(['b', 'c', 'e', 'f']), False, True, False)
+      return_value=_soong_module_graph,
+  )
+  def test_get_module_adjacency_list_soong_module_transitive_deps_and_props_by_converted_module_type(
+      self, _
+  ):
+    adjacency_dict, props_by_converted_module_type = (
+        bp2build_progress.get_module_adjacency_list_and_props_by_converted_module_type(
+            bp2build_progress.GraphFilterInfo(
+                module_types=set(['type1', 'type4']), package_dir=None
+            ),
+            False,
+            set(),
+            set(['b', 'c', 'e', 'f']),
+            False,
+            True,
+            False,
+        )
+    )
 
     a = bp2build_progress.ModuleInfo(
-        name='a', kind='type1', dirname='pkg', num_deps=2, created_by='')
+        name='a', kind='type1', dirname='pkg', num_deps=2, created_by=''
+    )
     b = bp2build_progress.ModuleInfo(
-        name='b', kind='type2', dirname='pkg', num_deps=1, created_by='', props=frozenset(["Name", "Sdk_version"]))
+        name='b',
+        kind='type2',
+        dirname='pkg',
+        num_deps=1,
+        created_by='',
+        props=frozenset(['Name', 'Sdk_version']),
+    )
     c = bp2build_progress.ModuleInfo(
-        name='c', kind='type2', dirname='other', num_deps=1, created_by='', props=frozenset(["Visibility"]))
+        name='c',
+        kind='type2',
+        dirname='other',
+        num_deps=1,
+        created_by='',
+        props=frozenset(['Visibility']),
+    )
     d = bp2build_progress.ModuleInfo(
-        name='d', kind='type2', dirname='pkg', num_deps=0, created_by='')
+        name='d', kind='type2', dirname='pkg', num_deps=0, created_by=''
+    )
     e = bp2build_progress.ModuleInfo(
-        name='e', kind='type3', dirname='other', num_deps=0, created_by='')
+        name='e', kind='type3', dirname='other', num_deps=0, created_by=''
+    )
     f = bp2build_progress.ModuleInfo(
-        name='f', kind='type4', dirname='pkg2', num_deps=0, created_by='', props=frozenset(["Manifest"]))
+        name='f',
+        kind='type4',
+        dirname='pkg2',
+        num_deps=0,
+        created_by='',
+        props=frozenset(['Manifest']),
+    )
 
     expected_adjacency_dict = {}
-    expected_adjacency_dict[a] = bp2build_progress.DepInfo(direct_deps=set([b, c]), transitive_deps=set([d, e]))
+    expected_adjacency_dict[a] = bp2build_progress.DepInfo(
+        direct_deps=set([b, c]), transitive_deps=set([d, e])
+    )
     expected_adjacency_dict[b] = bp2build_progress.DepInfo(direct_deps=set([d]))
     expected_adjacency_dict[c] = bp2build_progress.DepInfo(direct_deps=set([e]))
     expected_adjacency_dict[d] = bp2build_progress.DepInfo()
@@ -262,87 +427,183 @@ class Bp2BuildProgressTest(unittest.TestCase):
     expected_adjacency_dict[f] = bp2build_progress.DepInfo()
 
     expected_props_by_converted_module_type = collections.defaultdict(set)
-    expected_props_by_converted_module_type["type2"].update(set(["Name", "Sdk_version", "Visibility"]))
-    expected_props_by_converted_module_type["type3"] = set()
-    expected_props_by_converted_module_type["type4"].update(set(["Manifest"]))
+    expected_props_by_converted_module_type['type2'].update(
+        set(['Name', 'Sdk_version', 'Visibility'])
+    )
+    expected_props_by_converted_module_type['type3'] = set()
+    expected_props_by_converted_module_type['type4'].update(set(['Manifest']))
 
     self.assertDictEqual(adjacency_dict, expected_adjacency_dict)
-    self.assertDictEqual(props_by_converted_module_type, expected_props_by_converted_module_type)
+    self.assertDictEqual(
+        props_by_converted_module_type, expected_props_by_converted_module_type
+    )
 
   @unittest.mock.patch(
       'dependency_analysis.get_json_module_info',
       autospec=True,
-      return_value=_soong_module_graph)
-  def test_get_module_adjacency_list_soong_module_transitive_deps_package_dir_and_props_by_converted_module_type(self, _):
-    adjacency_dict1, props_by_converted_module_type1 = bp2build_progress.get_module_adjacency_list_and_props_by_converted_module_type(
-        bp2build_progress.GraphFilterInfo(package_dir="pkg/", recursive=True), False, set(), set(['b', 'c', 'e']), False, True, False)
+      return_value=_soong_module_graph,
+  )
+  def test_get_module_adjacency_list_soong_module_transitive_deps_package_dir_and_props_by_converted_module_type(
+      self, _
+  ):
+    adjacency_dict1, props_by_converted_module_type1 = (
+        bp2build_progress.get_module_adjacency_list_and_props_by_converted_module_type(
+            bp2build_progress.GraphFilterInfo(
+                package_dir='pkg/', recursive=True
+            ),
+            False,
+            set(),
+            set(['b', 'c', 'e']),
+            False,
+            True,
+            False,
+        )
+    )
 
-    adjacency_dict2, props_by_converted_module_type2 = bp2build_progress.get_module_adjacency_list_and_props_by_converted_module_type(
-        bp2build_progress.GraphFilterInfo(package_dir="pkg/", recursive=False), False, set(), set(['b', 'c', 'e']), False, True, False)
+    adjacency_dict2, props_by_converted_module_type2 = (
+        bp2build_progress.get_module_adjacency_list_and_props_by_converted_module_type(
+            bp2build_progress.GraphFilterInfo(
+                package_dir='pkg/', recursive=False
+            ),
+            False,
+            set(),
+            set(['b', 'c', 'e']),
+            False,
+            True,
+            False,
+        )
+    )
 
     a = bp2build_progress.ModuleInfo(
-        name='a', kind='type1', dirname='pkg', num_deps=2, created_by='')
+        name='a', kind='type1', dirname='pkg', num_deps=2, created_by=''
+    )
     b = bp2build_progress.ModuleInfo(
-        name='b', kind='type2', dirname='pkg', num_deps=1, created_by='', props=frozenset(["Name", "Sdk_version"]))
+        name='b',
+        kind='type2',
+        dirname='pkg',
+        num_deps=1,
+        created_by='',
+        props=frozenset(['Name', 'Sdk_version']),
+    )
     c = bp2build_progress.ModuleInfo(
-        name='c', kind='type2', dirname='other', num_deps=1, created_by='', props=frozenset(["Visibility"]))
+        name='c',
+        kind='type2',
+        dirname='other',
+        num_deps=1,
+        created_by='',
+        props=frozenset(['Visibility']),
+    )
     d = bp2build_progress.ModuleInfo(
-        name='d', kind='type2', dirname='pkg', num_deps=0, created_by='')
+        name='d', kind='type2', dirname='pkg', num_deps=0, created_by=''
+    )
     e = bp2build_progress.ModuleInfo(
-        name='e', kind='type3', dirname='other', num_deps=0, created_by='')
+        name='e', kind='type3', dirname='other', num_deps=0, created_by=''
+    )
     h = bp2build_progress.ModuleInfo(
-        name='h', kind='type3', dirname='pkg/pkg4', num_deps=0, created_by='')
+        name='h', kind='type3', dirname='pkg/pkg4', num_deps=0, created_by=''
+    )
 
     expected_adjacency_dict1 = {}
-    expected_adjacency_dict1[a] = bp2build_progress.DepInfo(direct_deps=set([b, c]), transitive_deps=set([d, e]))
-    expected_adjacency_dict1[b] = bp2build_progress.DepInfo(direct_deps=set([d]))
-    expected_adjacency_dict1[c] = bp2build_progress.DepInfo(direct_deps=set([e]))
+    expected_adjacency_dict1[a] = bp2build_progress.DepInfo(
+        direct_deps=set([b, c]), transitive_deps=set([d, e])
+    )
+    expected_adjacency_dict1[b] = bp2build_progress.DepInfo(
+        direct_deps=set([d])
+    )
+    expected_adjacency_dict1[c] = bp2build_progress.DepInfo(
+        direct_deps=set([e])
+    )
     expected_adjacency_dict1[d] = bp2build_progress.DepInfo()
     expected_adjacency_dict1[e] = bp2build_progress.DepInfo()
     expected_adjacency_dict1[h] = bp2build_progress.DepInfo()
 
     expected_adjacency_dict2 = {}
-    expected_adjacency_dict2[a] = bp2build_progress.DepInfo(direct_deps=set([b, c]), transitive_deps=set([d, e]))
-    expected_adjacency_dict2[b] = bp2build_progress.DepInfo(direct_deps=set([d]))
-    expected_adjacency_dict2[c] = bp2build_progress.DepInfo(direct_deps=set([e]))
+    expected_adjacency_dict2[a] = bp2build_progress.DepInfo(
+        direct_deps=set([b, c]), transitive_deps=set([d, e])
+    )
+    expected_adjacency_dict2[b] = bp2build_progress.DepInfo(
+        direct_deps=set([d])
+    )
+    expected_adjacency_dict2[c] = bp2build_progress.DepInfo(
+        direct_deps=set([e])
+    )
     expected_adjacency_dict2[d] = bp2build_progress.DepInfo()
     expected_adjacency_dict2[e] = bp2build_progress.DepInfo()
 
     expected_props_by_converted_module_type = collections.defaultdict(set)
-    expected_props_by_converted_module_type["type2"].update(set(["Name", "Sdk_version", "Visibility"]))
-    expected_props_by_converted_module_type["type3"] = set()
+    expected_props_by_converted_module_type['type2'].update(
+        set(['Name', 'Sdk_version', 'Visibility'])
+    )
+    expected_props_by_converted_module_type['type3'] = set()
 
     self.assertDictEqual(adjacency_dict1, expected_adjacency_dict1)
     self.assertDictEqual(adjacency_dict2, expected_adjacency_dict2)
-    self.assertDictEqual(props_by_converted_module_type1, expected_props_by_converted_module_type)
-    self.assertDictEqual(props_by_converted_module_type2, expected_props_by_converted_module_type)
+    self.assertDictEqual(
+        props_by_converted_module_type1, expected_props_by_converted_module_type
+    )
+    self.assertDictEqual(
+        props_by_converted_module_type2, expected_props_by_converted_module_type
+    )
 
   @unittest.mock.patch(
       'dependency_analysis.get_json_module_info',
       autospec=True,
-      return_value=_soong_module_graph)
-  def test_get_module_adjacency_list_soong_module_direct_deps_and_props_by_converted_module_type(self, _):
-    adjacency_dict, props_by_converted_module_type = bp2build_progress.get_module_adjacency_list_and_props_by_converted_module_type(
-        bp2build_progress.GraphFilterInfo(set(['a', 'f']), package_dir=None),
-                                                                 False, set(), set(['b', 'c', 'e', 'f']),
-                                                                 False, False)
+      return_value=_soong_module_graph,
+  )
+  def test_get_module_adjacency_list_soong_module_direct_deps_and_props_by_converted_module_type(
+      self, _
+  ):
+    adjacency_dict, props_by_converted_module_type = (
+        bp2build_progress.get_module_adjacency_list_and_props_by_converted_module_type(
+            bp2build_progress.GraphFilterInfo(
+                set(['a', 'f']), package_dir=None
+            ),
+            False,
+            set(),
+            set(['b', 'c', 'e', 'f']),
+            False,
+            False,
+        )
+    )
 
     a = bp2build_progress.ModuleInfo(
-        name='a', kind='type1', dirname='pkg', num_deps=2, created_by='')
+        name='a', kind='type1', dirname='pkg', num_deps=2, created_by=''
+    )
     b = bp2build_progress.ModuleInfo(
-        name='b', kind='type2', dirname='pkg', num_deps=1, created_by='', props=frozenset(["Name", "Sdk_version"]))
+        name='b',
+        kind='type2',
+        dirname='pkg',
+        num_deps=1,
+        created_by='',
+        props=frozenset(['Name', 'Sdk_version']),
+    )
     c = bp2build_progress.ModuleInfo(
-        name='c', kind='type2', dirname='other', num_deps=1, created_by='', props=frozenset(["Visibility"]))
+        name='c',
+        kind='type2',
+        dirname='other',
+        num_deps=1,
+        created_by='',
+        props=frozenset(['Visibility']),
+    )
     d = bp2build_progress.ModuleInfo(
-        name='d', kind='type2', dirname='pkg', num_deps=0, created_by='')
+        name='d', kind='type2', dirname='pkg', num_deps=0, created_by=''
+    )
     e = bp2build_progress.ModuleInfo(
-        name='e', kind='type3', dirname='other', num_deps=0, created_by='')
+        name='e', kind='type3', dirname='other', num_deps=0, created_by=''
+    )
     f = bp2build_progress.ModuleInfo(
-        name='f', kind='type4', dirname='pkg2', num_deps=0, created_by='', props=frozenset(["Manifest"]))
-
+        name='f',
+        kind='type4',
+        dirname='pkg2',
+        num_deps=0,
+        created_by='',
+        props=frozenset(['Manifest']),
+    )
 
     expected_adjacency_dict = {}
-    expected_adjacency_dict[a] = bp2build_progress.DepInfo(direct_deps=set([b, c]))
+    expected_adjacency_dict[a] = bp2build_progress.DepInfo(
+        direct_deps=set([b, c])
+    )
     expected_adjacency_dict[b] = bp2build_progress.DepInfo(direct_deps=set([d]))
     expected_adjacency_dict[c] = bp2build_progress.DepInfo(direct_deps=set([e]))
     expected_adjacency_dict[d] = bp2build_progress.DepInfo()
@@ -350,101 +611,199 @@ class Bp2BuildProgressTest(unittest.TestCase):
     expected_adjacency_dict[f] = bp2build_progress.DepInfo()
 
     expected_props_by_converted_module_type = collections.defaultdict(set)
-    expected_props_by_converted_module_type["type2"].update(set(["Name", "Sdk_version", "Visibility"]))
-    expected_props_by_converted_module_type["type3"] = set()
-    expected_props_by_converted_module_type["type4"].update(set(["Manifest"]))
+    expected_props_by_converted_module_type['type2'].update(
+        set(['Name', 'Sdk_version', 'Visibility'])
+    )
+    expected_props_by_converted_module_type['type3'] = set()
+    expected_props_by_converted_module_type['type4'].update(set(['Manifest']))
 
     self.assertDictEqual(adjacency_dict, expected_adjacency_dict)
-    self.assertDictEqual(props_by_converted_module_type, expected_props_by_converted_module_type)
+    self.assertDictEqual(
+        props_by_converted_module_type, expected_props_by_converted_module_type
+    )
 
   @unittest.mock.patch(
       'dependency_analysis.get_json_module_info',
       autospec=True,
-      return_value=_soong_module_graph_created_by_no_loop)
-  def test_get_module_adjacency_list_soong_module_created_by_and_props_by_converted_module_type(self, _):
-    adjacency_dict, props_by_converted_module_type = bp2build_progress.get_module_adjacency_list_and_props_by_converted_module_type(
-        bp2build_progress.GraphFilterInfo(set(['a', 'f']), package_dir=None),
-                                                                 False, set(), set(['a']),
-                                                                 True, False)
+      return_value=_soong_module_graph_created_by_no_loop,
+  )
+  def test_get_module_adjacency_list_soong_module_created_by_and_props_by_converted_module_type(
+      self, _
+  ):
+    adjacency_dict, props_by_converted_module_type = (
+        bp2build_progress.get_module_adjacency_list_and_props_by_converted_module_type(
+            bp2build_progress.GraphFilterInfo(
+                set(['a', 'f']), package_dir=None
+            ),
+            False,
+            set(),
+            set(['a']),
+            True,
+            False,
+        )
+    )
     a = bp2build_progress.ModuleInfo(
-        name='a', kind='type1', dirname='pkg', num_deps=1, created_by='b', props=frozenset(["Name", "Srcs"]))
+        name='a',
+        kind='type1',
+        dirname='pkg',
+        num_deps=1,
+        created_by='b',
+        props=frozenset(['Name', 'Srcs']),
+    )
     b = bp2build_progress.ModuleInfo(
-        name='b', kind='type2', dirname='pkg', num_deps=0, created_by='')
+        name='b', kind='type2', dirname='pkg', num_deps=0, created_by=''
+    )
 
     expected_adjacency_dict = {}
     expected_adjacency_dict[a] = bp2build_progress.DepInfo(direct_deps=set([b]))
     expected_adjacency_dict[b] = bp2build_progress.DepInfo()
 
     expected_props_by_converted_module_type = collections.defaultdict(set)
-    expected_props_by_converted_module_type["type1"].update(set(["Name", "Srcs"]))
+    expected_props_by_converted_module_type['type1'].update(
+        set(['Name', 'Srcs'])
+    )
 
     self.assertDictEqual(adjacency_dict, expected_adjacency_dict)
-    self.assertDictEqual(props_by_converted_module_type, expected_props_by_converted_module_type)
+    self.assertDictEqual(
+        props_by_converted_module_type, expected_props_by_converted_module_type
+    )
 
   @unittest.mock.patch(
       'dependency_analysis.get_json_module_info',
       autospec=True,
-      return_value=_soong_module_graph_created_by_loop)
-  def test_get_module_adjacency_list_soong_module_created_by_loop_and_props_by_converted_module_type(self, _):
-    adjacency_dict, props_by_converted_module_type = bp2build_progress.get_module_adjacency_list_and_props_by_converted_module_type(
-        bp2build_progress.GraphFilterInfo(set(['a', 'f']), package_dir=None),
-                                                                 False, set(), set(['b']),
-                                                                 True, False)
+      return_value=_soong_module_graph_created_by_loop,
+  )
+  def test_get_module_adjacency_list_soong_module_created_by_loop_and_props_by_converted_module_type(
+      self, _
+  ):
+    adjacency_dict, props_by_converted_module_type = (
+        bp2build_progress.get_module_adjacency_list_and_props_by_converted_module_type(
+            bp2build_progress.GraphFilterInfo(
+                set(['a', 'f']), package_dir=None
+            ),
+            False,
+            set(),
+            set(['b']),
+            True,
+            False,
+        )
+    )
 
     a = bp2build_progress.ModuleInfo(
-        name='a', kind='type1', dirname='pkg', num_deps=1, created_by='')
+        name='a', kind='type1', dirname='pkg', num_deps=1, created_by=''
+    )
     b = bp2build_progress.ModuleInfo(
-        name='b', kind='type2', dirname='pkg', num_deps=1, created_by='a', props=frozenset(["Name", "Defaults"]))
+        name='b',
+        kind='type2',
+        dirname='pkg',
+        num_deps=1,
+        created_by='a',
+        props=frozenset(['Name', 'Defaults']),
+    )
 
     expected_adjacency_dict = {}
     expected_adjacency_dict[a] = bp2build_progress.DepInfo(direct_deps=set([b]))
     expected_adjacency_dict[b] = bp2build_progress.DepInfo()
 
     expected_props_by_converted_module_type = collections.defaultdict(set)
-    expected_props_by_converted_module_type["type2"].update(set(["Name", "Defaults"]))
+    expected_props_by_converted_module_type['type2'].update(
+        set(['Name', 'Defaults'])
+    )
 
     self.assertDictEqual(adjacency_dict, expected_adjacency_dict)
-    self.assertDictEqual(props_by_converted_module_type, expected_props_by_converted_module_type)
+    self.assertDictEqual(
+        props_by_converted_module_type, expected_props_by_converted_module_type
+    )
 
   def test_generate_report_data(self):
     a = bp2build_progress.ModuleInfo(
-        name='a', kind='type1', dirname='pkg', num_deps=4, created_by=None,
-        reasons_from_heuristics=frozenset({'unconverted dependencies', 'type missing converter'}))
+        name='a',
+        kind='type1',
+        dirname='pkg',
+        num_deps=4,
+        created_by=None,
+        reasons_from_heuristics=frozenset(
+            {'unconverted dependencies', 'type missing converter'}
+        ),
+    )
     b = bp2build_progress.ModuleInfo(
-        name='b', kind='type2', dirname='pkg', num_deps=1, created_by=None,
-        props=frozenset({"Name", "Srcs", "BaseName"}),
-        reasons_from_heuristics=frozenset({'unconverted properties: [BaseName]'}))
+        name='b',
+        kind='type2',
+        dirname='pkg',
+        num_deps=1,
+        created_by=None,
+        props=frozenset({'Name', 'Srcs', 'BaseName'}),
+        reasons_from_heuristics=frozenset(
+            {'unconverted properties: [BaseName]'}
+        ),
+    )
     c = bp2build_progress.ModuleInfo(
-        name='c', kind='type2', dirname='other', num_deps=1, created_by=None,
-        props=frozenset({"Name", "Defaults"}),
-        reasons_from_heuristics=frozenset({'unconverted dependencies'}))
+        name='c',
+        kind='type2',
+        dirname='other',
+        num_deps=1,
+        created_by=None,
+        props=frozenset({'Name', 'Defaults'}),
+        reasons_from_heuristics=frozenset({'unconverted dependencies'}),
+    )
     d = bp2build_progress.ModuleInfo(
-        name='d', kind='type2', dirname='pkg', num_deps=0, created_by=None)
+        name='d', kind='type2', dirname='pkg', num_deps=0, created_by=None
+    )
     e = bp2build_progress.ModuleInfo(
-        name='e', kind='type3', dirname='other', num_deps=0, created_by=None,
-        reasons_from_heuristics=frozenset({'type missing converter'}))
+        name='e',
+        kind='type3',
+        dirname='other',
+        num_deps=0,
+        created_by=None,
+        reasons_from_heuristics=frozenset({'type missing converter'}),
+    )
     f = bp2build_progress.ModuleInfo(
-        name='f', kind='type4', dirname='pkg2', num_deps=3, created_by=None,
-        props=frozenset({"Name", "Sdk_version", "Visibility", "Backend.Java.Platform_apis"}),
-        reasons_from_heuristics=frozenset({'unconverted dependencies'}))
+        name='f',
+        kind='type4',
+        dirname='pkg2',
+        num_deps=3,
+        created_by=None,
+        props=frozenset(
+            {'Name', 'Sdk_version', 'Visibility', 'Backend.Java.Platform_apis'}
+        ),
+        reasons_from_heuristics=frozenset({'unconverted dependencies'}),
+    )
     g = bp2build_progress.ModuleInfo(
-        name='g', kind='type4', dirname='pkg2', num_deps=2, created_by=None)
+        name='g', kind='type4', dirname='pkg2', num_deps=2, created_by=None
+    )
 
     module_graph = {}
-    module_graph[a] = bp2build_progress.DepInfo(direct_deps=set([b, c]), transitive_deps=set([d, e]))
+    module_graph[a] = bp2build_progress.DepInfo(
+        direct_deps=set([b, c]), transitive_deps=set([d, e])
+    )
     module_graph[b] = bp2build_progress.DepInfo(direct_deps=set([d]))
     module_graph[c] = bp2build_progress.DepInfo(direct_deps=set([e]))
     module_graph[d] = bp2build_progress.DepInfo()
     module_graph[e] = bp2build_progress.DepInfo()
-    module_graph[f] = bp2build_progress.DepInfo(direct_deps=set([b, g]), transitive_deps=set([d]))
+    module_graph[f] = bp2build_progress.DepInfo(
+        direct_deps=set([b, g]), transitive_deps=set([d])
+    )
     module_graph[g] = bp2build_progress.DepInfo()
 
     props_by_converted_module_type = collections.defaultdict(set)
-    props_by_converted_module_type["type2"].update(frozenset(("Name", "Srcs", "Resource_dirs", "Defaults")))
-    props_by_converted_module_type["type4"].update(frozenset(("Name", "Sdk_version", "Visibility", "Backend.Java.Platform_apis")))
+    props_by_converted_module_type['type2'].update(
+        frozenset(('Name', 'Srcs', 'Resource_dirs', 'Defaults'))
+    )
+    props_by_converted_module_type['type4'].update(
+        frozenset(
+            ('Name', 'Sdk_version', 'Visibility', 'Backend.Java.Platform_apis')
+        )
+    )
 
     report_data = bp2build_progress.generate_report_data(
-        module_graph, {'d', 'g'}, bp2build_progress.GraphFilterInfo(module_names={'a', 'f'}, package_dir=None), props_by_converted_module_type, use_queryview=False)
+        module_graph,
+        {'d', 'g'},
+        bp2build_progress.GraphFilterInfo(
+            module_names={'a', 'f'}, package_dir=None
+        ),
+        props_by_converted_module_type,
+        use_queryview=False,
+    )
 
     all_unconverted_modules = collections.defaultdict(set)
     all_unconverted_modules[b].update({a, f})
@@ -468,7 +827,7 @@ class Bp2BuildProgressTest(unittest.TestCase):
     expected_report_data = bp2build_progress.ReportData(
         input_modules={
             bp2build_progress.InputModule(a, 4, 3),
-            bp2build_progress.InputModule(f, 3, 1)
+            bp2build_progress.InputModule(f, 3, 1),
         },
         total_deps={b, c, d, e, g},
         unconverted_deps={b, c, e},
@@ -476,51 +835,110 @@ class Bp2BuildProgressTest(unittest.TestCase):
         blocked_modules=blocked_modules,
         blocked_modules_transitive=blocked_modules_transitive,
         dirs_with_unconverted_modules={'pkg', 'other', 'pkg2'},
-        kind_of_unconverted_modules={'type1: 1', 'type2: 2', 'type3: 1', 'type4: 1'},
+        kind_of_unconverted_modules={
+            'type1: 1',
+            'type2: 2',
+            'type3: 1',
+            'type4: 1',
+        },
         converted={'d', 'g'},
         show_converted=False,
-        package_dir=None
+        package_dir=None,
     )
     self.assertEqual(report_data, expected_report_data)
 
   def test_generate_report_data_by_type(self):
     a = bp2build_progress.ModuleInfo(
-        name='a', kind='type1', dirname='pkg', num_deps=4, created_by=None,
+        name='a',
+        kind='type1',
+        dirname='pkg',
+        num_deps=4,
+        created_by=None,
         props=frozenset({'Flags', 'Stability'}),
-        reasons_from_heuristics=frozenset({'unconverted properties: [Flags, Stability]','unconverted dependencies'}))
+        reasons_from_heuristics=frozenset({
+            'unconverted properties: [Flags, Stability]',
+            'unconverted dependencies',
+        }),
+    )
     b = bp2build_progress.ModuleInfo(
-        name='b', kind='type2', dirname='pkg', num_deps=1, created_by=None,
-        reasons_from_heuristics=frozenset({'type missing converter'}))
+        name='b',
+        kind='type2',
+        dirname='pkg',
+        num_deps=1,
+        created_by=None,
+        reasons_from_heuristics=frozenset({'type missing converter'}),
+    )
     c = bp2build_progress.ModuleInfo(
-        name='c', kind='type2', dirname='other', num_deps=1, created_by=None,
-        reasons_from_heuristics=frozenset({'unconverted dependencies', 'type missing converter'}))
+        name='c',
+        kind='type2',
+        dirname='other',
+        num_deps=1,
+        created_by=None,
+        reasons_from_heuristics=frozenset(
+            {'unconverted dependencies', 'type missing converter'}
+        ),
+    )
     d = bp2build_progress.ModuleInfo(
-        name='d', kind='type2', dirname='pkg', num_deps=0, created_by=None)
+        name='d', kind='type2', dirname='pkg', num_deps=0, created_by=None
+    )
     e = bp2build_progress.ModuleInfo(
-        name='e', kind='type3', dirname='other', num_deps=0, created_by=None,
-        reasons_from_heuristics=frozenset({'type missing converter'}))
+        name='e',
+        kind='type3',
+        dirname='other',
+        num_deps=0,
+        created_by=None,
+        reasons_from_heuristics=frozenset({'type missing converter'}),
+    )
     f = bp2build_progress.ModuleInfo(
-        name='f', kind='type4', dirname='pkg2', num_deps=3, created_by=None,
-        props=frozenset({"Name", "Visibility"}),
-        reasons_from_heuristics=frozenset({'unconverted dependencies'}))
+        name='f',
+        kind='type4',
+        dirname='pkg2',
+        num_deps=3,
+        created_by=None,
+        props=frozenset({'Name', 'Visibility'}),
+        reasons_from_heuristics=frozenset({'unconverted dependencies'}),
+    )
     g = bp2build_progress.ModuleInfo(
-        name='g', kind='type4', dirname='pkg2', num_deps=0, created_by=None, converted=True)
+        name='g',
+        kind='type4',
+        dirname='pkg2',
+        num_deps=0,
+        created_by=None,
+        converted=True,
+    )
 
     module_graph = {}
-    module_graph[a] = bp2build_progress.DepInfo(direct_deps=set([b, c]), transitive_deps=set([d, e]))
+    module_graph[a] = bp2build_progress.DepInfo(
+        direct_deps=set([b, c]), transitive_deps=set([d, e])
+    )
     module_graph[b] = bp2build_progress.DepInfo(direct_deps=set([d]))
     module_graph[c] = bp2build_progress.DepInfo(direct_deps=set([e]))
     module_graph[d] = bp2build_progress.DepInfo()
     module_graph[e] = bp2build_progress.DepInfo()
-    module_graph[f] = bp2build_progress.DepInfo(direct_deps=set([b, g]), transitive_deps=set([d]))
+    module_graph[f] = bp2build_progress.DepInfo(
+        direct_deps=set([b, g]), transitive_deps=set([d])
+    )
     module_graph[g] = bp2build_progress.DepInfo()
 
     props_by_converted_module_type = collections.defaultdict(set)
-    props_by_converted_module_type["type1"].update(frozenset(("Name", "Srcs", "Resource_dirs", "Defaults")))
-    props_by_converted_module_type["type4"].update(frozenset(("Name", "Sdk_version", "Visibility", "Backend.Java.Platform_apis")))
+    props_by_converted_module_type['type1'].update(
+        frozenset(('Name', 'Srcs', 'Resource_dirs', 'Defaults'))
+    )
+    props_by_converted_module_type['type4'].update(
+        frozenset(
+            ('Name', 'Sdk_version', 'Visibility', 'Backend.Java.Platform_apis')
+        )
+    )
 
     report_data = bp2build_progress.generate_report_data(
-        module_graph, {'d', 'g'}, bp2build_progress.GraphFilterInfo(module_types={'type1', 'type4'}, package_dir=None), props_by_converted_module_type, use_queryview=False)
+        module_graph,
+        {'d', 'g'},
+        bp2build_progress.GraphFilterInfo(
+            module_types={'type1', 'type4'}, package_dir=None
+        ),
+        props_by_converted_module_type,
+        use_queryview=False,
+    )
 
     all_unconverted_modules = collections.defaultdict(set)
     all_unconverted_modules['b'].update({a, f})
@@ -545,7 +963,7 @@ class Bp2BuildProgressTest(unittest.TestCase):
         input_modules={
             bp2build_progress.InputModule(a, 4, 3),
             bp2build_progress.InputModule(f, 3, 1),
-            bp2build_progress.InputModule(g, 0, 0)
+            bp2build_progress.InputModule(g, 0, 0),
         },
         total_deps={b, c, d, e, g},
         unconverted_deps={'b', 'c', 'e'},
@@ -556,21 +974,42 @@ class Bp2BuildProgressTest(unittest.TestCase):
         kind_of_unconverted_modules={'type1', 'type2', 'type4'},
         converted={'d', 'g'},
         show_converted=False,
-        package_dir=None
+        package_dir=None,
     )
 
-    self.assertEqual(report_data.input_modules, expected_report_data.input_modules)
+    self.assertEqual(
+        report_data.input_modules, expected_report_data.input_modules
+    )
 
   def test_generate_report_data_show_converted(self):
     a = bp2build_progress.ModuleInfo(
-        name='a', kind='type1', dirname='pkg', num_deps=2, created_by=None,
-          props=frozenset({'Flags', 'Stability', 'Resource_dirs'}),
-        reasons_from_heuristics=frozenset({'unconverted properties: [Flags, Stability]', 'unconverted dependencies'}))
+        name='a',
+        kind='type1',
+        dirname='pkg',
+        num_deps=2,
+        created_by=None,
+        props=frozenset({'Flags', 'Stability', 'Resource_dirs'}),
+        reasons_from_heuristics=frozenset({
+            'unconverted properties: [Flags, Stability]',
+            'unconverted dependencies',
+        }),
+    )
     b = bp2build_progress.ModuleInfo(
-        name='b', kind='type2', dirname='pkg2', num_deps=0, created_by=None, converted=True)
+        name='b',
+        kind='type2',
+        dirname='pkg2',
+        num_deps=0,
+        created_by=None,
+        converted=True,
+    )
     c = bp2build_progress.ModuleInfo(
-        name='c', kind='type3', dirname='other', num_deps=0, created_by=None,
-        reasons_from_heuristics=frozenset({'type missing converter'}))
+        name='c',
+        kind='type3',
+        dirname='other',
+        num_deps=0,
+        created_by=None,
+        reasons_from_heuristics=frozenset({'type missing converter'}),
+    )
 
     module_graph = collections.defaultdict(set)
     module_graph[a] = bp2build_progress.DepInfo(direct_deps=set([b, c]))
@@ -578,10 +1017,18 @@ class Bp2BuildProgressTest(unittest.TestCase):
     module_graph[c] = bp2build_progress.DepInfo()
 
     props_by_converted_module_type = collections.defaultdict(set)
-    props_by_converted_module_type["type1"].update(frozenset(("Name", "Srcs", "Resource_dirs", "Defaults")))
+    props_by_converted_module_type['type1'].update(
+        frozenset(('Name', 'Srcs', 'Resource_dirs', 'Defaults'))
+    )
 
     report_data = bp2build_progress.generate_report_data(
-        module_graph, {'b'}, bp2build_progress.GraphFilterInfo(module_names={'a'}, package_dir=None), props_by_converted_module_type, use_queryview=False, show_converted=True)
+        module_graph,
+        {'b'},
+        bp2build_progress.GraphFilterInfo(module_names={'a'}, package_dir=None),
+        props_by_converted_module_type,
+        use_queryview=False,
+        show_converted=True,
+    )
 
     all_unconverted_modules = collections.defaultdict(set)
     all_unconverted_modules[c].update({a})
@@ -609,37 +1056,72 @@ class Bp2BuildProgressTest(unittest.TestCase):
         kind_of_unconverted_modules={'type1: 1', 'type3: 1'},
         converted={'b'},
         show_converted=True,
-        package_dir=None
+        package_dir=None,
     )
 
     self.assertEqual(report_data, expected_report_data)
 
   def test_generate_proto_from_soong_module(self):
     a = bp2build_progress.ModuleInfo(
-        name='a', kind='type1', dirname='pkg', num_deps=4, created_by=None)
+        name='a', kind='type1', dirname='pkg', num_deps=4, created_by=None
+    )
     b = bp2build_progress.ModuleInfo(
-        name='b', kind='type2', dirname='pkg', num_deps=1, created_by=None,
-        props=frozenset({"Name", "Srcs", "BaseName"}))
+        name='b',
+        kind='type2',
+        dirname='pkg',
+        num_deps=1,
+        created_by=None,
+        props=frozenset({'Name', 'Srcs', 'BaseName'}),
+    )
     c = bp2build_progress.ModuleInfo(
-        name='c', kind='type2', dirname='other', num_deps=1, created_by=None,
-        props=frozenset({"Name", "Defaults"}))
+        name='c',
+        kind='type2',
+        dirname='other',
+        num_deps=1,
+        created_by=None,
+        props=frozenset({'Name', 'Defaults'}),
+    )
     d = bp2build_progress.ModuleInfo(
-        name='d', kind='type2', dirname='pkg', num_deps=0, created_by=None, converted=True)
+        name='d',
+        kind='type2',
+        dirname='pkg',
+        num_deps=0,
+        created_by=None,
+        converted=True,
+    )
     e = bp2build_progress.ModuleInfo(
-        name='e', kind='type3', dirname='other', num_deps=0, created_by=None)
+        name='e', kind='type3', dirname='other', num_deps=0, created_by=None
+    )
     f = bp2build_progress.ModuleInfo(
-        name='f', kind='type4', dirname='pkg2', num_deps=3, created_by=None,
-        props=frozenset({"Name", "Sdk_version", "Visibility", "Backend.Java.Platform_apis"}))
+        name='f',
+        kind='type4',
+        dirname='pkg2',
+        num_deps=3,
+        created_by=None,
+        props=frozenset(
+            {'Name', 'Sdk_version', 'Visibility', 'Backend.Java.Platform_apis'}
+        ),
+    )
     g = bp2build_progress.ModuleInfo(
-        name='g', kind='type4', dirname='pkg2', num_deps=2, created_by=None, converted=True)
+        name='g',
+        kind='type4',
+        dirname='pkg2',
+        num_deps=2,
+        created_by=None,
+        converted=True,
+    )
 
     module_graph = {}
-    module_graph[a] = bp2build_progress.DepInfo(direct_deps=set([b, c]), transitive_deps=set([d, e]))
+    module_graph[a] = bp2build_progress.DepInfo(
+        direct_deps=set([b, c]), transitive_deps=set([d, e])
+    )
     module_graph[b] = bp2build_progress.DepInfo(direct_deps=set([d]))
     module_graph[c] = bp2build_progress.DepInfo(direct_deps=set([e]))
     module_graph[d] = bp2build_progress.DepInfo()
     module_graph[e] = bp2build_progress.DepInfo()
-    module_graph[f] = bp2build_progress.DepInfo(direct_deps=set([b, g]), transitive_deps=set([d]))
+    module_graph[f] = bp2build_progress.DepInfo(
+        direct_deps=set([b, g]), transitive_deps=set([d])
+    )
     module_graph[g] = bp2build_progress.DepInfo()
 
     blocked_modules_transitive = collections.defaultdict(set)
@@ -650,24 +1132,42 @@ class Bp2BuildProgressTest(unittest.TestCase):
     blocked_modules_transitive[e].update(set())
 
     props_by_converted_module_type = collections.defaultdict(set)
-    props_by_converted_module_type["type2"].update(frozenset(("Name", "Srcs", "Resource_dirs", "Defaults")))
-    props_by_converted_module_type["type4"].update(frozenset(("Name", "Sdk_version", "Visibility", "Backend.Java.Platform_apis")))
+    props_by_converted_module_type['type2'].update(
+        frozenset(('Name', 'Srcs', 'Resource_dirs', 'Defaults'))
+    )
+    props_by_converted_module_type['type4'].update(
+        frozenset(
+            ('Name', 'Sdk_version', 'Visibility', 'Backend.Java.Platform_apis')
+        )
+    )
 
     report_data = bp2build_progress.generate_report_data(
-        module_graph, {'d', 'g'}, bp2build_progress.GraphFilterInfo(module_names={'a', 'f'}, package_dir=None), props_by_converted_module_type, use_queryview=False)
+        module_graph,
+        {'d', 'g'},
+        bp2build_progress.GraphFilterInfo(
+            module_names={'a', 'f'}, package_dir=None
+        ),
+        props_by_converted_module_type,
+        use_queryview=False,
+    )
 
     expected_message = bp2build_pb2.Bp2buildConversionProgress(
-      root_modules=[m.module.name for m in report_data.input_modules],
-      num_deps=len(report_data.total_deps),
+        root_modules=[m.module.name for m in report_data.input_modules],
+        num_deps=len(report_data.total_deps),
     )
-    for module, unconverted_deps in report_data.blocked_modules_transitive.items():
+    for (
+        module,
+        unconverted_deps,
+    ) in report_data.blocked_modules_transitive.items():
       expected_message.unconverted.add(
           name=module.name,
           directory=module.dirname,
           type=module.kind,
           unconverted_deps={d.name for d in unconverted_deps},
           num_deps=module.num_deps,
-          unconverted_reasons_from_heuristics=list(module.reasons_from_heuristics)
+          unconverted_reasons_from_heuristics=list(
+              module.reasons_from_heuristics
+          ),
       )
 
     message = bp2build_progress.generate_proto(report_data)
@@ -675,30 +1175,65 @@ class Bp2BuildProgressTest(unittest.TestCase):
 
   def test_generate_proto_from_soong_module_show_converted(self):
     a = bp2build_progress.ModuleInfo(
-        name='a', kind='type1', dirname='pkg', num_deps=4, created_by=None)
+        name='a', kind='type1', dirname='pkg', num_deps=4, created_by=None
+    )
     b = bp2build_progress.ModuleInfo(
-        name='b', kind='type2', dirname='pkg', num_deps=1, created_by=None,
-        props=frozenset({"Name", "Srcs", "BaseName"}))
+        name='b',
+        kind='type2',
+        dirname='pkg',
+        num_deps=1,
+        created_by=None,
+        props=frozenset({'Name', 'Srcs', 'BaseName'}),
+    )
     c = bp2build_progress.ModuleInfo(
-        name='c', kind='type2', dirname='other', num_deps=1, created_by=None,
-        props=frozenset({"Name", "Defaults"}))
+        name='c',
+        kind='type2',
+        dirname='other',
+        num_deps=1,
+        created_by=None,
+        props=frozenset({'Name', 'Defaults'}),
+    )
     d = bp2build_progress.ModuleInfo(
-        name='d', kind='type2', dirname='pkg', num_deps=0, created_by=None, converted=True)
+        name='d',
+        kind='type2',
+        dirname='pkg',
+        num_deps=0,
+        created_by=None,
+        converted=True,
+    )
     e = bp2build_progress.ModuleInfo(
-        name='e', kind='type3', dirname='other', num_deps=0, created_by=None)
+        name='e', kind='type3', dirname='other', num_deps=0, created_by=None
+    )
     f = bp2build_progress.ModuleInfo(
-        name='f', kind='type4', dirname='pkg2', num_deps=3, created_by=None,
-        props=frozenset({"Name", "Sdk_version", "Visibility", "Backend.Java.Platform_apis"}))
+        name='f',
+        kind='type4',
+        dirname='pkg2',
+        num_deps=3,
+        created_by=None,
+        props=frozenset(
+            {'Name', 'Sdk_version', 'Visibility', 'Backend.Java.Platform_apis'}
+        ),
+    )
     g = bp2build_progress.ModuleInfo(
-        name='g', kind='type4', dirname='pkg2', num_deps=2, created_by=None, converted=True)
+        name='g',
+        kind='type4',
+        dirname='pkg2',
+        num_deps=2,
+        created_by=None,
+        converted=True,
+    )
 
     module_graph = {}
-    module_graph[a] = bp2build_progress.DepInfo(direct_deps=set([b, c]), transitive_deps=set([d, e]))
+    module_graph[a] = bp2build_progress.DepInfo(
+        direct_deps=set([b, c]), transitive_deps=set([d, e])
+    )
     module_graph[b] = bp2build_progress.DepInfo(direct_deps=set([d]))
     module_graph[c] = bp2build_progress.DepInfo(direct_deps=set([e]))
     module_graph[d] = bp2build_progress.DepInfo()
     module_graph[e] = bp2build_progress.DepInfo()
-    module_graph[f] = bp2build_progress.DepInfo(direct_deps=set([b, g]), transitive_deps=set([d]))
+    module_graph[f] = bp2build_progress.DepInfo(
+        direct_deps=set([b, g]), transitive_deps=set([d])
+    )
     module_graph[g] = bp2build_progress.DepInfo()
 
     blocked_modules_transitive = collections.defaultdict(set)
@@ -711,24 +1246,43 @@ class Bp2BuildProgressTest(unittest.TestCase):
     blocked_modules_transitive[g].update(set())
 
     props_by_converted_module_type = collections.defaultdict(set)
-    props_by_converted_module_type["type2"].update(frozenset(("Name", "Srcs", "Resource_dirs", "Defaults")))
-    props_by_converted_module_type["type4"].update(frozenset(("Name", "Sdk_version", "Visibility", "Backend.Java.Platform_apis")))
+    props_by_converted_module_type['type2'].update(
+        frozenset(('Name', 'Srcs', 'Resource_dirs', 'Defaults'))
+    )
+    props_by_converted_module_type['type4'].update(
+        frozenset(
+            ('Name', 'Sdk_version', 'Visibility', 'Backend.Java.Platform_apis')
+        )
+    )
 
     report_data = bp2build_progress.generate_report_data(
-        module_graph, {'d', 'g'}, bp2build_progress.GraphFilterInfo(module_names={'a', 'f'}, package_dir=None), props_by_converted_module_type, use_queryview=False, show_converted=True)
+        module_graph,
+        {'d', 'g'},
+        bp2build_progress.GraphFilterInfo(
+            module_names={'a', 'f'}, package_dir=None
+        ),
+        props_by_converted_module_type,
+        use_queryview=False,
+        show_converted=True,
+    )
 
     expected_message = bp2build_pb2.Bp2buildConversionProgress(
-      root_modules=[m.module.name for m in report_data.input_modules],
-      num_deps=len(report_data.total_deps),
+        root_modules=[m.module.name for m in report_data.input_modules],
+        num_deps=len(report_data.total_deps),
     )
-    for module, unconverted_deps in report_data.blocked_modules_transitive.items():
+    for (
+        module,
+        unconverted_deps,
+    ) in report_data.blocked_modules_transitive.items():
       expected_message.unconverted.add(
           name=module.name,
           directory=module.dirname,
           type=module.kind,
           unconverted_deps={d.name for d in unconverted_deps},
           num_deps=module.num_deps,
-          unconverted_reasons_from_heuristics=list(module.reasons_from_heuristics)
+          unconverted_reasons_from_heuristics=list(
+              module.reasons_from_heuristics
+          ),
       )
 
     message = bp2build_progress.generate_proto(report_data)
@@ -737,15 +1291,20 @@ class Bp2BuildProgressTest(unittest.TestCase):
   def test_generate_dot_file(self):
     self.maxDiff = None
     a = bp2build_progress.ModuleInfo(
-        name='a', kind='type1', dirname='pkg', num_deps=2, created_by=None)
+        name='a', kind='type1', dirname='pkg', num_deps=2, created_by=None
+    )
     b = bp2build_progress.ModuleInfo(
-        name='b', kind='type2', dirname='pkg', num_deps=1, created_by=None)
+        name='b', kind='type2', dirname='pkg', num_deps=1, created_by=None
+    )
     c = bp2build_progress.ModuleInfo(
-        name='c', kind='type2', dirname='other', num_deps=1, created_by=None)
+        name='c', kind='type2', dirname='other', num_deps=1, created_by=None
+    )
     d = bp2build_progress.ModuleInfo(
-        name='d', kind='type2', dirname='pkg', num_deps=0, created_by=None)
+        name='d', kind='type2', dirname='pkg', num_deps=0, created_by=None
+    )
     e = bp2build_progress.ModuleInfo(
-        name='e', kind='type2', dirname='other', num_deps=0, created_by=None)
+        name='e', kind='type2', dirname='other', num_deps=0, created_by=None
+    )
 
     module_graph = {}
     module_graph[a] = bp2build_progress.DepInfo(direct_deps=set([b, c]))
@@ -774,15 +1333,20 @@ digraph mygraph {{
   def test_generate_dot_file_show_converted(self):
     self.maxDiff = None
     a = bp2build_progress.ModuleInfo(
-        name='a', kind='type1', dirname='pkg', num_deps=2, created_by=None)
+        name='a', kind='type1', dirname='pkg', num_deps=2, created_by=None
+    )
     b = bp2build_progress.ModuleInfo(
-        name='b', kind='type2', dirname='pkg', num_deps=1, created_by=None)
+        name='b', kind='type2', dirname='pkg', num_deps=1, created_by=None
+    )
     c = bp2build_progress.ModuleInfo(
-        name='c', kind='type2', dirname='other', num_deps=1, created_by=None)
+        name='c', kind='type2', dirname='other', num_deps=1, created_by=None
+    )
     d = bp2build_progress.ModuleInfo(
-        name='d', kind='type2', dirname='pkg', num_deps=0, created_by=None)
+        name='d', kind='type2', dirname='pkg', num_deps=0, created_by=None
+    )
     e = bp2build_progress.ModuleInfo(
-        name='e', kind='type2', dirname='other', num_deps=0, created_by=None)
+        name='e', kind='type2', dirname='other', num_deps=0, created_by=None
+    )
 
     module_graph = {}
     module_graph[a] = bp2build_progress.DepInfo(direct_deps=set([b, c]))
