@@ -35,6 +35,9 @@ SKIPPED automatically.
 load("@bazel_skylib//lib:dicts.bzl", "dicts")
 load("@bazel_skylib//lib:paths.bzl", "paths")
 
+# Apply this suffix to the name of the test dep target (e.g. the cc_test target)
+TEST_DEP_SUFFIX = "__tf_internal"
+
 LANGUAGE_CC = "cc"
 LANGUAGE_JAVA = "java"
 
@@ -101,6 +104,15 @@ _TRADEFED_TEST_ATTRIBUTES = {
     ),
 }
 
+# The normalized name of test under tradefed harness. This is without any of the
+#
+# "__tf" suffixes, e.g. adbd_test or hello_world_test.
+#
+#The normalized module name is used as the stem for the test executable or
+# config files, which are referenced in AndroidTest.xml, like in PushFilePreparer elements.
+def _normalize_test_name(s):
+    return s.replace(TEST_DEP_SUFFIX, "")
+
 # Get test config if specified or generate test config from template.
 def _get_or_generate_test_config(ctx, tf_test_dir, test_executable, test_language):
     # Validate input
@@ -113,7 +125,7 @@ def _get_or_generate_test_config(ctx, tf_test_dir, test_executable, test_languag
         fail("Exactly one of test_config or test_config_template should be provided, but got: " +
              "%s %s" % (ctx.file.test_config, ctx.file.template_test_config))
 
-    basename = test_executable.basename
+    basename = _normalize_test_name(test_executable.basename)
 
     # If existing tradefed config is specified, symlink to it and return early.
     #
@@ -137,7 +149,7 @@ def _get_or_generate_test_config(ctx, tf_test_dir, test_executable, test_languag
     # configs together and add xml spacing indent.
     if test_language == LANGUAGE_JAVA:
         # rm ".jar" extension since it's "{MODULE}.jar" in Java config template
-        basename = basename.rstrip(".jar")
+        basename = basename.removesuffix(".jar")
     ctx.actions.expand_template(
         template = ctx.file.template_test_config,
         output = out,
@@ -169,13 +181,21 @@ def _create_result_reporter_config(ctx):
     ctx.actions.write(result_reporters_config_file, "\n".join(config_lines))
     return result_reporters_config_file
 
+# Get the test Target object.
+#
+# ctx.attr.test could be a list, depending on the rule configuration. Host
+# driven device test transitions ctx.attr.test to device config, which turns the
+# test attr into a label list.
+def _get_test_target(ctx):
+    if type(ctx.attr.test) == "list":
+        return ctx.attr.test[0]
+    return ctx.attr.test
+
 # Generate and run tradefed bash script entry point and associated runfiles.
 def _tradefed_test_impl(ctx, tradefed_options = []):
     tf_test_dir = ctx.label.name + "/testcases"
 
-    # host driven device test transitions ctx.attr.test to device config,
-    # which turns the test attr into a label list.
-    test_target = ctx.attr.test[0] if type(ctx.attr.test) == "list" else ctx.attr.test
+    test_target = _get_test_target(ctx)
     test_language = ctx.attr.test_language
 
     # For Java, a library may make more sense here than the executable. When
@@ -186,7 +206,7 @@ def _tradefed_test_impl(ctx, tradefed_options = []):
         test_executable = test_target.files.to_list()[0]
     else:
         test_executable = test_target.files_to_run.executable
-    test_basename = test_executable.basename
+    test_basename = _normalize_test_name(test_executable.basename)
 
     # Get or generate test config.
     test_config = _get_or_generate_test_config(ctx, tf_test_dir, test_executable, test_language)
@@ -364,8 +384,8 @@ def tradefed_test_suite(
     """
 
     # Validate names.
-    if not test_dep.endswith("__tf_internal") or test_dep.removesuffix("__tf_internal") != name:
-        fail("tradefed_test_suite.test_dep must be named %s__tf_internal, " % name +
+    if not test_dep.endswith(TEST_DEP_SUFFIX) or test_dep.removesuffix(TEST_DEP_SUFFIX) != name:
+        fail("tradefed_test_suite.test_dep must be named %s%s, " % (name, TEST_DEP_SUFFIX) +
              "but got %s" % test_dep)
 
     # Shared attributes between all three test types. The only difference between them
