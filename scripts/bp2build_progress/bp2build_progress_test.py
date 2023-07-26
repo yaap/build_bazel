@@ -126,15 +126,15 @@ class Bp2BuildProgressTest(unittest.TestCase):
   def test_get_module_adjacency_list_queryview_transitive_deps_and_props_by_converted_module_type(
       self, _
   ):
+    self.maxDiff = None
     adjacency_dict, props_by_converted_module_type = (
         bp2build_progress.get_module_adjacency_list_and_props_by_converted_module_type(
             bp2build_progress.GraphFilterInfo(module_names=set(['a', 'f'])),
             True,
             set(),
             set(),
-            False,
-            True,
-            False,
+            dependency_analysis.TargetProduct(),
+            collect_transitive_dependencies=True,
         )
     )
 
@@ -187,6 +187,7 @@ class Bp2BuildProgressTest(unittest.TestCase):
             True,
             set(),
             set(),
+            dependency_analysis.TargetProduct(),
             False,
             False,
         )
@@ -244,8 +245,8 @@ class Bp2BuildProgressTest(unittest.TestCase):
             True,
             set(),
             set(),
-            False,
-            False,
+            dependency_analysis.TargetProduct(),
+            collect_transitive_dependencies=False,
         )
     )
 
@@ -301,9 +302,8 @@ class Bp2BuildProgressTest(unittest.TestCase):
             False,
             set(),
             set(['b', 'c', 'e', 'f']),
-            False,
-            True,
-            False,
+            dependency_analysis.TargetProduct(),
+            collect_transitive_dependencies=True,
         )
     )
     a = bp2build_progress.ModuleInfo(
@@ -378,9 +378,8 @@ class Bp2BuildProgressTest(unittest.TestCase):
             False,
             set(),
             set(['b', 'c', 'e', 'f']),
-            False,
-            True,
-            False,
+            dependency_analysis.TargetProduct(),
+            collect_transitive_dependencies=True,
         )
     )
 
@@ -456,9 +455,8 @@ class Bp2BuildProgressTest(unittest.TestCase):
             False,
             set(),
             set(['b', 'c', 'e']),
-            False,
-            True,
-            False,
+            dependency_analysis.TargetProduct(),
+            collect_transitive_dependencies=True,
         )
     )
 
@@ -470,9 +468,8 @@ class Bp2BuildProgressTest(unittest.TestCase):
             False,
             set(),
             set(['b', 'c', 'e']),
-            False,
-            True,
-            False,
+            dependency_analysis.TargetProduct(),
+            collect_transitive_dependencies=True,
         )
     )
 
@@ -563,8 +560,8 @@ class Bp2BuildProgressTest(unittest.TestCase):
             False,
             set(),
             set(['b', 'c', 'e', 'f']),
-            False,
-            False,
+            dependency_analysis.TargetProduct(),
+            collect_transitive_dependencies=False,
         )
     )
 
