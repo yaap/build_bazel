@@ -47,6 +47,16 @@ _TRADEFED_TEST_ATTRIBUTES = {
         allow_single_file = True,
         doc = "Template script to launch tradefed.",
     ),
+    "_atest_tradefed_launcher": attr.label(
+        default = "//tools/asuite/atest:atest_tradefed.sh",
+        allow_single_file = True,
+        cfg = "exec",
+    ),
+    "_atest_helper": attr.label(
+        default = "//tools/asuite/atest:atest_script_help.sh",
+        allow_single_file = True,
+        cfg = "exec",
+    ),
     "_tradefed_dependencies": attr.label_list(
         default = [
             "//prebuilts/runtime:prebuilt-runtime-adb",
@@ -199,9 +209,17 @@ def _tradefed_test_impl(ctx, tradefed_options = []):
             target_file = f,
         )
         test_runfiles.append(out)
+        test_runfiles.append(f)
 
     # Gather runfiles.
-    runfiles = ctx.runfiles(files = test_runfiles + [test_config, report_config])
+    runfiles = ctx.runfiles(
+        files = test_runfiles + [
+            test_config,
+            report_config,
+            ctx.file._atest_tradefed_launcher,
+            ctx.file._atest_helper,
+        ],
+    )
     runfiles = runfiles.merge(test_target.default_runfiles)
 
     # Generate script to run tradefed.
@@ -212,6 +230,9 @@ def _tradefed_test_impl(ctx, tradefed_options = []):
         is_executable = True,
         substitutions = {
             "{MODULE}": test_basename,
+            "{atest_tradefed_launcher}": _abspath(ctx.file._atest_tradefed_launcher.short_path),
+            "{atest_helper}": _abspath(ctx.file._atest_helper.short_path),
+            "{tradefed_classpath}": _classpath(ctx.files._tradefed_dependencies),
             "{root_relative_tests_dir}": root_relative_tests_dir,
             "{additional_tradefed_options}": " ".join(tradefed_options),
         },
@@ -403,3 +424,9 @@ def tradefed_test_suite(
         tags = tags,
         target_compatible_with = ["//build/bazel/platforms/os:linux"],
     )
+
+def _abspath(relative):
+    return "${TEST_SRCDIR}/${TEST_WORKSPACE}/" + relative
+
+def _classpath(jars):
+    return ":".join([_abspath(f.short_path) for f in depset(jars).to_list()])
