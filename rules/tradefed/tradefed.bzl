@@ -12,6 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""The tradefest test ruleset.
+
+This file contains the definition and implementation of:
+
+- tradefed_test_suite, which expands to
+    - tradefed_deviceless_test
+    - tradefed_host_driven_device_test
+    - tradefed_device_driven_test
+
+These rules provide Tradefed harness support around test executables and
+runfiles. They are language independent, and thus work with cc_test, java_test,
+and other test types.
+
+The execution mode (host, device, deviceless) is automatically determined by the
+target_compatible_with attribute of the test dependency. Whether a test runs is
+handled by Bazel's incompatible target skipping, i.e. a test dep that's
+compatible only with android would cause the tradefed_deviceless_test to be
+SKIPPED automatically.
+"""
+
 load("@bazel_skylib//lib:dicts.bzl", "dicts")
 load("@bazel_skylib//lib:paths.bzl", "paths")
 
@@ -24,7 +44,7 @@ LANGUAGE_JAVA = "java"
 # TODO(b/290716628): Handle multilib. For example, cc_test sets `multilib:
 # "both"` by default, so this may drop the secondary arch of the test, depending
 # on the TARGET_PRODUCT.
-def _tradefed_always_device_transition_impl(settings, attr):
+def _tradefed_always_device_transition_impl(settings, _):
     old_platform = str(settings["//command_line_option:platforms"][0])
 
     # TODO(b/290716626): This is brittle handling for distinguishing between
@@ -327,6 +347,20 @@ def tradefed_test_suite(
     This enables users or tools to simply run 'b test //path/to:foo_test_suite' and bazel
     can automatically determine which of the device or deviceless variants to run, using
     target_compatible_with information from the test_dep target.
+
+
+    Args:
+      name: name of the test suite. This is the canonical name of the test, e.g. "hello_world_test".
+      test_dep: label of the language-specific test dependency.
+      test_config: label of a custom Tradefed XML config. if specified, skip auto generation with default configs.
+      template_configs: additional lines to be added to the test config.
+      template_install_base: the default install location on device for files.
+      tags: additional tags for the top level test_suite target. This can be used for filtering tests.
+      visibility: Bazel visibility declarations for this target.
+      test_language: language used for the test dependency. One of [LANGUAGE_CC, LANGUAGE_JAVA].
+      deviceless_test_config: default Tradefed test config for the deviceless execution mode.
+      device_driven_test_config: default Tradefed test config for the device driven execution mode.
+      host_driven_device_test_config: default Tradefed test config for the host driven execution mode.
     """
 
     # Validate names.
