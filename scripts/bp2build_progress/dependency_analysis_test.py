@@ -57,6 +57,50 @@ class DependencyAnalysisTest(unittest.TestCase):
     expected_visited = ['d', 'b', 'e', 'c', 'a']
     self.assertListEqual(visited_modules, expected_visited)
 
+  def test_visit_json_module_graph_post_order_visits_all_variants_in_post_order(self):
+    graph = [
+        soong_module_json.make_module('d', 'module', [
+            soong_module_json.make_dep('g'),
+        ], variations=[
+            soong_module_json.make_variation("foo", "1")]),
+        soong_module_json.make_module('d', 'module', [
+            soong_module_json.make_dep('f'),
+        ], variations=[soong_module_json.make_variation("foo", "2")]),
+        soong_module_json.make_module('g', 'module', []),
+        soong_module_json.make_module('f', 'module', []),
+        soong_module_json.make_module('e', 'module', []),
+        soong_module_json.make_module('c', 'module', [
+            soong_module_json.make_dep('e'),
+        ]),
+        soong_module_json.make_module('a', 'module', [
+            soong_module_json.make_dep('b'),
+            soong_module_json.make_dep('c'),
+        ]),
+        soong_module_json.make_module('b', 'module', [
+            soong_module_json.make_dep('d', variations=[
+                soong_module_json.make_variation("foo", "1"),
+            ]),
+        ]),
+        soong_module_json.make_module('q', 'module', [
+            soong_module_json.make_dep('a'),
+            soong_module_json.make_dep('b'),
+        ]),
+    ]
+
+    def only_a(json):
+      return json['Name'] == 'a'
+
+    visited_modules = []
+
+    def visit(module, _):
+      visited_modules.append(module['Name'])
+
+    dependency_analysis.visit_json_module_graph_post_order(
+        graph, set(), False, only_a, visit)
+
+    expected_visited = ['g', 'f', 'd', 'd', 'b', 'e', 'c', 'a']
+    self.assertListEqual(visited_modules, expected_visited)
+
   def test_visit_json_module_graph_post_order_skips_ignored_by_name_and_transitive(
       self):
     graph = [
@@ -209,12 +253,13 @@ class DependencyAnalysisTest(unittest.TestCase):
     self.assertListEqual(visited_modules, expected_visited)
 
   def test_visit_json_module_graph_post_order_visits_all_variants(self):
+    m1_variation = [soong_module_json.make_variation('m', '1')]
     graph = [
         soong_module_json.make_module(
             'a',
             'module',
             [
-                soong_module_json.make_dep('b'),
+                soong_module_json.make_dep('b', variations= m1_variation),
             ],
             variations=[soong_module_json.make_variation('m', '1')],
         ),
@@ -222,18 +267,22 @@ class DependencyAnalysisTest(unittest.TestCase):
             'a',
             'module',
             [
-                soong_module_json.make_dep('c'),
+                soong_module_json.make_dep('c', variations= m1_variation),
             ],
             variations=[soong_module_json.make_variation('m', '2')],
         ),
         soong_module_json.make_module('b', 'module', [
-            soong_module_json.make_dep('d'),
-        ]),
+            soong_module_json.make_dep('d', variations= m1_variation),
+        ],
+            variations=[soong_module_json.make_variation('m', '1')]),
         soong_module_json.make_module('c', 'module', [
-            soong_module_json.make_dep('e'),
-        ]),
-        soong_module_json.make_module('d', 'module', []),
-        soong_module_json.make_module('e', 'module', []),
+            soong_module_json.make_dep('e', variations= m1_variation),
+        ],
+            variations=[soong_module_json.make_variation('m', '1')]),
+        soong_module_json.make_module('d', 'module', [],
+            variations=[soong_module_json.make_variation('m', '1')]),
+        soong_module_json.make_module('e', 'module', [],
+            variations=[soong_module_json.make_variation('m', '1')]),
     ]
 
     def only_a(json):
@@ -247,7 +296,7 @@ class DependencyAnalysisTest(unittest.TestCase):
     dependency_analysis.visit_json_module_graph_post_order(
         graph, set(), False, only_a, visit)
 
-    expected_visited = ['d', 'b', 'a', 'e', 'c', 'a']
+    expected_visited = ['d', 'b', 'e', 'c', 'a', 'a']
     self.assertListEqual(visited_modules, expected_visited)
 
   def test_visit_json_module_skips_filegroup_with_src_same_as_name(self):
