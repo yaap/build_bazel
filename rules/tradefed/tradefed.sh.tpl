@@ -5,9 +5,10 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 ATEST_TF_LAUNCHER="{atest_tradefed_launcher}"
 ATEST_HELPER="{atest_helper}"
 TRADEFED_CLASSPATH="{tradefed_classpath}"
+PATH_ADDITIONS="{path_additions}"
 read -a ADDITIONAL_TRADEFED_OPTIONS <<< "{additional_tradefed_options}"
 
-export PATH="$SCRIPT_DIR:${PATH}"
+export PATH="${PATH_ADDITIONS}:${PATH}"
 export ATEST_HELPER="${ATEST_HELPER}"
 export TF_PATH="${TRADEFED_CLASSPATH}"
 
