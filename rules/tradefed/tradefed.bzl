@@ -80,16 +80,21 @@ _TRADEFED_TEST_ATTRIBUTES = {
         allow_single_file = True,
         cfg = "exec",
     ),
+    # TODO(b/285949958): Use source-built adb for device tests.
+    "_adb": attr.label(
+        default = "//prebuilts/runtime:prebuilt-runtime-adb",
+        allow_single_file = True,
+        cfg = "exec",
+    ),
     "_tradefed_dependencies": attr.label_list(
         default = [
-            "//prebuilts/runtime:prebuilt-runtime-adb",
-            "//tools/tradefederation/prebuilts/filegroups/tradefed:bp2build_all_srcs",
+            "//tools/tradefederation/prebuilts/filegroups/tradefed:tradefed-prebuilt",
             "//tools/tradefederation/prebuilts/filegroups/suite:compatibility-host-util-prebuilt",
             "//tools/tradefederation/prebuilts/filegroups/suite:compatibility-tradefed-prebuilt",
             "//tools/asuite/atest:atest-tradefed",
             "//tools/asuite/atest/bazel/reporter:bazel-result-reporter",
         ],
-        doc = "Files needed on the PATH to run tradefed",
+        doc = "Files needed on the classpath to run tradefed",
         cfg = "exec",
     ),
     "test_config": attr.label(
@@ -240,16 +245,11 @@ def _tradefed_test_impl(ctx, tradefed_options = []):
             continue
         test_runfiles.append(f)
 
-    # Prepare tooling runfiles.
-    # Symlink tradefed dependencies to the root of the test package.
-    for f in ctx.files._tradefed_dependencies:
-        out = ctx.actions.declare_file(f.basename)
-        ctx.actions.symlink(
-            output = out,
-            target_file = f,
-        )
-        test_runfiles.append(out)
-        test_runfiles.append(f)
+    # Add harness dependencies into runfiles.
+    test_runfiles.extend(ctx.files._tradefed_dependencies)
+    test_runfiles.append(ctx.file._adb)
+
+    path_additions = [_abspath(ctx.file._adb.dirname)]
 
     # Gather runfiles.
     runfiles = ctx.runfiles(
@@ -273,6 +273,7 @@ def _tradefed_test_impl(ctx, tradefed_options = []):
             "{atest_tradefed_launcher}": _abspath(ctx.file._atest_tradefed_launcher.short_path),
             "{atest_helper}": _abspath(ctx.file._atest_helper.short_path),
             "{tradefed_classpath}": _classpath(ctx.files._tradefed_dependencies),
+            "{path_additions}": ":".join(path_additions),
             "{root_relative_tests_dir}": root_relative_tests_dir,
             "{additional_tradefed_options}": " ".join(tradefed_options),
         },
