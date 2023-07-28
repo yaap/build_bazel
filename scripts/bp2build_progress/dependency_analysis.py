@@ -24,6 +24,7 @@ import subprocess
 import sys
 from typing import Set
 import xml.etree.ElementTree
+from bp2build_metrics_proto.bp2build_metrics_pb2 import Bp2BuildMetrics
 
 
 @dataclasses.dataclass(frozen=True, order=True)
@@ -438,6 +439,17 @@ def get_bp2build_converted_modules() -> Set[str]:
     # Each line is a module name.
     ret = set(line.strip() for line in f if not line.strip().startswith("#"))
   return ret
+
+
+def get_bp2build_metrics(bp2build_metrics_location):
+  """Returns the bp2build metrics"""
+  bp2build_metrics = Bp2BuildMetrics()
+  with open(
+      os.path.join(bp2build_metrics_location, "bp2build_metrics.pb"), "rb"
+  ) as f:
+    bp2build_metrics.ParseFromString(f.read())
+    f.close()
+  return bp2build_metrics
 
 
 def get_json_module_type_info(module_type):
