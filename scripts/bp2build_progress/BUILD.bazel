@@ -16,6 +16,7 @@ py_library(
     name = "dependency_analysis",
     srcs = ["dependency_analysis.py"],
     visibility = ["//visibility:public"],
+    deps = ["//build/soong/ui/metrics:metrics-py-proto"],
 )
 
 py_library(
