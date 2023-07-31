@@ -447,7 +447,7 @@ class Bp2BuildProgressTest(unittest.TestCase):
   def test_get_module_adjacency_list_soong_module_transitive_deps_package_dir_and_props_by_converted_module_type(
       self, _
   ):
-    adjacency_dict1, props_by_converted_module_type1 = (
+    adjacency_dict_recursive, props_by_converted_module_type_recursive = (
         bp2build_progress.get_module_adjacency_list_and_props_by_converted_module_type(
             bp2build_progress.GraphFilterInfo(
                 package_dir='pkg/', recursive=True
@@ -460,17 +460,16 @@ class Bp2BuildProgressTest(unittest.TestCase):
         )
     )
 
-    adjacency_dict2, props_by_converted_module_type2 = (
-        bp2build_progress.get_module_adjacency_list_and_props_by_converted_module_type(
-            bp2build_progress.GraphFilterInfo(
-                package_dir='pkg/', recursive=False
-            ),
-            False,
-            set(),
-            set(['b', 'c', 'e']),
-            dependency_analysis.TargetProduct(),
-            collect_transitive_dependencies=True,
-        )
+    (
+        adjacency_dict_non_recursive,
+        props_by_converted_module_type_non_recursive,
+    ) = bp2build_progress.get_module_adjacency_list_and_props_by_converted_module_type(
+        bp2build_progress.GraphFilterInfo(package_dir='pkg/', recursive=False),
+        False,
+        set(),
+        set(['b', 'c', 'e']),
+        dependency_analysis.TargetProduct(),
+        collect_transitive_dependencies=True,
     )
 
     a = bp2build_progress.ModuleInfo(
@@ -502,32 +501,32 @@ class Bp2BuildProgressTest(unittest.TestCase):
         name='h', kind='type3', dirname='pkg/pkg4', num_deps=0, created_by=''
     )
 
-    expected_adjacency_dict1 = {}
-    expected_adjacency_dict1[a] = bp2build_progress.DepInfo(
+    expected_adjacency_dict_recursive = {}
+    expected_adjacency_dict_recursive[a] = bp2build_progress.DepInfo(
         direct_deps=set([b, c]), transitive_deps=set([d, e])
     )
-    expected_adjacency_dict1[b] = bp2build_progress.DepInfo(
+    expected_adjacency_dict_recursive[b] = bp2build_progress.DepInfo(
         direct_deps=set([d])
     )
-    expected_adjacency_dict1[c] = bp2build_progress.DepInfo(
+    expected_adjacency_dict_recursive[c] = bp2build_progress.DepInfo(
         direct_deps=set([e])
     )
-    expected_adjacency_dict1[d] = bp2build_progress.DepInfo()
-    expected_adjacency_dict1[e] = bp2build_progress.DepInfo()
-    expected_adjacency_dict1[h] = bp2build_progress.DepInfo()
+    expected_adjacency_dict_recursive[d] = bp2build_progress.DepInfo()
+    expected_adjacency_dict_recursive[e] = bp2build_progress.DepInfo()
+    expected_adjacency_dict_recursive[h] = bp2build_progress.DepInfo()
 
-    expected_adjacency_dict2 = {}
-    expected_adjacency_dict2[a] = bp2build_progress.DepInfo(
+    expected_adjacency_dict_non_recursive = {}
+    expected_adjacency_dict_non_recursive[a] = bp2build_progress.DepInfo(
         direct_deps=set([b, c]), transitive_deps=set([d, e])
     )
-    expected_adjacency_dict2[b] = bp2build_progress.DepInfo(
+    expected_adjacency_dict_non_recursive[b] = bp2build_progress.DepInfo(
         direct_deps=set([d])
     )
-    expected_adjacency_dict2[c] = bp2build_progress.DepInfo(
+    expected_adjacency_dict_non_recursive[c] = bp2build_progress.DepInfo(
         direct_deps=set([e])
     )
-    expected_adjacency_dict2[d] = bp2build_progress.DepInfo()
-    expected_adjacency_dict2[e] = bp2build_progress.DepInfo()
+    expected_adjacency_dict_non_recursive[d] = bp2build_progress.DepInfo()
+    expected_adjacency_dict_non_recursive[e] = bp2build_progress.DepInfo()
 
     expected_props_by_converted_module_type = collections.defaultdict(set)
     expected_props_by_converted_module_type['type2'].update(
@@ -535,13 +534,19 @@ class Bp2BuildProgressTest(unittest.TestCase):
     )
     expected_props_by_converted_module_type['type3'] = set()
 
-    self.assertDictEqual(adjacency_dict1, expected_adjacency_dict1)
-    self.assertDictEqual(adjacency_dict2, expected_adjacency_dict2)
     self.assertDictEqual(
-        props_by_converted_module_type1, expected_props_by_converted_module_type
+        adjacency_dict_recursive, expected_adjacency_dict_recursive
     )
     self.assertDictEqual(
-        props_by_converted_module_type2, expected_props_by_converted_module_type
+        adjacency_dict_non_recursive, expected_adjacency_dict_non_recursive
+    )
+    self.assertDictEqual(
+        props_by_converted_module_type_recursive,
+        expected_props_by_converted_module_type,
+    )
+    self.assertDictEqual(
+        props_by_converted_module_type_non_recursive,
+        expected_props_by_converted_module_type,
     )
 
   @unittest.mock.patch(
