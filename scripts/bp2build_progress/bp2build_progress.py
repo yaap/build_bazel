@@ -631,9 +631,9 @@ def get_module_adjacency_list_and_props_by_converted_module_type(
     use_queryview: bool,
     ignore_by_name: List[str],
     converted: Set[str],
+    target_product: dependency_analysis.TargetProduct,
     ignore_java_auto_deps: bool = False,
     collect_transitive_dependencies: bool = True,
-    banchan_mode: bool = False,
 ) -> Tuple[Dict[ModuleInfo, DepInfo], DefaultDict[str, Set[str]]]:
   # The main module graph containing _all_ modules in the Soong build,
   # and the list of converted modules.
@@ -646,11 +646,11 @@ def get_module_adjacency_list_and_props_by_converted_module_type(
     if use_queryview:
       if len(graph_filter.module_names) > 0:
         module_graph = dependency_analysis.get_queryview_module_info(
-            graph_filter.module_names, banchan_mode
+            graph_filter.module_names, target_product
         )
       else:
         module_graph = dependency_analysis.get_queryview_module_info_by_type(
-            graph_filter.module_types, banchan_mode
+            graph_filter.module_types, target_product
         )
 
       module_adjacency_list = adjacency_list_from_queryview_xml(
@@ -660,7 +660,7 @@ def get_module_adjacency_list_and_props_by_converted_module_type(
           collect_transitive_dependencies,
       )
     else:
-      module_graph = dependency_analysis.get_json_module_info(banchan_mode)
+      module_graph = dependency_analysis.get_json_module_info(target_product)
       module_adjacency_list = adjacency_list_from_json(
           module_graph,
           ignore_by_name,
@@ -709,6 +709,12 @@ def add_created_by_to_converted(
 def main():
   parser = argparse.ArgumentParser()
   parser.add_argument("mode", help="mode: graph or report")
+  parser.add_argument(
+      "--product",
+      help="Product to collect module graph for. (Optional)",
+      required=False,
+      default="aosp_cf_arm64_phone",
+  )
   parser.add_argument(
       "--module",
       "-m",
@@ -820,7 +826,10 @@ def main():
   use_queryview = args.use_queryview
   ignore_by_name = args.ignore_by_name.split(",")
   ignore_java_auto_deps = args.ignore_java_auto_deps
-  banchan_mode = args.banchan
+  target_product = dependency_analysis.TargetProduct(
+      banchan_mode=args.banchan,
+      product=args.product,
+  )
   modules = set(args.module) if args.module is not None else set()
   types = set(args.type) if args.type is not None else set()
   recursive = args.recursive
@@ -861,7 +870,7 @@ def main():
           f"Cannot support --hide-unconverted-modules-reasons with mode graph"
       )
 
-  converted = dependency_analysis.get_bp2build_converted_modules()
+  converted = dependency_analysis.get_bp2build_converted_modules(target_product)
   bp2build_metrics = dependency_analysis.get_bp2build_metrics(
       bp2build_metrics_location
   )
@@ -872,9 +881,9 @@ def main():
           use_queryview,
           ignore_by_name,
           converted,
+          target_product,
           ignore_java_auto_deps,
           collect_transitive_dependencies=mode != "graph",
-          banchan_mode=banchan_mode,
       )
   )
 
