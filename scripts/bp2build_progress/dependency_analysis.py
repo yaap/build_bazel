@@ -22,9 +22,15 @@ import os
 import os.path
 import subprocess
 import sys
-from typing import Set
+from typing import Optional, Set
 import xml.etree.ElementTree
 from bp2build_metrics_proto.bp2build_metrics_pb2 import Bp2BuildMetrics
+
+
+@dataclasses.dataclass(frozen=True, order=True)
+class TargetProduct:
+  product: Optional[str] = None
+  banchan_mode: bool = False
 
 
 @dataclasses.dataclass(frozen=True, order=True)
@@ -104,7 +110,11 @@ BANCHAN_ENV = {
 }
 
 
-def _build_with_soong(target, banchan_mode=False):
+def _build_with_soong(target, target_product):
+  env = BANCHAN_ENV if target_product.banchan_mode else LUNCH_ENV
+  if target_product.product:
+    env["TARGET_PRODUCT"] = target_product.product
+
   subprocess.check_output(
       [
           "build/soong/soong_ui.bash",
@@ -113,7 +123,7 @@ def _build_with_soong(target, banchan_mode=False):
           target,
       ],
       cwd=SRC_ROOT_DIR,
-      env=BANCHAN_ENV if banchan_mode else LUNCH_ENV,
+      env=env,
   )
 
 
@@ -142,9 +152,9 @@ def get_property_names(json_module):
   return get_properties(json_module).keys()
 
 
-def get_queryview_module_info_by_type(types, banchan_mode):
+def get_queryview_module_info_by_type(types, target_product):
   """Returns the list of transitive dependencies of input module as built by queryview."""
-  _build_with_soong("queryview", banchan_mode)
+  _build_with_soong("queryview", target_product)
 
   queryview_xml = subprocess.check_output(
       [
@@ -168,9 +178,9 @@ def get_queryview_module_info_by_type(types, banchan_mode):
 ParseError: {err}""")
 
 
-def get_queryview_module_info(modules, banchan_mode):
+def get_queryview_module_info(modules, target_product):
   """Returns the list of transitive dependencies of input module as built by queryview."""
-  _build_with_soong("queryview", banchan_mode)
+  _build_with_soong("queryview", target_product)
 
   queryview_xml = subprocess.check_output(
       [
@@ -195,9 +205,9 @@ def get_queryview_module_info(modules, banchan_mode):
 ParseError: {err}""")
 
 
-def get_json_module_info(banchan_mode=False):
+def get_json_module_info(target_product=None):
   """Returns the list of transitive dependencies of input module as provided by Soong's json module graph."""
-  _build_with_soong("json-module-graph", banchan_mode)
+  _build_with_soong("json-module-graph", target_product)
   try:
     with open(os.path.join(SRC_ROOT_DIR, "out/soong/module-graph.json")) as f:
       return json.load(f)
@@ -424,9 +434,9 @@ def visit_queryview_xml_module_graph_post_order(
     queryview_module_graph_post_traversal(name_with_variant)
 
 
-def get_bp2build_converted_modules() -> Set[str]:
+def get_bp2build_converted_modules(target_product) -> Set[str]:
   """Returns the list of modules that bp2build can currently convert."""
-  _build_with_soong("bp2build")
+  _build_with_soong("bp2build", target_product)
   # Parse the list of converted module names from bp2build
   with open(
       os.path.join(
@@ -452,9 +462,11 @@ def get_bp2build_metrics(bp2build_metrics_location):
   return bp2build_metrics
 
 
-def get_json_module_type_info(module_type):
+def get_json_module_type_info(module_type, target_product=None):
   """Returns the combined transitive dependency closures of all modules of module_type."""
-  _build_with_soong("json-module-graph")
+  if target_product is None:
+    target_product = TargetProduct(banchan_mode=False)
+  _build_with_soong("json-module-graph", target_product)
   # Run query.sh on the module graph for the top level module type
   result = subprocess.check_output(
       [
