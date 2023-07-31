@@ -2,7 +2,7 @@ load("@bazel_skylib//rules:common_settings.bzl", "bool_flag", "bool_setting", "s
 load("@env//:env.bzl", "env")
 load("@soong_injection//api_levels:platform_versions.bzl", "platform_versions")
 load("//build/bazel/flags:common.bzl", "is_env_true")
-load("//build/bazel/product_variables:constants.bzl", "constants")
+load("//build/bazel/platforms/arch/variants:constants.bzl", "arch_variant_to_constraints")
 load("//build/bazel/rules:metadata.bzl", "metadata")
 load("//build/bazel/rules/apex:toolchain.bzl", "apex_toolchain")
 load("//build/bazel/rules/common:api.bzl", "api")
@@ -49,7 +49,7 @@ bool_setting(
 config_setting(
     name = "system",
     constraint_values = [
-        constants.ArchVariantToConstraints["android"],
+        arch_variant_to_constraints["android"],
     ],
     flag_values = {
         ":api_domain": "system",
@@ -74,7 +74,7 @@ config_setting(
 config_setting(
     name = "android-in_apex",
     constraint_values = [
-        constants.ArchVariantToConstraints["android"],
+        arch_variant_to_constraints["android"],
     ],
     flag_values = {
         ":within_apex": "True",
@@ -84,7 +84,7 @@ config_setting(
 config_setting(
     name = "android-non_apex",
     constraint_values = [
-        constants.ArchVariantToConstraints["android"],
+        arch_variant_to_constraints["android"],
     ],
     flag_values = {
         ":within_apex": "False",
@@ -94,7 +94,7 @@ config_setting(
 config_setting(
     name = "linux_bionic-in_apex",
     constraint_values = [
-        constants.ArchVariantToConstraints["linux_bionic"],
+        arch_variant_to_constraints["linux_bionic"],
     ],
     flag_values = {
         ":within_apex": "True",
@@ -104,7 +104,7 @@ config_setting(
 config_setting(
     name = "linux_bionic-non_apex",
     constraint_values = [
-        constants.ArchVariantToConstraints["linux_bionic"],
+        arch_variant_to_constraints["linux_bionic"],
     ],
     flag_values = {
         ":within_apex": "False",
