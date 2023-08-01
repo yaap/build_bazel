@@ -34,7 +34,6 @@ INDICATOR_FILE: Final[str] = "build/soong/soong_ui.bash"
 # It's supposed to be viewed as a spreadsheet that compiles data from multiple
 # builds to be analyzed by other external tools.
 METRICS_TABLE: Final[str] = "metrics.csv"
-SUMMARY_TABLE: Final[str] = "summary.csv"
 RUN_DIR_PREFIX: Final[str] = "run"
 BUILD_INFO_JSON: Final[str] = "build_info.json"
 
@@ -103,18 +102,17 @@ CURRENT_BUILD_TYPE: BuildType
 
 @dataclasses.dataclass
 class BuildInfo:
-    build_type: BuildType
-    build_result: BuildResult
+    actions: int
     build_ninja_hash: str  # hash
     build_ninja_size: int
+    build_result: BuildResult
+    build_type: BuildType
+    description: str
     product: str
+    targets: tuple[str, ...]
     time: datetime.timedelta
-    actions: int
-    cquery_out_size: int = None
-    description: str = "<unset>"
-    warmup: bool = False
     rebuild: bool = False
-    targets: tuple[str, ...] = None
+    warmup: bool = False
 
 
 class CustomEncoder(json.JSONEncoder):
@@ -253,8 +251,9 @@ def has_uncommitted_changes() -> bool:
     """
     for cmd in ["diff", "diff --staged"]:
         diff = subprocess.run(
-            args=f"repo forall -c git {cmd} --quiet --exit-code".split(),
+            f"repo forall -c git {cmd} --quiet --exit-code",
             cwd=get_top_dir(),
+            shell=True,
             text=True,
             capture_output=True,
         )
