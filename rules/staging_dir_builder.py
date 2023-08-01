@@ -48,7 +48,7 @@ def build_staging_dir(options_path, staging_dir_path, command_argv):
     if not isinstance(options, dict):
         sys.exit(options_path + ": expected a JSON dict[str, ?]")
     for k in options.keys():
-        if k not in ["file_mapping"]:
+        if k not in ["file_mapping", "base_staging_dir"]:
             sys.exit("Unknown option: " + str(k))
     if not isinstance(options.get("file_mapping", {}), dict):
         sys.exit(options_path + ": file_mapping: expected a JSON dict[str, str]")
@@ -63,6 +63,13 @@ def build_staging_dir(options_path, staging_dir_path, command_argv):
         if path_in_staging_dir.startswith('../'):
             sys.exit("Path attempts to break out of staging dir: " + path_in_staging_dir)
         file_mapping[path_in_staging_dir] = path_in_bazel
+
+    if options.get("base_staging_dir"):
+        base_staging_dir = options["base_staging_dir"]
+        # Resolve the symlink because we want to use copytree with symlinks=True later
+        while os.path.islink(base_staging_dir):
+            base_staging_dir = os.path.normpath(os.path.join(os.path.dirname(base_staging_dir), os.readlink(base_staging_dir)))
+        shutil.copytree(base_staging_dir, staging_dir_path, symlinks=True)
 
     for path_in_staging_dir, path_in_bazel in file_mapping.items():
         path_in_staging_dir = os.path.join(staging_dir_path, path_in_staging_dir)
@@ -101,6 +108,9 @@ def build_staging_dir(options_path, staging_dir_path, command_argv):
             # For sandbox run these are the 2nd level symlinks and we need to resolve
             while os.path.islink(path_in_bazel) and 'execroot/__main__' in path_in_bazel:
                 path_in_bazel = os.readlink(path_in_bazel)
+
+        if os.path.exists(path_in_staging_dir):
+            sys.exit("error: " + path_in_staging_dir + " already exists because of the base_staging_dir")
 
         os.makedirs(os.path.dirname(path_in_staging_dir), exist_ok=True)
         # shutil.copy copies the file data and the file's permission mode
