@@ -153,3 +153,6 @@ test:device_tests --test_lang_filters=tradefed_device_driven,tradefed_host_drive
 # Supporting cgo for building go code is not required
 # Disable it explcitly to prevent issues with C toolchain setup
 build --@io_bazel_rules_go//go/config:pure
+
+# Breaking bazel feature for the 7/25 release. b/292565910
+common --noincompatible_use_host_features
