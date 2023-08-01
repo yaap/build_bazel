@@ -26,10 +26,11 @@ def java_test(
         target_compatible_with = [],
         **kwargs):
     test_dep_name = name + TEST_DEP_SUFFIX
+    java_binary_name = name + "_jb"
 
-    # tradefed_test_suite uses the .jar from this java_binary to execute tests.
+    # tradefed_test_suite uses the _deploy.jar from this java_binary to execute tests.
     java_binary(
-        name = test_dep_name,
+        name = java_binary_name,
         srcs = srcs,
         deps = deps,
         create_executable = False,
@@ -38,6 +39,12 @@ def java_test(
         target_compatible_with = target_compatible_with,
         **kwargs
     )
+
+    native.filegroup(
+        name = test_dep_name,
+        srcs = [java_binary_name + "_deploy.jar"],
+    )
+
     tradefed_test_suite(
         name = name,
         test_dep = test_dep_name,
