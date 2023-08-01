@@ -141,7 +141,6 @@ def _android_binary_sdk_transition_impl(ctx):
         android = ctx.attr.exports[0].android,
         providers = [
             ctx.attr.exports[0][AndroidIdlInfo],
-            ctx.attr.exports[0][BaselineProfileProvider],
             ctx.attr.exports[0][InstrumentedFilesInfo],
             ctx.attr.exports[0][DataBindingV2Info],
             ctx.attr.exports[0][JavaInfo],
