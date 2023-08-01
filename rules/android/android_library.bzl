@@ -99,6 +99,7 @@ def _android_library_sdk_transition_impl(ctx):
             ctx.attr.exports[0][StarlarkAndroidResourcesInfo],
             ctx.attr.exports[0][AndroidLibraryResourceClassJarProvider],
             ctx.attr.exports[0][AndroidIdlInfo],
+            ctx.attr.exports[0][BaselineProfileProvider],
             ctx.attr.exports[0][DataBindingV2Info],
             ctx.attr.exports[0][JavaInfo],
             ctx.attr.exports[0][ProguardSpecProvider],
