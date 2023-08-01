@@ -40,6 +40,7 @@ import pretty
 import ui
 import util
 from cuj import skip_for
+from pretty import Aggregation
 from util import BuildInfo
 from util import BuildResult
 from util import BuildType
@@ -175,7 +176,9 @@ def _build(build_type: BuildType, run_dir: Path) -> BuildInfo:
         build_result=BuildResult.FAILED if p.returncode else BuildResult.SUCCESS,
         build_ninja_hash=_build_file_sha(target_product),
         build_ninja_size=_build_file_size(target_product),
+        description="<placeholder>",
         product=f'{target_product}-{env["TARGET_BUILD_VARIANT"]}',
+        targets=ui.get_user_input().targets,
         time=datetime.timedelta(microseconds=elapsed_ns / 1000),
     )
 
@@ -213,6 +216,17 @@ def _run_cuj(
             shutil.copytree(bazel_profiles, run_dir.joinpath(BAZEL_PROFILES))
 
     return build_info
+
+
+def _display(prop_regex: str):
+    user_input = ui.get_user_input()
+    metrics = user_input.log_dir.joinpath(util.METRICS_TABLE)
+    perf_metrics.display_tabulated_metrics(user_input.log_dir, user_input.ci_mode)
+    pretty.summarize(
+        metrics,
+        prop_regex,
+        user_input.log_dir.joinpath("perf"),
+    )
 
 
 def main():
@@ -253,8 +267,6 @@ def main():
 
     def run_cuj_group(cuj_group: cuj_catalog.CujGroup):
         nonlocal stop_building
-        metrics = user_input.log_dir.joinpath(util.METRICS_TABLE)
-        summary = user_input.log_dir.joinpath(util.SUMMARY_TABLE)
         for cujstep in cuj_group.steps:
             desc = cujstep.verb
             desc = f"{desc} {cuj_group.description}".strip()
@@ -299,13 +311,9 @@ def main():
                 # we are doing tabulation and summary after each run
                 # so that we can look at intermediate results
                 perf_metrics.tabulate_metrics_csv(user_input.log_dir)
-                with open(metrics, mode="rt") as mf, open(summary, mode="wt") as sf:
-                    pretty.summarize_metrics(mf, sf)
-                if run == 0:
-                    perf_metrics.display_tabulated_metrics(
-                        user_input.log_dir, user_input.ci_mode
-                    )
-                    pretty.display_summarized_metrics(user_input.log_dir)
+                if cuj_group != cuj_catalog.Warmup and run == 0:
+                    _display("^time$")  # display intermediate results
+
                 if build_info.actions == 0:
                     # build has stabilized
                     break
@@ -319,6 +327,7 @@ def main():
             run_cuj_group(cuj_catalog.Warmup)
         for i in user_input.chosen_cujgroups:
             run_cuj_group(cuj_catalog.get_cujgroups()[i])
+        _display(r"^(?:time|bp2build|soong_build/\*\.bazel)$")
 
 
 class InfoAndBelow(logging.Filter):
