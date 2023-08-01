@@ -4,7 +4,6 @@ package(default_visibility = ["//visibility:public"])
 
 partition(
     name = "system_image",
-    base_staging_dir = "//build/bazel/bazel_sandwich:system_staging_dir",
     image_properties = """
 system_fs_type=ext4
 system_reserved_size=67108864
