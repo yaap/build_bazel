@@ -266,7 +266,7 @@ def _verify_product_is_registered(name):
          "testing-specific platforms) must be manually listed in " +
          "//build/bazel/tests/products/product_labels.bzl.")
 
-def android_product(name, *, soong_variables, extra_constraints = []):
+def android_product(name, soong_variables):
     """
     android_product integrates product variables into Bazel platforms.
 
@@ -298,7 +298,7 @@ def android_product(name, *, soong_variables, extra_constraints = []):
         constraint_setting = "@//build/bazel/product_config:current_product",
     )
 
-    common_constraints = extra_constraints + product_var_constraints + [name + "_constraint_value"]
+    common_constraints = product_var_constraints + [name + "_constraint_value"]
 
     # TODO(b/258802089): figure out how to deal with multiple arches for target
     if len(arch_configs) > 0:
