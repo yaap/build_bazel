@@ -165,7 +165,7 @@ new_local_repository(
     path = "external/kotlinc",
 )
 
-register_toolchains("@rules_kotlin//toolchains/kotlin_jvm:kt_jvm_toolchain")
+register_toolchains("@rules_kotlin//toolchains/kotlin_jvm:kt_jvm_toolchain_linux")
 
 load("//prebuilts/clang/host/linux-x86:cc_toolchain_config.bzl", "cc_register_toolchains")
 
