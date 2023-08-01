@@ -16,64 +16,80 @@ import textwrap
 import unittest
 from typing import TextIO
 
-from pretty import summarize
+from pretty import Aggregation
+from pretty import summarize_helper
 
 
 class PrettyTest(unittest.TestCase):
-    def test_summarize(self):
-        def metrics() -> TextIO:
-            return io.StringIO(
-                textwrap.dedent(
-                    "build_result,build_type,description,targets,a,ab,ac\n"
-                    "SUCCESS,B1,WARMUP,nothing,1,10,1:00\n"
-                    "SUCCESS,B1,do it,something,10,200\n"
-                    "SUCCESS,B1,rebuild-1,something,4,,1:04\n"
-                    "SUCCESS,B1,rebuild-2,something,6,55,1:07\n"
-                    "TEST_FAILURE,B2,do it,something,601\n"
-                    "TEST_FAILURE,B2,do it,nothing,3600\n"
-                    "TEST_FAILURE,B2,undo it,something,240\n"
-                    "FAILED,B3,,,70000,70000,7:00:00"
-                )
-            )
+    metrics: TextIO
 
-        with self.subTest("a$"):
-            result = summarize(metrics(), "a$")
-            self.assertEqual(len(result), 1)
-            self.assertEqual(
-                result["a"],
-                "cuj,targets,B1,B2\n"
-                "WARMUP,nothing,1,\n"
-                "do it,something,10,601\n"
-                "do it,nothing,,3600\n"
-                "rebuild,something,5[N=2],\n"
-                "undo it,something,,240",
+    def setUp(self) -> None:
+        self.metrics = io.StringIO(
+            textwrap.dedent(
+                """\
+                build_result,build_type,description,targets,a,ab,ac
+                SUCCESS,B1,WARMUP,nothing,1,10,1:00
+                SUCCESS,B1,do it,something,10,200,
+                SUCCESS,B1,rebuild-1,something,4,,1:04
+                SUCCESS,B1,rebuild-2,something,6,55,1:07
+                TEST_FAILURE,B2,do it,something,601,,
+                TEST_FAILURE,B2,do it,nothing,3600,,
+                TEST_FAILURE,B2,undo it,something,240,,
+                FAILED,B3,,,70000,70000,7:00:00
+                """
             )
+        )
 
-        with self.subTest("a.$"):
-            result = summarize(metrics(), "a.$")
-            self.assertEqual(len(result), 2)
-            self.assertEqual(
-                result["ab"],
-                "cuj,targets,B1,B2\n"
-                "WARMUP,nothing,10,\n"
-                "do it,something,200,\n"
-                "do it,nothing,,\n"
-                "rebuild,something,55,\n"
-                "undo it,something,,",
-            )
-            self.assertEqual(
-                result["ac"],
-                "cuj,targets,B1,B2\n"
-                "WARMUP,nothing,01:00,\n"
-                "do it,something,,\n"
-                "do it,nothing,,\n"
-                "rebuild,something,01:06[N=2],\n"
-                "undo it,something,,",
-            )
+    def test_summarize_single_prop(self):
+        result = summarize_helper(self.metrics, "a$", Aggregation.MAX)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(
+            textwrap.dedent(
+                """\
+                cuj,targets,B1,B2
+                WARMUP,nothing,1,
+                do it,something,10,601
+                do it,nothing,,3600
+                rebuild,something,6[N=2],
+                undo it,something,,240
+                """
+            ),
+            result["a"],
+        )
 
-            with self.subTest("multiple patterns"):
-                result = summarize(metrics(), "ab", "ac")
-                self.assertEqual(len(result), 2)
+    def test_summarize_multiple_props(self):
+        result = summarize_helper(self.metrics, "a.$", Aggregation.MEDIAN)
+        self.assertEqual(len(result), 2)
+        self.assertEqual(
+            textwrap.dedent(
+                """\
+                cuj,targets,B1,B2
+                WARMUP,nothing,10,
+                do it,something,200,
+                do it,nothing,,
+                rebuild,something,55,
+                undo it,something,,
+                """
+            ),
+            result["ab"],
+        )
+        self.assertEqual(
+            textwrap.dedent(
+                """\
+                cuj,targets,B1,B2
+                WARMUP,nothing,01:00,
+                do it,something,,
+                do it,nothing,,
+                rebuild,something,01:06[N=2],
+                undo it,something,,
+                """
+            ),
+            result["ac"],
+        )
+
+    def test_summarize_loose_pattern(self):
+        result = summarize_helper(self.metrics, "^a", Aggregation.MEDIAN)
+        self.assertEqual(len(result), 3)
 
 
 if __name__ == "__main__":
