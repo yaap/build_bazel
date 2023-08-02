@@ -33,7 +33,7 @@ def py_test(
         name = test_dep_name,
         deps = deps,
         srcs = srcs,
-        main = main,
+        main = main or "%s.py" % name,
         tags = tags + ["manual"],
         visibility = visibility,
         target_compatible_with = target_compatible_with,
