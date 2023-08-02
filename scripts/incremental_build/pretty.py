@@ -221,7 +221,7 @@ def main():
         raise RuntimeError(f"{metrics_csv} does not exit")
     summarize(
         metrics_csv=metrics_csv,
-        regex=options.regex,
+        regex=options.properties,
         agg=aggregation,
         output_dir=metrics_csv.parent.joinpath("perf"),
         filter_cujs=options.filter,
