@@ -32,4 +32,5 @@ api_levels_released_versions = {
     "S": 31,
     "S-V2": 32,
     "Tiramisu": 33,
+    "UpsideDownCake": 34,
 }
