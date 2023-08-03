@@ -498,6 +498,52 @@ class DependencyAnalysisTest(unittest.TestCase):
     expected_visited = ['d', 'b', 'e', 'c', 'a']
     self.assertListEqual(visited_modules, expected_visited)
 
+  def test_visit_json_module_graph_post_order_include_required(self):
+    graph = [
+        soong_module_json.make_module(
+            'a',
+            'module',
+            [
+                soong_module_json.make_dep('b'),
+            ],
+        ),
+        soong_module_json.make_module(
+            'b',
+            'module',
+            json_props=[
+                soong_module_json.make_property(
+                    # we explicitly specify a non-Soong module because there can
+                    # be Soong -> Kati edges in Required
+                    'Required', values=['c', 'not_soong']
+                ),
+                soong_module_json.make_property('Host_required', values=['d']),
+                soong_module_json.make_property(
+                    'Target_required', values=['e']
+                ),
+                soong_module_json.make_property('Linux.Host_required', values=['f']),
+            ],
+        ),
+        soong_module_json.make_module('c', 'module', []),
+        soong_module_json.make_module('d', 'module', []),
+        soong_module_json.make_module('e', 'module', []),
+        soong_module_json.make_module('f', 'module', []),
+    ]
+
+    def only_a(json):
+      return json['Name'] == 'a'
+
+    visited_modules = []
+
+    def visit(module, _):
+      visited_modules.append(module['Name'])
+
+    dependency_analysis.visit_json_module_graph_post_order(
+        graph, set(), False, only_a, visit
+    )
+
+    expected_visited = ['c', 'd', 'e', 'f', 'b', 'a']
+    self.assertListEqual(visited_modules, expected_visited)
+
   def test_visit_queryview_xml_module_graph_post_order_visits_all(self):
     graph = queryview_xml.make_graph([
         queryview_xml.make_module(
