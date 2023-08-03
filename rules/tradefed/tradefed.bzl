@@ -217,10 +217,7 @@ def _tradefed_test_impl(ctx, tradefed_options = []):
     # expanding tradefed_test_impl to accept more rule types, this could be
     # turned into a provider, whether set by the rule or an aspect visiting the
     # rule.
-    if test_language == LANGUAGE_JAVA:
-        test_executable = test_target.files.to_list()[0]
-    else:
-        test_executable = test_target.files_to_run.executable
+    test_executable = test_target.files_to_run.executable
     test_basename = _normalize_test_name(test_executable.basename)
 
     # Get or generate test config.
