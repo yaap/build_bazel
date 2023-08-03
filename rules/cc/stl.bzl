@@ -15,7 +15,7 @@
 # Helpers for stl property resolution.
 # These mappings taken from build/soong/cc/stl.go
 
-load("//build/bazel/product_variables:constants.bzl", "constants")
+load("//build/bazel/platforms/arch/variants:constants.bzl", "arch_variant_to_constraints")
 
 _libcpp_stl_names = {
     "libc++": True,
@@ -26,7 +26,7 @@ _libcpp_stl_names = {
 
 # https://cs.android.com/android/platform/superproject/+/master:build/soong/cc/stl.go;l=157;drc=55d98d2ba142d6c35894b1092397e2b5a70bc2e8
 _common_static_deps = select({
-    constants.ArchVariantToConstraints["android"]: ["//external/libcxxabi:libc++demangle"],
+    arch_variant_to_constraints["android"]: ["//external/libcxxabi:libc++demangle"],
     "//conditions:default": [],
 })
 
@@ -36,8 +36,8 @@ _common_static_deps = select({
 _libunwind = "//prebuilts/clang/host/linux-x86:libunwind"
 
 _static_binary_deps = select({
-    constants.ArchVariantToConstraints["android"]: [_libunwind],
-    constants.ArchVariantToConstraints["linux_bionic"]: [_libunwind],
+    arch_variant_to_constraints["android"]: [_libunwind],
+    arch_variant_to_constraints["linux_bionic"]: [_libunwind],
     "//conditions:default": [],
 })
 

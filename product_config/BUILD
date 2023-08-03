@@ -65,18 +65,37 @@ _string_variables = [
     "device_name",
     "device_product",
     "manifest_package_name_overrides",
+    "override_rs_driver",
     "platform_version_name",
+    "platform_sdk_extension_version",
+    "platform_sdk_version_or_codename",
     "product_brand",
     "product_manufacturer",
     "target_build_variant",
     "tidy_checks",
     "unbundled_build_apps",
+    "platform_sdk_version",
 ]
 
 _bool_variables = [
     "always_use_prebuilt_sdks",
     "compressed_apex",
     "unbundled_build",
+    "malloc_not_svelte",
+    "malloc_pattern_fill_contents",
+    "malloc_zero_contents",
+    "safestack",
+    "binder32bit",
+    "device_page_size_agnostic",
+    "treble_linker_namespaces",
+    "enforce_vintf_manifest",
+    "build_from_text_stub",
+    "debuggable",
+    "eng",
+    "pdk",
+    "uml",
+    "arc",
+    "native_coverage",
 ]
 
 [
