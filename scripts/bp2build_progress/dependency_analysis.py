@@ -109,6 +109,12 @@ BANCHAN_ENV = {
     "TARGET_BUILD_APPS": "all",
 }
 
+_REQUIRED_PROPERTIES = [
+    "Required",
+    "Host_required",
+    "Target_required",
+]
+
 
 def _build_with_soong(target, target_product):
   env = BANCHAN_ENV if target_product.banchan_mode else LUNCH_ENV
@@ -270,14 +276,25 @@ def visit_json_module_graph_post_order(
     module = module_graph_map[module_key]
     created_by = module["CreatedBy"]
 
+    extra_deps = []
     if created_by:
-      for key in name_to_keys[created_by]:
+      extra_deps.append(created_by)
+
+    set_properties = get_properties(module)
+    for prop in set_properties.keys():
+      for req in _REQUIRED_PROPERTIES:
+        if prop.endswith(req):
+          modules = set_properties.get(prop, [])
+          extra_deps.extend(modules)
+
+    for m in extra_deps:
+      for key in name_to_keys.get(m, []):
         if key in ignored:
           continue
         # treat created by as a dep so it appears as a blocker, otherwise the
         # module will be disconnected from the traversal graph despite having a
         # direct relationship to a module and must addressed in the migration
-        deps.add(created_by)
+        deps.add(m)
         json_module_graph_post_traversal(key)
 
     # collect all variants and dependencies from those variants
