@@ -65,3 +65,18 @@ def power_set(items, *, include_empty = True):
                 combination.append(items[j])
         power_set.append(combination)
     return power_set
+
+arch_variant_to_constraints = {
+    "arm": "//build/bazel/platforms/arch:arm",
+    "arm64": "//build/bazel/platforms/arch:arm64",
+    "x86": "//build/bazel/platforms/arch:x86",
+    "x86_64": "//build/bazel/platforms/arch:x86_64",
+    "riscv64": "//build/bazel/platforms/arch:riscv64",
+    "android": "//build/bazel/platforms/os:android",
+    "darwin": "//build/bazel/platforms/os:darwin",
+    "linux": "//build/bazel/platforms/os:linux",
+    "linux_bionic": "//build/bazel/platforms/os:linux_bionic",
+    "linux_glibc": "//build/bazel/platforms/os:linux_glibc",
+    "linux_musl": "//build/bazel/platforms/os:linux_musl",
+    "windows": "//build/bazel/platforms/os:windows",
+}
