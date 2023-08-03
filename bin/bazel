@@ -109,7 +109,7 @@ build --action_env=PATH=${RESTRICTED_PATH}
 common:queryview --noannounce_rc
 build:queryview --package_path=${ABSOLUTE_OUT_DIR}/soong/queryview
 fetch:queryview --package_path=${ABSOLUTE_OUT_DIR}/soong/queryview
-modquery:queryview --package_path=${ABSOLUTE_OUT_DIR}/soong/queryview
+mod:queryview --package_path=${ABSOLUTE_OUT_DIR}/soong/queryview
 query:queryview --package_path=${ABSOLUTE_OUT_DIR}/soong/queryview
 sync:queryview --package_path=${ABSOLUTE_OUT_DIR}/soong/queryview
 
@@ -117,7 +117,7 @@ sync:queryview --package_path=${ABSOLUTE_OUT_DIR}/soong/queryview
 common:api_bp2build --noannounce_rc
 build:api_bp2build --package_path=${ABSOLUTE_OUT_DIR}/soong/api_bp2build
 fetch:api_bp2build --package_path=${ABSOLUTE_OUT_DIR}/soong/api_bp2build
-modquery:api_bp2build --package_path=${ABSOLUTE_OUT_DIR}/soong/api_bp2build
+mod:api_bp2build --package_path=${ABSOLUTE_OUT_DIR}/soong/api_bp2build
 query:api_bp2build --package_path=${ABSOLUTE_OUT_DIR}/soong/api_bp2build
 sync:api_bp2build --package_path=${ABSOLUTE_OUT_DIR}/soong/api_bp2build
 
@@ -125,7 +125,7 @@ sync:api_bp2build --package_path=${ABSOLUTE_OUT_DIR}/soong/api_bp2build
 common:bp2build --noannounce_rc
 build:bp2build --package_path=${ABSOLUTE_OUT_DIR}/soong/workspace
 fetch:bp2build --package_path=${ABSOLUTE_OUT_DIR}/soong/workspace
-modquery:bp2build --package_path=${ABSOLUTE_OUT_DIR}/soong/workspace
+mod:bp2build --package_path=${ABSOLUTE_OUT_DIR}/soong/workspace
 query:bp2build --package_path=${ABSOLUTE_OUT_DIR}/soong/workspace
 sync:bp2build --package_path=${ABSOLUTE_OUT_DIR}/soong/workspace
 
