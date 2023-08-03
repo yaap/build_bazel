@@ -27,8 +27,7 @@ android_binary(
     target_compatible_with = ["//build/bazel/platforms/os:android"],
     deps = [
         ":applib",
-        # TODO(b/240555494): re-enable JNI when it is supported
-        # ":jni",
+        ":jni",
     ],
 )
 
