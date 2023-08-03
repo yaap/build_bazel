@@ -19,3 +19,7 @@ load("//build/bazel/rules/env_variables.bzl", _CAPTURED_ENV_VARS = "CAPTURED_ENV
 api_levels_released_versions = _api_levels_released_versions
 captured_env_vars = _CAPTURED_ENV_VARS
 products_for_testing = _products_for_testing
+additional_module_names_to_packages = {
+    "apex_certificate_label_with_overrides": "//build/bazel/rules/apex",
+    "apex_certificate_label_with_overrides_another_cert": "//build/bazel/rules/apex",
+}
