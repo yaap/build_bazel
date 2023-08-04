@@ -18,6 +18,7 @@ import os
 from pathlib import Path
 from typing import Callable
 from typing import TypeAlias
+
 import util
 from util import BuildType
 
@@ -76,10 +77,10 @@ class InWorkspace(enum.Enum):
         return f
 
 
-def skip_for(build_type: util.BuildType):
+def skip_for(*build_types: util.BuildType):
     def decorator(func: Callable[[], any]) -> Callable[[], any]:
         def wrapper():
-            if util.CURRENT_BUILD_TYPE != build_type:
+            if util.CURRENT_BUILD_TYPE not in build_types:
                 return func()
 
         return wrapper
@@ -94,7 +95,7 @@ def verify_symlink_forest_has_only_symlink_leaves():
 
     top_in_ws = InWorkspace.ws_counterpart(util.get_top_dir())
 
-    for root, dirs, files in os.walk(top_in_ws, topdown=True, followlinks=False):
+    for root, _, files in os.walk(top_in_ws, topdown=True, followlinks=False):
         for file in files:
             if file == "symlink_forest_version" and top_in_ws.samefile(root):
                 continue
@@ -137,3 +138,11 @@ class CujGroup:
                 for i, step in enumerate(self.steps)
             ]
         )
+
+
+def sequence(*vs: Callable[[], None]) -> Callable[[], None]:
+    def f():
+        for v in vs:
+            v()
+
+    return f
