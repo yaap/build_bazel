@@ -188,7 +188,7 @@ def cc_library_static(
             ("implementation_deps", [locals_name]),
             ("deps", [exports_name]),
             ("features", toolchain_features),
-            ("toolchains", ["//build/bazel/product_config:product_vars"]),
+            ("toolchains", ["//build/bazel/product_config:product_variables_for_attributes"]),
             ("target_compatible_with", target_compatible_with),
             ("linkopts", linkopts),
         ],

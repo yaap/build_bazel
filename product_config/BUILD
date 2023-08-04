@@ -1,5 +1,6 @@
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag", "string_flag")
 load(":android_product.bzl", "all_android_product_labels")
+load(":product_variables_for_attributes.bzl", "product_variables_for_attributes")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -23,12 +24,11 @@ constraint_setting(name = "current_product")
 #  - Not all configuration variables need to be used in toolchain resolution.
 #
 # This target has 2 providers:
-#  - TemplateVariableInfo: this is a native platform_common.TemplateVariableInfo provider that
-#    contains a subset of the product variables to be available for expansion using make-like syntax
-#    on certain rule attributes. Soong had this feature, so it was ported to bazel.
 #  - ProductVariablesInfo: A custom provider that is supposed to replace direct accesses of
 #    soong.variables. You'd use this rule instead of reading from soong.variables directly so that
 #    when you transition into another product, you get the updated product config variables.
+#  - ProductVariablesDepsInfo: A provider that contains groups of files referenced by the product
+#    variables, so that rules can have dynamic dependencies based on product config.
 #
 # This method of accessing product variables can't be used from macros / the bazel loading phase.
 # This is intentional, because if you could read them during the loading phase, you wouldn't be
@@ -42,6 +42,11 @@ alias(
         for label in all_android_product_labels
     }),
 )
+
+# This rule type outputs a TemplateVariableInfo provider that contains a subset of the product
+# variables to be available for expansion using make-like syntax on certain rule attributes.
+# Soong had this feature, so it was ported to bazel.
+product_variables_for_attributes(name = "product_variables_for_attributes")
 
 # TODO: b/292563629 - The following variables should be string_list_settings, but there's currently
 # a bazel crash: https://github.com/bazelbuild/bazel/issues/18977
@@ -96,6 +101,7 @@ _bool_variables = [
     "uml",
     "arc",
     "native_coverage",
+    "release_aidl_use_unfrozen",
 ]
 
 [
