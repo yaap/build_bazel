@@ -57,7 +57,6 @@ def _product_variables_providing_rule_impl(ctx):
         target_build_variant = "userdebug"
 
     return [
-        platform_common.TemplateVariableInfo(ctx.attr.attribute_vars),
         ProductVariablesInfo(
             Always_use_prebuilt_sdks = vars.get("Always_use_prebuilt_sdks", False),
             CompressedApex = vars.get("CompressedApex", False),
@@ -87,7 +86,6 @@ def _product_variables_providing_rule_impl(ctx):
 _product_variables_providing_rule = rule(
     implementation = _product_variables_providing_rule_impl,
     attrs = {
-        "attribute_vars": attr.string_dict(doc = "Variables that can be expanded using make-style syntax in attributes"),
         "product_vars": attr.string(doc = "Regular android product variables, a copy of the soong.variables file. Unfortunately this needs to be a json-encoded string because bazel attributes can only be simple types."),
         "default_app_certificate_filegroup": attr.label(doc = "Filegroup that contains all the .pem, .pk8, and .avbpubkey files in $(dirname product_vars.DefaultAppCertificate)"),
         "overriding_cert_filegroups": attr.label_list(doc = "All filegroups of certs used to override an android_app_certificate using the CertificatesOverride product variable."),
@@ -96,7 +94,6 @@ _product_variables_providing_rule = rule(
 
 def product_variables_providing_rule(
         name,
-        attribute_vars,
         product_vars):
     default_app_certificate_filegroup = None
     default_app_certificate = product_vars.get("DefaultAppCertificate", None)
@@ -134,7 +131,6 @@ def product_variables_providing_rule(
 
     _product_variables_providing_rule(
         name = name,
-        attribute_vars = attribute_vars,
         product_vars = json.encode(product_vars),
         default_app_certificate_filegroup = default_app_certificate_filegroup,
         overriding_cert_filegroups = cert_filegroups.keys(),

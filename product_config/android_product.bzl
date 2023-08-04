@@ -13,11 +13,6 @@
 # limitations under the License.
 
 load("@//build/bazel/tests/products:product_labels.bzl", _test_product_labels = "product_labels")
-load("@soong_injection//product_config:product_variable_constants.bzl", "product_var_constant_info")
-load(
-    "@soong_injection//product_config:soong_config_variables.bzl",
-    _soong_config_value_variables = "soong_config_value_variables",
-)
 load("@soong_injection//product_config_platforms:product_labels.bzl", _product_labels = "product_labels")
 load("//build/bazel/platforms/arch/variants:constants.bzl", _arch_constants = "constants")
 load(
@@ -142,66 +137,6 @@ def _determine_target_arches_from_config(config):
         ))
     return arches
 
-def _get_attribute_variables(soong_variables):
-    # Some attributes on rules are able to access the values of product
-    # variables via make-style expansion (like $(foo)). We collect the values
-    # of the relevant product variables here so that it can be passed to
-    # product_variables_providing_rule, which exports a
-    # platform_common.TemplateVariableInfo provider to allow the substitution.
-    attribute_vars = {}
-
-    def attribute_value_to_string(value):
-        typ = type(value)
-        if typ == "bool":
-            return "1" if value else "0"
-        elif typ == "list":
-            return ",".join(value)
-        elif typ == "int":
-            return str(value)
-        elif typ == "string":
-            return value
-        else:
-            fail("Unknown type")
-
-    # Native_coverage is not set within soong.variables, but is hardcoded
-    # within config.go NewConfig
-    attribute_vars["native_coverage"] = attribute_value_to_string(
-        soong_variables.get("ClangCoverage", False) or
-        soong_variables.get("GcovCoverage", False),
-    )
-
-    # Generate constraints for Soong config variables (bool, value, string typed).
-    for (namespace, variables) in soong_variables.get("VendorVars", {}).items():
-        for (var, value) in variables.items():
-            # All vendor vars are Starlark string-typed, even though they may be
-            # boxed bools/strings/arbitrary printf'd values, like numbers, so
-            # we'll need to do some translation work here by referring to
-            # soong_injection's generated data.
-
-            if value == "":
-                # Variable is not set so skip adding this as a constraint.
-                continue
-
-            # Create the identifier for the constraint var (or select key)
-            config_var = namespace + "__" + var
-
-            if config_var in _soong_config_value_variables:
-                # For value variables, providing_vars add support for substituting
-                # the value using TemplateVariableInfo.
-                attribute_vars[config_var.lower()] = value
-
-    for (var, value) in soong_variables.items():
-        # TODO(b/187323817): determine how to handle remaining product
-        # variables not used in product_variables
-        if not product_var_constant_info.get(var):
-            continue
-        if not product_var_constant_info.get(var).selectable:
-            continue
-
-        attribute_vars[var] = attribute_value_to_string(value)
-
-    return attribute_vars
-
 def _define_platform_for_arch(name, common_constraints, arch, secondary_arch = None):
     if secondary_arch == None:
         # When there is no secondary arch, we'll pretend it exists but is the same as the primary arch
@@ -266,12 +201,10 @@ def android_product(*, name, soong_variables, extra_constraints = []):
     """
     _verify_product_is_registered(name)
 
-    attribute_vars = _get_attribute_variables(soong_variables)
     arch_configs = _determine_target_arches_from_config(soong_variables)
 
     product_variables_providing_rule(
         name = name + "_product_vars",
-        attribute_vars = attribute_vars,
         product_vars = soong_variables,
     )
 

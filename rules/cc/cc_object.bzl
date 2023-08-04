@@ -247,7 +247,7 @@ _cc_object = rule(
             doc = "Just the path to the target package. Used by transitions.",
         ),
         "_android_product_variables": attr.label(
-            default = Label("//build/bazel/product_config:product_vars"),
+            default = Label("//build/bazel/product_config:product_variables_for_attributes"),
             providers = [platform_common.TemplateVariableInfo],
         ),
         "_apex_min_sdk_version": attr.label(
