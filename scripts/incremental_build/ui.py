@@ -91,8 +91,7 @@ def get_user_input() -> UserInput:
     p.add_argument(
         "-c",
         "--cujs",
-        nargs="+",
-        required=True,
+        nargs="*",
         type=validate_cujgroups,
         help="Index number(s) for the CUJ(s) from the following list. "
         "Or substring matches for the CUJ description."
@@ -180,7 +179,7 @@ def get_user_input() -> UserInput:
 
     chosen_cujgroups: tuple[int, ...] = tuple(
         int(i) for sublist in options.cujs for i in sublist
-    )
+    ) if options.cujs else tuple()
 
     bazel_labels: list[str] = [
         target for target in options.targets if target.startswith("//")
