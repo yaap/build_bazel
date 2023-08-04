@@ -152,7 +152,7 @@ def _build(build_type: BuildType, run_dir: Path) -> BuildInfo:
 
     @skip_for(BuildType.SOONG_ONLY, BuildType.B, BuildType.B_ANDROID)
     def get_cquery_size() -> int:
-        return os.stat(cquery_out).st_size
+        return os.stat(cquery_out).st_size if cquery_out.exists() else None
 
     cquery_ts = get_cquery_ts()
     with open(logfile, mode="wt") as f:
