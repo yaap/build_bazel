@@ -42,6 +42,11 @@ def _cc_proto_sources_gen_rule_impl(ctx):
         proto_infos.append(proto_info)
         if proto_info.proto_source_root == ".":
             includes.append(paths.join(ctx.label.name, ctx.label.package))
+
+        # If any .proto is a generated file, relativize the proto_source_root wrt to bin dir, and provide it as includes to rdeps
+        if any([not src.is_source for src in dep[ProtoInfo].direct_sources]):
+            includes.append(paths.join(ctx.label.name, paths.relativize(dep[ProtoInfo].proto_source_root, ctx.bin_dir.path)))
+
         includes.append(ctx.label.name)
 
     outs = _generate_cc_proto_action(
