@@ -145,7 +145,7 @@ def read_pbs(d: Path) -> tuple[dict[str, any], list[PerfInfoOrEvent]]:
             retval["mixed.disabled"] = len(ms)
     if bp2build_pb.exists():
         retval["generatedModuleCount"] = bp2build_metrics.generatedModuleCount
-        retval["unconvertedCModuleCount"] = bp2build_metrics.unconvertedModuleCount
+        retval["unconvertedModuleCount"] = bp2build_metrics.unconvertedModuleCount
     return retval, events
 
 
