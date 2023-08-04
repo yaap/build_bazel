@@ -18,6 +18,7 @@ py_binary(
         "clone.py",
         "cuj.py",
         "cuj_catalog.py",
+        "go_allowlists.py",
         "incremental_build.py",
         "pretty.py",
         "ui.py",
@@ -46,6 +47,7 @@ py_binary(
     srcs = [
         "clone.py",
         "cuj.py",
+        "go_allowlists.py",
     ],
     main = "clone.py",
     python_version = "PY3",
@@ -54,7 +56,10 @@ py_binary(
 
 py_test(
     name = "clone_test",
-    srcs = ["clone_test.py"],
+    srcs = [
+        "clone_test.py",
+        "go_allowlists_test.py",
+    ],
     deps = [":clone"],
 )
 

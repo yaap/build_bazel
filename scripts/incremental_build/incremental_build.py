@@ -40,14 +40,13 @@ import pretty
 import ui
 import util
 from cuj import skip_for
-from pretty import Aggregation
 from util import BuildInfo
 from util import BuildResult
 from util import BuildType
 
 MAX_RUN_COUNT: Final[int] = 5
 BAZEL_PROFILES: Final[str] = "bazel_metrics"
-CQUERY_OUT = "soong/soong_injection/cquery.out"
+CQUERY_OUT: Final[str] = "soong/soong_injection/cquery.out"
 
 
 @functools.cache
@@ -110,6 +109,7 @@ def _recompact_ninja_log(f: TextIO):
         shell=False,
         stdout=f,
         stderr=f,
+        text=True,
     )
 
 
@@ -142,7 +142,20 @@ def _build(build_type: BuildType, run_dir: Path) -> BuildInfo:
     env = _prepare_env()
     target_product = env["TARGET_PRODUCT"]
 
-    with open(logfile, mode="w") as f:
+    cquery_out = util.get_out_dir().joinpath("soong/soong_injection/cquery.out")
+
+    def get_cquery_ts() -> float:
+        try:
+            return os.stat(cquery_out).st_mtime
+        except FileNotFoundError:
+            return -1
+
+    @skip_for(BuildType.SOONG_ONLY, BuildType.B, BuildType.B_ANDROID)
+    def get_cquery_size() -> int:
+        return os.stat(cquery_out).st_size
+
+    cquery_ts = get_cquery_ts()
+    with open(logfile, mode="wt") as f:
         action_count_before = _new_action_count()
         if action_count_before > 0:
             _recompact_ninja_log(f)
@@ -170,12 +183,19 @@ def _build(build_type: BuildType, run_dir: Path) -> BuildInfo:
         with open(run_dir.joinpath("new_ninja_actions.txt"), "w") as af:
             action_count_delta = _new_action_count(af, action_count_before)
 
+    if get_cquery_ts() > cquery_ts:
+        shutil.copy(cquery_out, run_dir.joinpath("cquery.out"))
+        bazel_profiles = util.get_out_dir().joinpath(BAZEL_PROFILES)
+        if bazel_profiles.exists():
+            shutil.copytree(bazel_profiles, run_dir.joinpath(BAZEL_PROFILES))
+
     return BuildInfo(
         actions=action_count_delta,
         build_type=build_type,
         build_result=BuildResult.FAILED if p.returncode else BuildResult.SUCCESS,
         build_ninja_hash=_build_file_sha(target_product),
         build_ninja_size=_build_file_size(target_product),
+        cquery_out_size=get_cquery_size(),
         description="<placeholder>",
         product=f'{target_product}-{env["TARGET_BUILD_VARIANT"]}',
         targets=ui.get_user_input().targets,
@@ -186,34 +206,14 @@ def _build(build_type: BuildType, run_dir: Path) -> BuildInfo:
 def _run_cuj(
     run_dir: Path, build_type: ui.BuildType, cujstep: cuj_catalog.CujStep
 ) -> BuildInfo:
-    cquery_out = util.get_out_dir().joinpath("soong/soong_injection/cquery.out")
-
-    def get_cquery_ts() -> float:
-        try:
-            return os.stat(cquery_out).st_mtime
-        except FileNotFoundError:
-            return -1
-
-    @skip_for(BuildType.SOONG_ONLY)
-    def get_cquery_size() -> int:
-        return os.path.getsize(cquery_out)
-
-    cquery_ts = get_cquery_ts()
     build_info: Final[BuildInfo] = _build(build_type, run_dir)
     # if build was successful, run test
-    build_info.targets = ui.get_user_input().targets
     if build_info.build_result == BuildResult.SUCCESS:
         try:
             cujstep.verify()
         except Exception as e:
-            logging.error(e)
+            logging.exception(e)
             build_info.build_result = BuildResult.TEST_FAILURE
-    build_info.cquery_out_size = get_cquery_size()
-    if get_cquery_ts() > cquery_ts:
-        shutil.copy(cquery_out, run_dir.joinpath("cquery.out"))
-        bazel_profiles = util.get_out_dir().joinpath(BAZEL_PROFILES)
-        if bazel_profiles.exists():
-            shutil.copytree(bazel_profiles, run_dir.joinpath(BAZEL_PROFILES))
 
     return build_info
 
@@ -244,16 +244,15 @@ def main():
           collect metrics
     """
     user_input = ui.get_user_input()
-
     logging.warning(
         textwrap.dedent(
-            f"""
-  If you kill this process, make sure to revert unwanted changes.
-  TIP: If you have no local changes of interest you may
-       `repo forall -p -c git reset --hard`  and
-       `repo forall -p -c git clean --force` and even
-       `m clean && rm -rf {util.get_out_dir()}`
-  """
+            f"""\
+             If you kill this process, make sure to revert unwanted changes.
+             TIP: If you have no local changes of interest you may
+                  `repo forall -p -c git reset --hard`  and
+                  `repo forall -p -c git clean --force` and even
+                  `m clean && rm -rf {util.get_out_dir()}`
+             """
         )
     )
 
@@ -300,7 +299,7 @@ def main():
                     if logs_dir_for_ci.exists():
                         perf_metrics.archive_run(logs_dir_for_ci, build_info)
 
-                if build_info.build_result == BuildResult.FAILED:
+                if build_info.build_result != BuildResult.SUCCESS:
                     stop_building = StopBuilding.DUE_TO_ERROR
                     logging.critical(f"Failed cuj run! Please see logs in: {run_dir}")
                 elif run == MAX_RUN_COUNT - 1:
@@ -308,8 +307,6 @@ def main():
                     logging.critical(f"Build did not stabilize in {run} attempts")
 
                 perf_metrics.archive_run(run_dir, build_info)
-                # we are doing tabulation and summary after each run
-                # so that we can look at intermediate results
                 perf_metrics.tabulate_metrics_csv(user_input.log_dir)
                 if cuj_group != cuj_catalog.Warmup and run == 0:
                     _display("^time$")  # display intermediate results
