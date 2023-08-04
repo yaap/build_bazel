@@ -11,47 +11,132 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import textwrap
 import unittest
+from io import StringIO
 
-from clone import GoList
+from clone import ModuleName
+from clone import ModuleType
+from clone import _extract_templates_helper
+from clone import conjunction
+from clone import module_defs
+from clone import negate
+from clone import name_in
+from clone import type_in
 
 
 class CloneTest(unittest.TestCase):
-  def test_go_list(self):
-    golist = GoList('''
-        import blah
-        package blue
-        type X
-        var (
-          empty = []string{
-          }
-          more = []string{
-            "a",
-            "b", // comment
-          }
+    def setUp(self) -> None:
+        self.bp = textwrap.dedent(
+            """\
+            //licence text
+            alias=blah
+            cc_library {
+              out: ["dont"],
+              name: "a",
+              other: 45
+            }
+            genrule {
+              name: "b",
+              out: [
+                "oph"
+              ]
+              other:  {
+                name: 'not-a-name'
+                blah: "nested"
+              }
+            }
+            """
         )
-    '''.splitlines(keepends=True))
-    L = len(golist.lines)
 
-    with self.assertRaises(RuntimeError):
-      golist.locate('non-existing')
+    def test_module_def(self):
+        defs = list(module_defs(StringIO(self.bp)))
+        self.assertEqual(len(defs), 2)
+        name, content = defs[0]
+        self.assertEqual(name, "cc_library")
+        self.assertEqual(
+            content,
+            textwrap.dedent(
+                """\
+                cc_library {
+                  out: ["dont"],
+                  name: "a",
+                  other: 45
+                }
+                """
+            ),
+        )
+        name, content = defs[1]
+        self.assertEqual(name, "genrule")
+        self.assertEqual(
+            content,
+            textwrap.dedent(
+                """\
+                genrule {
+                  name: "b",
+                  out: [
+                    "oph"
+                  ]
+                  other:  {
+                    name: 'not-a-name'
+                    blah: "nested"
+                  }
+                }
+                """
+            ),
+        )
 
-    self.assertEqual(-1, golist.begin)
-    self.assertEqual(-1, golist.end)
+    def test_non_existent(self):
+        cloners = _extract_templates_helper(StringIO(self.bp), name_in("not-a-name"))
+        self.assertEqual(len(cloners), 0)
 
-    golist.locate('empty')
-    self.assertNotEqual(-1, golist.begin)
-    self.assertNotEqual(-1, golist.end)
-    self.assertEqual(golist.begin, golist.end)
-    self.assertFalse(golist.has_module("a"))
-    golist.insert_clones("a", 3)
-    self.assertEqual(3, golist.end - golist.begin)
-    self.assertTrue(golist.has_module("a-1"))
-    self.assertTrue(golist.has_module("a-2"))
-    self.assertTrue(golist.has_module("a-3"))
-    self.assertEqual(L + 3, len(golist.lines))
+    def test_by_type(self):
+        cloners = _extract_templates_helper(StringIO(self.bp), type_in("genrule"))
+        self.assertEqual(len(cloners), 1)
+        self.assertEqual(
+            cloners[ModuleName("b")].substitute(suffix="test"),
+            textwrap.dedent(
+                """\
+                genrule {
+                  name: "b-test",
+                  out: [
+                    "oph-test"
+                  ]
+                  other:  {
+                    name: 'not-a-name'
+                    blah: "nested"
+                  }
+                }
+                """
+            ),
+        )
 
-    golist.locate('more')
-    self.assertEqual(2, golist.end - golist.begin)
-    self.assertTrue(golist.has_module("a"))
-    self.assertTrue(golist.has_module("b"))
+    def test_by_name(self):
+        cloners = _extract_templates_helper(StringIO(self.bp), name_in("a", "b"))
+        self.assertEqual(len(cloners), 2)
+        self.assertEqual(
+            cloners[ModuleName("a")].substitute(suffix="test"),
+            textwrap.dedent(
+                """\
+                cc_library {
+                  out: ["dont"],
+                  name: "a-test",
+                  other: 45
+                }
+                """
+            ),
+        )
+
+    def test_conjunction(self):
+        a = name_in("a")
+        b = type_in("A")
+        f = conjunction(a, b)
+        self.assertTrue(f(ModuleType("A"), ModuleName("a")))
+        self.assertFalse(f(ModuleType("A"), ModuleName("b")))
+        self.assertFalse(f(ModuleType("B"), ModuleName("a")))
+
+    def test_negate(self):
+        a = name_in("a")
+        not_a = negate(a)
+        self.assertTrue(not_a(ModuleType(""), ModuleName("b")))
+        self.assertFalse(not_a(ModuleType(""), ModuleName("a")))
