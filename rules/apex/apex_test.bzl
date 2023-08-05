@@ -1376,6 +1376,12 @@ def _test_apex_certificate_label_with_overrides():
         tags = ["manual"],
     )
 
+    android_app_certificate(
+        name = name + "_another_cert",
+        certificate = name + "_another_cert",
+        tags = ["manual"],
+    )
+
     test_apex(
         name = name,
         certificate = name + "_cert",
@@ -1384,8 +1390,8 @@ def _test_apex_certificate_label_with_overrides():
     apex_certificate_with_overrides_test(
         name = test_name,
         target_under_test = name,
-        expected_pem_path = "build/bazel/rules/apex/testdata/another.x509.pem",
-        expected_pk8_path = "build/bazel/rules/apex/testdata/another.pk8",
+        expected_pem_path = "build/bazel/rules/apex/apex_certificate_label_with_overrides_another_cert.x509.pem",
+        expected_pk8_path = "build/bazel/rules/apex/apex_certificate_label_with_overrides_another_cert.pk8",
     )
 
     return test_name
