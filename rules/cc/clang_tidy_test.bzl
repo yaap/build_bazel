@@ -144,8 +144,8 @@ _clang_tidy = rule(
         "_tidy_timeout": attr.label(
             default = "//build/bazel/flags/cc/tidy:tidy_timeout",
         ),
-        "_product_variables": attr.label(
-            default = "//build/bazel/product_config:product_vars",
+        "_tidy_checks": attr.label(
+            default = "//build/bazel/product_config:tidy_checks",
         ),
     },
     toolchains = ["@bazel_tools//tools/cpp:toolchain_type"],
