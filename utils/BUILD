@@ -59,3 +59,5 @@ selects.config_setting_group(
     ],
     visibility = ["//visibility:public"],
 )
+
+filegroup(name = "empty_filegroup")

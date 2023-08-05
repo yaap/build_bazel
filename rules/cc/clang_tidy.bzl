@@ -21,7 +21,6 @@ load(
 )
 load("@bazel_tools//tools/cpp:toolchain_utils.bzl", "find_cpp_toolchain")
 load("@soong_injection//cc_toolchain:config_constants.bzl", "constants")
-load("//build/bazel/product_config:product_variables_providing_rule.bzl", "ProductVariablesInfo")
 load("//build/bazel/rules:common.bzl", "get_dep_targets")
 load(":cc_library_common.bzl", "get_compilation_args")
 
@@ -100,7 +99,9 @@ def _add_extra_arg_flags(tidy_flags):
     return tidy_flags + ["-extra-arg-before=" + f for f in _TIDY_EXTRA_ARG_FLAGS]
 
 def _add_quiet_if_not_global_tidy(ctx, tidy_flags):
-    if not ctx.attr._product_variables[ProductVariablesInfo].TidyChecks:
+    tidy_checks = ctx.attr._tidy_checks[BuildSettingInfo].value
+    tidy_checks = tidy_checks.split(",") if tidy_checks else []
+    if not tidy_checks:
         return tidy_flags + [
             "-quiet",
             "-extra-arg-before=-fno-caret-diagnostics",
@@ -154,7 +155,8 @@ def _add_checks_for_dir(directory):
     return _TIDY_DEFAULT_GLOBAL_CHECKS
 
 def _add_global_tidy_checks(ctx, local_checks, input_file):
-    tidy_checks = ctx.attr._product_variables[ProductVariablesInfo].TidyChecks
+    tidy_checks = ctx.attr._tidy_checks[BuildSettingInfo].value
+    tidy_checks = tidy_checks.split(",") if tidy_checks else []
     global_tidy_checks = []
     if tidy_checks:
         global_tidy_checks = tidy_checks
