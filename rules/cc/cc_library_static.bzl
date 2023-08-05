@@ -682,8 +682,8 @@ _cc_library_combiner = rule(
         "_allowlist_function_transition": attr.label(
             default = "@bazel_tools//tools/allowlists/function_transition_allowlist",
         ),
-        "_product_variables": attr.label(
-            default = "//build/bazel/product_config:product_vars",
+        "_tidy_checks": attr.label(
+            default = "//build/bazel/product_config:tidy_checks",
         ),
     },
     toolchains = ["@bazel_tools//tools/cpp:toolchain_type"],
