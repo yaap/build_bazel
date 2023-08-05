@@ -31,7 +31,7 @@ products = {
                 "package_name_override_from_config:another.package",
             ],
             "CertificateOverrides": [
-                "apex_certificate_label_with_overrides:another",
+                "apex_certificate_label_with_overrides:apex_certificate_label_with_overrides_another_cert",
             ],
             "DefaultAppCertificate": "build/bazel/rules/apex/testdata/devkey",
         },
