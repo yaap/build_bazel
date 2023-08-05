@@ -20,10 +20,11 @@ import tempfile
 import textwrap
 import uuid
 from pathlib import Path
-from typing import Final
-from typing import Optional
+from typing import Final, Optional
 
 import clone
+import finder
+import cuj
 import finder
 import ui
 import util
@@ -32,7 +33,6 @@ from cuj import CujStep
 from cuj import InWorkspace
 from cuj import Verifier
 from cuj import de_src
-from cuj import skip_for
 from cuj import src
 from util import BuildType
 
@@ -189,15 +189,7 @@ def replace_link_with_dir(p: Path):
     )
 
 
-def _sequence(*vs: Verifier) -> Verifier:
-    def f():
-        for v in vs:
-            v()
-
-    return f
-
-
-def content_verfiers(ws_build_file: Path, content: str) -> (Verifier, Verifier):
+def content_verfiers(ws_build_file: Path, content: str) -> tuple[Verifier, Verifier]:
     def search() -> bool:
         with open(ws_build_file, "r") as f:
             for line in f:
@@ -205,7 +197,7 @@ def content_verfiers(ws_build_file: Path, content: str) -> (Verifier, Verifier):
                     return True
         return False
 
-    @skip_for(BuildType.SOONG_ONLY)
+    @cuj.skip_for(BuildType.SOONG_ONLY)
     def contains():
         if not search():
             raise AssertionError(
@@ -213,7 +205,7 @@ def content_verfiers(ws_build_file: Path, content: str) -> (Verifier, Verifier):
             )
         logging.info(f"VERIFIED {de_src(ws_build_file)} contains {content}")
 
-    @skip_for(BuildType.SOONG_ONLY)
+    @cuj.skip_for(BuildType.SOONG_ONLY)
     def does_not_contain():
         if search():
             raise AssertionError(
@@ -234,10 +226,12 @@ def modify_revert_kept_build_file(build_file: Path) -> CujGroup:
         de_src(build_file),
         [
             CujStep(
-                step1.verb, step1.apply_change, _sequence(step1.verify, merge_prover)
+                step1.verb, step1.apply_change, cuj.sequence(step1.verify, merge_prover)
             ),
             CujStep(
-                step2.verb, step2.apply_change, _sequence(step2.verify, merge_disprover)
+                step2.verb,
+                step2.apply_change,
+                cuj.sequence(step2.verify, merge_disprover),
             ),
         ],
     )
@@ -263,10 +257,12 @@ def create_delete_kept_build_file(build_file: Path) -> CujGroup:
         de_src(build_file),
         [
             CujStep(
-                step1.verb, step1.apply_change, _sequence(step1.verify, merge_prover)
+                step1.verb, step1.apply_change, cuj.sequence(step1.verify, merge_prover)
             ),
             CujStep(
-                step2.verb, step2.apply_change, _sequence(step2.verify, merge_disprover)
+                step2.verb,
+                step2.apply_change,
+                cuj.sequence(step2.verify, merge_disprover),
             ),
         ],
     )
@@ -284,10 +280,14 @@ def create_delete_unkept_build_file(build_file) -> CujGroup:
         de_src(build_file),
         [
             CujStep(
-                step1.verb, step1.apply_change, _sequence(step1.verify, merge_disprover)
+                step1.verb,
+                step1.apply_change,
+                cuj.sequence(step1.verify, merge_disprover),
             ),
             CujStep(
-                step2.verb, step2.apply_change, _sequence(step2.verify, merge_disprover)
+                step2.verb,
+                step2.apply_change,
+                cuj.sequence(step2.verify, merge_disprover),
             ),
         ],
     )
@@ -353,12 +353,13 @@ def get_cujgroups() -> list[CujGroup]:
     )
     logging.info(
         textwrap.dedent(
-            f"""Choosing:
-            package: {de_src(pkg)} has {p_why}
-   package ancestor: {de_src(ancestor)} has {a_why} but no direct Android.bp
-       package free: {de_src(pkg_free)} has {f_why} but no Android.bp anywhere
-  leaf package free: {de_src(leaf_pkg_free)} has neither Android.bp nor sub-dirs
-  """
+            f"""\
+                Choosing:
+                          package: {de_src(pkg)} has {p_why}
+                 package ancestor: {de_src(ancestor)} has {a_why} but no direct Android.bp
+                     package free: {de_src(pkg_free)} has {f_why} but no Android.bp anywhere
+                leaf package free: {de_src(leaf_pkg_free)} has neither Android.bp nor sub-dirs
+            """
         )
     )
 
@@ -387,6 +388,30 @@ def get_cujgroups() -> list[CujGroup]:
         ],
     ]
 
+    cc_ = (
+        lambda t, name: t.startswith("cc_")
+        and "test" not in t
+        and not name.startswith("libcrypto")  # has some unique hash
+    )
+    libNN = lambda t, name: t == "cc_library_shared" and name == "libneuralnetworks"
+    cloning_cujs = [
+        clone.get_cuj_group({src("."): clone.type_in("genrule")}, "genrules"),
+        clone.get_cuj_group({src("."): cc_}, "cc_"),
+        clone.get_cuj_group(
+            {src("packages/modules/adb/Android.bp"): clone.name_in("adbd")}, "adbd"
+        ),
+        clone.get_cuj_group(
+            {src("packages/modules/NeuralNetworks/runtime/Android.bp"): libNN}, "libNN"
+        ),
+        clone.get_cuj_group(
+            {
+                src("packages/modules/adb/Android.bp"): clone.name_in("adbd"),
+                src("packages/modules/NeuralNetworks/runtime/Android.bp"): libNN,
+            },
+            "adbd&libNN",
+        ),
+    ]
+
     def clean():
         if ui.get_user_input().log_dir.is_relative_to(util.get_top_dir()):
             raise AssertionError(
@@ -397,12 +422,8 @@ def get_cujgroups() -> list[CujGroup]:
 
     return [
         CujGroup("", [CujStep("clean", clean)]),
-        CujGroup("", Warmup.steps),
-        clone.get_cuj_group(src("packages/modules/adb/Android.bp"), "adbd"),
-        clone.get_cuj_group(
-            src("packages/modules/NeuralNetworks/runtime/Android.bp"),
-            "libneuralnetworks",
-        ),
+        CujGroup("", Warmup.steps),  # to allow a "no change" CUJ option
+        *cloning_cujs,
         create_delete(src("bionic/libc/tzcode/globbed.c"), InWorkspace.UNDER_SYMLINK),
         # TODO (usta): find targets that should be affected
         *[
