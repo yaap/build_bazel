@@ -100,7 +100,6 @@ def _add_extra_arg_flags(tidy_flags):
 
 def _add_quiet_if_not_global_tidy(ctx, tidy_flags):
     tidy_checks = ctx.attr._tidy_checks[BuildSettingInfo].value
-    tidy_checks = tidy_checks.split(",") if tidy_checks else []
     if not tidy_checks:
         return tidy_flags + [
             "-quiet",
@@ -156,7 +155,6 @@ def _add_checks_for_dir(directory):
 
 def _add_global_tidy_checks(ctx, local_checks, input_file):
     tidy_checks = ctx.attr._tidy_checks[BuildSettingInfo].value
-    tidy_checks = tidy_checks.split(",") if tidy_checks else []
     global_tidy_checks = []
     if tidy_checks:
         global_tidy_checks = tidy_checks
