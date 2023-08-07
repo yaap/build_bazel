@@ -1214,6 +1214,7 @@ class Bp2BuildProgressTest(unittest.TestCase):
         report_data_hide_unconverted_modules_reasons
     )
 
+    self.maxDiff = None
     expected_report_show_unconverted_modules_reasons = f"""# bp2build progress report for: a: 100.0% (2/2) converted
 
 Percent converted: 100.00 (2/2)
@@ -1224,9 +1225,10 @@ Ignored module types: ['cc_defaults', 'cpython3_python_stdlib', 'hidl_package_ro
 
 0 unconverted transitive deps remaining:
 a [type1] [pkg]
- unconverted reason from metric: TYPE_UNSUPPORTED
- unconverted reasons from heuristics: type missing converter
-direct deps:
+\tunconverted due to:
+\t\tunconverted reason from metric: TYPE_UNSUPPORTED
+\t\tunconverted reasons from heuristics: type missing converter
+\tdirect deps:
 
 
 # Unconverted deps of a: 100.0% (2/2) converted:
@@ -1262,7 +1264,7 @@ Ignored module types: ['cc_defaults', 'cpython3_python_stdlib', 'hidl_package_ro
 
 0 unconverted transitive deps remaining:
 a [type1] [pkg]
-direct deps:
+\tdirect deps:
 
 
 # Unconverted deps of a: 100.0% (2/2) converted:

@@ -61,14 +61,14 @@ class ModuleInfo:
     if len(self.reasons_from_heuristics) == 0:
       return ""
     return (
-        " unconverted reasons from heuristics: {reasons_from_heuristics}"
+        "unconverted reasons from heuristics: {reasons_from_heuristics}"
         .format(reasons_from_heuristics=", ".join(self.reasons_from_heuristics))
     )
 
   def get_reason_from_metric(self):
     if len(self.reason_from_metric) == 0:
       return ""
-    return " unconverted reason from metric: {reason_from_metric}".format(
+    return "unconverted reason from metric: {reason_from_metric}".format(
         reason_from_metric=self.reason_from_metric
     )
 
@@ -428,17 +428,18 @@ def generate_report(report_data):
     )
     report_lines.append(f"{module}")
     if not report_data.hide_unconverted_modules_reasons:
+      report_lines.append("\tunconverted due to:")
       reason_from_metric = module.get_reason_from_metric()
       reasons_from_heuristics = module.get_reasons_from_heuristics()
       if reason_from_metric != "":
-        report_lines.append(f"{reason_from_metric}")
+        report_lines.append(f"\t\t{reason_from_metric}")
       if reasons_from_heuristics != "":
-        report_lines.append(f"{reasons_from_heuristics}")
+        report_lines.append(f"\t\t{reasons_from_heuristics}")
     if len(unconverted_deps) == 0:
-      report_lines.append('direct deps:')
+      report_lines.append('\tdirect deps:')
     else:
       report_lines.append(
-        "direct deps: {deps}".format(deps=", ".join(sorted(unconverted_deps)))
+        "\tdirect deps: {deps}".format(deps=", ".join(sorted(unconverted_deps)))
       )
 
   report_lines.append("\n")
