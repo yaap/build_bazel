@@ -61,8 +61,6 @@ def _lto_and_sanitizer_deps_transition_impl(settings, attr):
     new_cli_features = apply_lto_deps(features, old_cli_features)
     cfi_include_paths = settings[transition_constants.cfi_include_paths_key]
     cfi_exclude_paths = settings[transition_constants.cfi_exclude_paths_key]
-    cfi_include_paths = cfi_include_paths.split(",") if cfi_include_paths else []
-    cfi_exclude_paths = cfi_exclude_paths.split(",") if cfi_exclude_paths else []
     new_cli_features = apply_cfi_deps(
         features,
         new_cli_features,
