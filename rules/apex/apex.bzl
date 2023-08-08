@@ -626,7 +626,6 @@ def _run_signapk(ctx, unsigned_file, signed_file, private_key, public_key, mnemo
 def _override_manifest_package_name(ctx):
     apex_name = ctx.attr.name
     overrides = ctx.attr._manifest_package_name_overrides[BuildSettingInfo].value
-    overrides = overrides.split(",") if overrides else []
     if not overrides:
         return None
 
@@ -648,7 +647,6 @@ def _override_manifest_package_name(ctx):
 def _compression_enabled(ctx):
     compressed_apex = ctx.attr._compressed_apex[BuildSettingInfo].value
     unbundled_apps = ctx.attr._unbundled_build_apps[BuildSettingInfo].value
-    unbundled_apps = unbundled_apps.split(",") if unbundled_apps else []
 
     return compressed_apex and len(unbundled_apps) == 0
 
@@ -829,7 +827,6 @@ def _generate_sbom(ctx, file_mapping, metadata_file_mapping, apex_file):
     inputs += metadata_files
 
     build_version_tags = ctx.attr._build_version_tags[BuildSettingInfo].value
-    build_version_tags = build_version_tags.split(",") if build_version_tags else []
     build_fingerprint = "%s/%s/%s:%s/%s/%s:%s/%s" % (
         ctx.attr._product_brand[BuildSettingInfo].value,
         ctx.attr._device_product[BuildSettingInfo].value,
