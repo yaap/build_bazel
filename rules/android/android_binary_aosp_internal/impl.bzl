@@ -72,9 +72,9 @@ collect_cc_stubs_aspect = aspect(
 
 def _get_lib_name_from_ctx(ctx):
     # Use the device ABI for the arch name when naming subdirectories within the APK's lib/ dir
-    # Note that the value from _product_config_abi[BuildSettingInfo].value is a string that's
-    # actually a comma-separated list of strings, where only the first element matters.
-    return ctx.attr._product_config_device_abi[BuildSettingInfo].value.split(",")[0]
+    # Note that the value from _product_config_abi[BuildSettingInfo].value is a list of strings
+    # where only the first element matters.
+    return ctx.attr._product_config_device_abi[BuildSettingInfo].value[0]
 
 def _process_native_deps_aosp(ctx, **_unused_ctxs):
     """AOSP-specific native dep processof for android_binary.
@@ -125,7 +125,7 @@ def _process_native_deps_aosp(ctx, **_unused_ctxs):
         ]),
     )
 
-def _process_manifest_aosp(ctx, **unused_ctxs):
+def _process_manifest_aosp(ctx, **_unused_ctxs):
     manifest_ctx = _resources.set_default_min_sdk(
         ctx,
         manifest = ctx.file.manifest,
