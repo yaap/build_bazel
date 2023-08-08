@@ -18,12 +18,6 @@ _string_list_variables = [
     "unbundled_build_apps",
 ]
 
-# TODO: b/292563629 - The following variables should be string_list_settings, but there's currently
-# a bazel crash: https://github.com/bazelbuild/bazel/issues/18977
-#   - device_abi
-#   - manifest_package_name_overrides
-#   - unbundled_build_apps
-#   - tidy_checks
 _string_variables = [
     "apex_global_min_sdk_version_override",
     "build_id",
