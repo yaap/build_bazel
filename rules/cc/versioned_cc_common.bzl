@@ -78,6 +78,7 @@ def _versioned_binary_impl(ctx):
         DefaultInfo(
             files = depset([out_file]),
             executable = out_file,
+            runfiles = ctx.attr.src[DefaultInfo].default_runfiles,
         ),
     ] + common_providers
 
