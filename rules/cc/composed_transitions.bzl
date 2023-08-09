@@ -22,6 +22,10 @@ load(
     "apply_fdo_profile",
 )
 load(":lto_transitions.bzl", "apply_drop_lto", "apply_lto_deps")
+load(
+    ":sanitizer_enablement_transition.bzl",
+    "apply_sanitizer_enablement_transition",
+)
 
 # LTO, sanitizers, and FDO require an incoming transition on cc_library_shared
 # FDO is applied, while LTO and sanitizers are dropped.
@@ -39,7 +43,11 @@ def _lto_and_fdo_profile_incoming_transition_impl(settings, attr):
         transition_constants.cli_features_key: new_cli_features,
     }
 
-    return new_fdo_settings | new_cli_setting | {transition_constants.cfi_assembly_key: False}
+    return new_fdo_settings | new_cli_setting | {
+        transition_constants.cfi_assembly_key: False,
+        # TODO: b/294868620 - This can be removed when completing the bug
+        transition_constants.sanitizers_enabled_key: False,
+    }
 
 lto_and_fdo_profile_incoming_transition = transition(
     implementation = _lto_and_fdo_profile_incoming_transition_impl,
@@ -51,6 +59,8 @@ lto_and_fdo_profile_incoming_transition = transition(
         CLI_FDO_KEY,
         transition_constants.cli_features_key,
         transition_constants.cfi_assembly_key,
+        # TODO: b/294868620 - This can be removed when completing the bug
+        transition_constants.sanitizers_enabled_key,
     ],
 )
 
@@ -71,9 +81,16 @@ def _lto_and_sanitizer_deps_transition_impl(settings, attr):
         settings[transition_constants.cli_platforms_key],
     )
     cfi_assembly = CFI_FEATURE in new_cli_features and CFI_ASSEMBLY_FEATURE in features
+
+    # TODO: b/294868620 - This can be removed when completing the bug
+    sanitizers_enabled = apply_sanitizer_enablement_transition(
+        features + new_cli_features,
+    )
     return {
         transition_constants.cli_features_key: new_cli_features,
         transition_constants.cfi_assembly_key: cfi_assembly,
+        # TODO: b/294868620 - This can be removed when completing the bug
+        transition_constants.sanitizers_enabled_key: sanitizers_enabled,
     }
 
 lto_and_sanitizer_deps_transition = transition(
@@ -88,6 +105,34 @@ lto_and_sanitizer_deps_transition = transition(
     outputs = [
         transition_constants.cli_features_key,
         transition_constants.cfi_assembly_key,
+        # TODO: b/294868620 - This can be removed when completing the bug
+        transition_constants.sanitizers_enabled_key,
+    ],
+)
+
+# TODO: b/294868620 - This can be removed when completing the bug
+def _lto_and_sanitizer_static_transition_impl(settings, attr):
+    features = getattr(attr, transition_constants.features_attr_key)
+    old_cli_features = settings[transition_constants.cli_features_key]
+    return {
+        transition_constants.cli_features_key: apply_lto_deps(
+            features,
+            old_cli_features,
+        ),
+        transition_constants.sanitizers_enabled_key: (
+            apply_sanitizer_enablement_transition(features + old_cli_features)
+        ),
+    }
+
+# TODO: b/294868620 - This can be removed when completing the bug
+lto_and_sanitizer_static_transition = transition(
+    implementation = _lto_and_sanitizer_static_transition_impl,
+    inputs = [
+        transition_constants.cli_features_key,
+    ],
+    outputs = [
+        transition_constants.cli_features_key,
+        transition_constants.sanitizers_enabled_key,
     ],
 )
 
@@ -123,7 +168,15 @@ def _drop_lto_sanitizer_and_fdo_profile_transition_impl(settings, _):
 
     new_fdo_setting = apply_drop_fdo_profile()
 
-    return new_cli_features | new_fdo_setting | {transition_constants.cfi_assembly_key: False}
+    return (
+        new_cli_features |
+        new_fdo_setting |
+        {
+            transition_constants.cfi_assembly_key: False,
+            # TODO: b/294868620 - This can be removed when completing the bug
+            transition_constants.sanitizers_enabled_key: False,
+        }
+    )
 
 drop_lto_sanitizer_and_fdo_profile_incoming_transition = transition(
     implementation = _drop_lto_sanitizer_and_fdo_profile_transition_impl,
@@ -135,6 +188,8 @@ drop_lto_sanitizer_and_fdo_profile_incoming_transition = transition(
         transition_constants.cli_features_key,
         CLI_FDO_KEY,
         transition_constants.cfi_assembly_key,
+        # TODO: b/294868620 - This can be removed when completing the bug
+        transition_constants.sanitizers_enabled_key,
     ],
 )
 

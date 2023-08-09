@@ -33,7 +33,16 @@ load(
     "system_dynamic_deps_defaults",
 )
 load(":clang_tidy.bzl", "ClangTidyInfo", "clang_tidy_for_dir", "generate_clang_tidy_actions")
-load(":lto_transitions.bzl", "lto_deps_transition")
+
+# TODO: b/294868620 - Change this back to lto_deps_transition when completing
+#                     the bug
+load(":composed_transitions.bzl", "lto_and_sanitizer_static_transition")
+
+# TODO: b/294868620 - Remove when completing the bug
+load(
+    ":sanitizer_enablement_transition.bzl",
+    "drop_sanitizer_enablement_transition",
+)
 load(":stl.bzl", "stl_info_from_attr")
 
 _ALLOWED_MANUAL_INTERFACE_PATHS = [
@@ -94,7 +103,8 @@ def cc_library_static(
         tidy_disabled_srcs = None,
         tidy_timeout_srcs = None,
         tidy_gen_header_filter = None,
-        native_coverage = True):
+        native_coverage = True,
+        additional_compiler_inputs = []):
     "Bazel macro to correspond with the cc_library_static Soong module."
 
     exports_name = "%s_exports" % name
@@ -120,7 +130,7 @@ def cc_library_static(
 
     for allowed_project in config_constants.WarningAllowedProjects:
         if native.package_name().startswith(allowed_project):
-            toolchain_features += ["-warnings_as_errors"]
+            toolchain_features.append("-warnings_as_errors")
             break
 
     if rtti:
@@ -206,6 +216,7 @@ def cc_library_static(
         name = cpp_name,
         srcs = srcs,
         copts = copts + cppflags,
+        additional_compiler_inputs = additional_compiler_inputs,
         tags = ["manual"],
         alwayslink = True,
         **common_attrs
@@ -214,6 +225,7 @@ def cc_library_static(
         name = c_name,
         srcs = srcs_c,
         copts = copts + conlyflags,
+        additional_compiler_inputs = additional_compiler_inputs,
         tags = ["manual"],
         alwayslink = True,
         **common_attrs
@@ -557,14 +569,15 @@ def _cc_library_combiner_impl(ctx):
 #       by this rule.
 _cc_library_combiner = rule(
     implementation = _cc_library_combiner_impl,
+    cfg = drop_sanitizer_enablement_transition,
     attrs = {
         "roots": attr.label_list(
             providers = [CcInfo],
-            cfg = lto_deps_transition,
+            cfg = lto_and_sanitizer_static_transition,
         ),
         "deps": attr.label_list(
             providers = [CcInfo],
-            cfg = lto_deps_transition,
+            cfg = lto_and_sanitizer_static_transition,
         ),
         "shared_linking": attr.bool(
             doc = "Whether to link as needed for shared libraries, rather than as needed for a static libraries.",
@@ -572,7 +585,7 @@ _cc_library_combiner = rule(
         ),
         "additional_sanitizer_deps": attr.label_list(
             providers = [CcInfo],
-            cfg = lto_deps_transition,
+            cfg = lto_and_sanitizer_static_transition,
             doc = "Deps used only to check for sanitizer enablement",
         ),
         "runtime_deps": attr.label_list(
@@ -610,7 +623,7 @@ _cc_library_combiner = rule(
         ),
         "exports": attr.label(
             providers = [CcInfo],
-            cfg = lto_deps_transition,
+            cfg = lto_and_sanitizer_static_transition,
         ),
         "_cc_toolchain": attr.label(
             default = Label("@local_config_cc//:toolchain"),
@@ -633,7 +646,7 @@ _cc_library_combiner = rule(
         "copts_cpp": attr.string_list(),
         "copts_c": attr.string_list(),
         "hdrs": attr.label_list(allow_files = True),
-        "includes": attr.label_list(cfg = lto_deps_transition),
+        "includes": attr.label_list(cfg = lto_and_sanitizer_static_transition),
         "tidy_checks": attr.string_list(),
         "tidy_checks_as_errors": attr.string_list(),
         "tidy_flags": attr.string_list(),
