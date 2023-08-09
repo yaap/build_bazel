@@ -115,6 +115,7 @@ class BuildInfo:
     product: str
     targets: tuple[str, ...]
     time: datetime.timedelta
+    tag: str = None
     rebuild: bool = False
     warmup: bool = False
 
