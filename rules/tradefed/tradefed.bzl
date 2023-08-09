@@ -34,6 +34,8 @@ SKIPPED automatically.
 
 load("@bazel_skylib//lib:dicts.bzl", "dicts")
 load("@bazel_skylib//lib:paths.bzl", "paths")
+load("//build/bazel/platforms:platform_utils.bzl", "platforms")
+load(":cc_aspects.bzl", "CcTestSharedLibsInfo", "collect_cc_libs_aspect")
 
 # Apply this suffix to the name of the test dep target (e.g. the cc_test target)
 TEST_DEP_SUFFIX = "__tf_internal"
@@ -97,6 +99,9 @@ _TRADEFED_TEST_ATTRIBUTES = {
         doc = "Files needed on the classpath to run tradefed",
         cfg = "exec",
     ),
+    "_platform_utils": attr.label(
+        default = Label("//build/bazel/platforms:platform_utils"),
+    ),
     "test_config": attr.label(
         allow_single_file = True,
         doc = "Test/Tradefed config.",
@@ -128,6 +133,15 @@ _TRADEFED_TEST_ATTRIBUTES = {
 def _normalize_test_name(s):
     return s.replace(TEST_DEP_SUFFIX, "")
 
+def _copy_file(ctx, input, output):
+    ctx.actions.run_shell(
+        inputs = depset(direct = [input]),
+        outputs = [output],
+        command = "cp -f %s %s" % (input.path, output.path),
+        mnemonic = "CopyFile",
+        use_default_shell_env = True,
+    )
+
 # Get test config if specified or generate test config from template.
 def _get_or_generate_test_config(ctx, tf_test_dir, test_executable, test_language):
     # Validate input
@@ -142,22 +156,19 @@ def _get_or_generate_test_config(ctx, tf_test_dir, test_executable, test_languag
 
     basename = _normalize_test_name(test_executable.basename)
 
-    # If existing tradefed config is specified, symlink to it and return early.
+    # If existing tradefed config is specified, copy to it and return early.
     #
     # The config needs to be a sibling file to the test executable, and both
     # files must be in tf_test_dir. Given that ctx.file.test_config could be
-    # from another package, like //build/make/core, this symlink handles that.
+    # from another package, like //build/make/core, this copy handles that.
     #
     # $ tree bazel-bin/packages/modules/adb/adb_test__tf_deviceless_test/testcases/
     # bazel-bin/packages/modules/adb/adb_test__tf_deviceless_test/testcases/
-    # ├── adb_test -> /out/bazel/output_user_root/7f5b7a0603f97e18eafe9111781920be/execroot/__main__/bazel-out/aosp_cf_x86_64_phone-userdebug_linux_x86_64-opt-ST-0f3d6a823fdb/bin/packages/modules/adb/bin/adb_test/adb_test
+    # ├── adb_test
     # └── adb_test.config
     out = ctx.actions.declare_file(paths.join(tf_test_dir, basename + ".config"))
     if ctx.file.test_config:
-        ctx.actions.symlink(
-            output = out,
-            target_file = ctx.file.test_config,
-        )
+        _copy_file(ctx, ctx.file.test_config, out)
         return out
 
     # No test config specified, generate config from template. Join extra
@@ -230,11 +241,25 @@ def _tradefed_test_impl(ctx, tradefed_options = []):
 
     out = ctx.actions.declare_file(test_basename, sibling = test_config)
 
-    # Symlink the test executable to the test cases directory
-    ctx.actions.symlink(output = out, target_file = test_executable)
+    # Copy the test executable to the test cases directory
+    _copy_file(ctx, test_executable, out)
 
     root_relative_tests_dir = paths.dirname(out.short_path)
     test_runfiles.append(out)
+
+    if CcTestSharedLibsInfo in test_target:
+        # We set the linker rpath in bazel and the binary will always look for shared libs in lib/lib64, we copy
+        # all the shared libs to lib/lib64 so that the binary can load them correctly.
+        # https://source.corp.google.com/h/android/platform/superproject/main/+/main:prebuilts/clang/host/linux-x86/cc_toolchain_features.bzl;l=771;drc=68f2dd9d06b946e99153304b3de04d1ac2c0d599
+        # Soong does something similar: https://cs.android.com/android/platform/superproject/main/+/main:build/soong/cc/linker.go;l=584-621;drc=391a25d7fa3d4dd316b8263b0fd190aa5f33e4e8
+        # TODO(b/294915120): add rapth support for 32 bit arch.
+        shared_lib_dir = "lib"
+        if platforms.get_target_bitness(ctx.attr._platform_utils) == 64:
+            shared_lib_dir = "lib64"
+        for lib in test_target[CcTestSharedLibsInfo].shared_libs.to_list():
+            lib_out = ctx.actions.declare_file(paths.join(tf_test_dir, shared_lib_dir, lib.basename))
+            _copy_file(ctx, lib, lib_out)
+            test_runfiles.append(lib_out)
 
     # Prepare test-provided runfiles
     for f in test_target.files.to_list():
@@ -247,6 +272,17 @@ def _tradefed_test_impl(ctx, tradefed_options = []):
     test_runfiles.append(ctx.file._adb)
 
     path_additions = [_abspath(ctx.file._adb.dirname)]
+
+    for runfile in test_target.default_runfiles.files.to_list():
+        if runfile == test_executable:
+            continue
+        suffix = runfile.basename.removeprefix(test_executable.basename)
+        if suffix in ["_versioned", "_unstripped"]:
+            continue
+        path_without_package = runfile.short_path.removeprefix(ctx.label.package + "/")
+        out = ctx.actions.declare_file("%s/%s" % (tf_test_dir, path_without_package))
+        _copy_file(ctx, runfile, out)
+        test_runfiles.append(out)
 
     # Gather runfiles.
     runfiles = ctx.runfiles(
@@ -294,6 +330,7 @@ tradefed_deviceless_test = rule(
         "test": attr.label(
             # Deviceless test executables should always build for host.
             doc = "Test target to run in tradefed.",
+            aspects = [collect_cc_libs_aspect],
         ),
     }),
     test = True,
@@ -318,6 +355,7 @@ tradefed_device_driven_test = rule(
             # Device driven tests should always build for device.
             cfg = _tradefed_always_device_transition,
             doc = "Test target to run in tradefed.",
+            aspects = [collect_cc_libs_aspect],
         ),
         "_allowlist_function_transition": attr.label(
             default = "@bazel_tools//tools/allowlists/function_transition_allowlist",
@@ -349,6 +387,7 @@ tradefed_host_driven_device_test = rule(
             # push onto the device during test runtime, but we'll let the test
             # itself handle the configuration transition to those dependencies.
             doc = "Test target to run in tradefed.",
+            aspects = [collect_cc_libs_aspect],
         ),
     }),
     test = True,
