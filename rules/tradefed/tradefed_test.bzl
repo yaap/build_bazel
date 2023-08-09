@@ -14,12 +14,14 @@
 
 load("@bazel_skylib//lib:paths.bzl", "paths")
 load("@bazel_skylib//lib:unittest.bzl", "analysistest", "asserts")
+load("//build/bazel/rules/cc:cc_binary.bzl", "cc_binary")
+load("//build/bazel/rules/cc:cc_library_shared.bzl", "cc_library_shared")
 load("//build/bazel/rules/cc:cc_library_static.bzl", "cc_library_static")
 load(
     "//build/bazel/rules/test_common:paths.bzl",
     "get_output_and_package_dir_based_path",
 )
-load(":tradefed.bzl", "tradefed_device_driven_test", "tradefed_host_driven_device_test")
+load(":tradefed.bzl", "tradefed_device_driven_test", "tradefed_deviceless_test", "tradefed_host_driven_device_test")
 
 def _test_tradefed_config_generation_impl(ctx):
     env = analysistest.begin(ctx)
@@ -156,6 +158,108 @@ def tradefed_cc_host_outputs_generate_test_config():
     )
     return name + "_test"
 
+def _tradefed_cc_copy_runfiles_test_impl(ctx):
+    env = analysistest.begin(ctx)
+    target = analysistest.target_under_test(env)
+    actions = analysistest.target_actions(env)
+    copy_actions = [a for a in actions if a.mnemonic == "CopyFile"]
+    outputs = []
+    for action in copy_actions:
+        for output in action.outputs.to_list():
+            outputs.append(output.path)
+
+    for expect in ctx.attr.expected_files:
+        expect = get_output_and_package_dir_based_path(env, paths.join(target.label.name, "testcases", expect))
+        asserts.true(
+            env,
+            expect in outputs,
+            "Expected: " + expect +
+            " in outputs: " + str(outputs),
+        )
+
+    return analysistest.end(env)
+
+tradefed_cc_copy_runfiles_test = analysistest.make(
+    _tradefed_cc_copy_runfiles_test_impl,
+    attrs = {
+        "expected_files": attr.string_list(
+            doc = "Files should be copied.",
+        ),
+    },
+    config_settings = {
+        "//command_line_option:platforms": "@//build/bazel/tests/products:aosp_x86_64_for_testing",
+    },
+)
+
+def tradefed_cc_copy_runfiles():
+    name = "tradefed_cc_copy_runfiles"
+    test_name = name + "_test"
+
+    cc_library_shared(
+        name = name + "_shared_lib_1",
+        srcs = [name + "_shared_lib_1.cc"],
+        dynamic_deps = [name + "_shared_lib_2"],
+        tags = ["manual"],
+    )
+
+    cc_library_shared(
+        name = name + "_shared_lib_2",
+        srcs = [name + "_shared_lib_2.cc"],
+        tags = ["manual"],
+    )
+
+    cc_library_shared(
+        name = name + "_shared_lib_3",
+        srcs = [name + "_shared_lib_3.cc"],
+        tags = ["manual"],
+    )
+
+    cc_library_shared(
+        name = name + "_shared_lib_4",
+        srcs = [name + "_shared_lib_4.cc"],
+        tags = ["manual"],
+    )
+
+    cc_library_static(
+        name = name + "_static_lib_1",
+        srcs = [name + "_static_lib_1.cc"],
+        dynamic_deps = [name + "_shared_lib_3"],
+        tags = ["manual"],
+    )
+
+    cc_binary(
+        name = name + "__tf_internal",
+        generate_cc_test = True,
+        deps = [name + "_static_lib_1"],
+        dynamic_deps = [name + "_shared_lib_1"],
+        runtime_deps = [name + "_shared_lib_4"],
+        data = ["data/a.text"],
+        tags = ["manual"],
+    )
+
+    tradefed_deviceless_test(
+        name = name,
+        tags = ["manual"],
+        test = name + "__tf_internal",
+        test_config = "//build/bazel/rules/tradefed/test:example_config.xml",
+    )
+
+    tradefed_cc_copy_runfiles_test(
+        name = test_name,
+        target_under_test = name,
+        expected_files = [
+            "tradefed_cc_copy_runfiles.config",
+            "tradefed_cc_copy_runfiles",
+            "data/a.text",
+            "lib64/tradefed_cc_copy_runfiles_shared_lib_1.so",
+            "lib64/tradefed_cc_copy_runfiles_shared_lib_2.so",
+            "lib64/tradefed_cc_copy_runfiles_shared_lib_3.so",
+            "lib64/tradefed_cc_copy_runfiles_shared_lib_4.so",
+        ],
+    )
+
+    return test_name
+
 def tradefed_test_suite(name):
     native.test_suite(
         name = name,
@@ -163,5 +267,6 @@ def tradefed_test_suite(name):
             tradefed_cc_outputs(),
             tradefed_cc_host_outputs(),
             tradefed_cc_host_outputs_generate_test_config(),
+            tradefed_cc_copy_runfiles(),
         ],
     )
