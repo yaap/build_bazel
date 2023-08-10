@@ -437,9 +437,16 @@ def _run_apexer(ctx, apex_toolchain):
     notices_file = _generate_notices(ctx, apex_toolchain)
     api_fingerprint_file = None
 
+    # NOTE: When used as inputs to another sandboxed action, this directory
+    # artifact's inner files will be made up of symlinks. Ensure that the
+    # aforementioned action handles symlinks correctly (e.g. following
+    # symlinks).
+    staging_dir = ctx.actions.declare_directory(ctx.attr.name + "_staging_dir")
+
     file_mapping_file = ctx.actions.declare_file(ctx.attr.name + "_apex_file_mapping.json")
     ctx.actions.write(file_mapping_file, json.encode({
         "file_mapping": {k: v.path for k, v in file_mapping.items()},
+        "staging_dir_path": staging_dir.path,
     }))
 
     # Outputs
@@ -449,14 +456,6 @@ def _run_apexer(ctx, apex_toolchain):
 
     # Arguments
     command = [ctx.executable._staging_dir_builder.path, file_mapping_file.path]
-
-    # NOTE: When used as inputs to another sandboxed action, this directory
-    # artifact's inner files will be made up of symlinks. Ensure that the
-    # aforementioned action handles symlinks correctly (e.g. following
-    # symlinks).
-    staging_dir = ctx.actions.declare_directory(ctx.attr.name + "_staging_dir")
-
-    command.append(staging_dir.path)
 
     # start of apexer cmd
     command.append(apexer_files.executable.path)
