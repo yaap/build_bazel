@@ -24,12 +24,20 @@ _global_rustc_flags = list(constants.GLOBAL_RUSTC_FLAGS)
 # rules_rust already set `--color=always`
 _global_rustc_flags.remove("--color=always")
 
-# (b/301466790): Set linting flags to rustc before checking in BUILD files
+# TODO: b/301466790 - Set linting flags to rustc before checking in BUILD files
 _global_rustc_flags.append("--cap-lints=allow")
 
 _linux_host_rustc_flags = ["-Clink-args={}".format(" ".join(constants.LINUX_HOST_GLOBAL_LINK_FLAGS))]
 
+_device_global_rustc_flags = list(constants.DEVICE_GLOBAL_RUSTC_FLAGS)
+
+_device_global_rustc_flags.extend(
+    ["-Clink-args={}".format(" ".join(constants.DEVICE_GLOBAL_LINK_FLAGS))],
+)
+
 flags = struct(
     global_rustc_flags = _global_rustc_flags,
     linux_host_rustc_flags = _linux_host_rustc_flags,
+    device_global_rustc_flags = _device_global_rustc_flags,
+    device_arm64_rustc_flags = constants.DEVICE_ARM64_RUSTC_FLAGS,
 )
