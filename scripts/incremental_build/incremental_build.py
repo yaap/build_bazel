@@ -295,7 +295,6 @@ def main():
         for cujstep in cuj_group.steps:
             desc = cujstep.verb
             desc = f"{desc} {cuj_group.description}".strip()
-            desc = f"{desc} {user_input.description}".strip()
             logging.info(
                 "********* %s %s [%s] **********",
                 build_type.name,
@@ -316,6 +315,7 @@ def main():
                 )
                 build_info.warmup = cuj_group == cuj_catalog.Warmup
                 build_info.rebuild = run != 0
+                build_info.tag = user_input.tag
 
                 logging.info(json.dumps(build_info, indent=2, cls=util.CustomEncoder))
 
