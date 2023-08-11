@@ -245,6 +245,8 @@ def _run_cuj(
 def _display(prop_regex: str):
     user_input = ui.get_user_input()
     metrics = user_input.log_dir.joinpath(util.METRICS_TABLE)
+    if not metrics.exists():
+        perf_metrics.tabulate_metrics_csv(user_input.log_dir)
     perf_metrics.display_tabulated_metrics(user_input.log_dir, user_input.ci_mode)
     pretty.summarize(
         metrics,
