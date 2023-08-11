@@ -75,8 +75,6 @@ def _partition_impl(ctx):
     staging_dir_builder_options_file = ctx.actions.declare_file(ctx.attr.name + "/staging_dir_builder_options.json")
     ctx.actions.write(staging_dir_builder_options_file, json.encode(staging_dir_builder_options))
 
-    staging_dir = ctx.actions.declare_directory(ctx.attr.name + "_staging_dir")
-
     build_image_files = toolchain.build_image[DefaultInfo].files_to_run
 
     # These are tools that are run from build_image or another tool that build_image runs.
@@ -97,16 +95,15 @@ def _partition_impl(ctx):
             build_image_files,
             python_interpreter,
         ],
-        outputs = [output_image, staging_dir],
+        outputs = [output_image],
         executable = ctx.executable._staging_dir_builder,
         arguments = [
             staging_dir_builder_options_file.path,
-            staging_dir.path,
             build_image_files.executable.path,
-            staging_dir.path,
+            "STAGING_DIR_PLACEHOLDER",
             image_info.path,
             output_image.path,
-            staging_dir.path,
+            "STAGING_DIR_PLACEHOLDER",
         ],
         mnemonic = "BuildPartition",
         env = {

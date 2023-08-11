@@ -76,6 +76,9 @@ echo '
 
 output_file="${output_dir}/test.apex"
 
+staging_dir=$(mktemp -d /tmp/temporary-dir.XXXXXXXX)
+trap 'rm -rf -- "${staging_dir}"' EXIT
+
 # Create the wrapper manifest file
 staging_dir_builder_options_file=$(mktemp)
 echo "{
@@ -86,7 +89,8 @@ echo "{
     \"dir5/two_level_sym_in_execroot\": \"${input_dir}/two_level_sym_in_execroot\",
     \"dir6/two_level_sym_not_in_execroot\": \"${input_dir}/two_level_sym_not_in_execroot\",
     \"dir7/three_level_sym_in_execroot\": \"${input_dir}/three_level_sym_in_execroot\"
-  }
+  },
+  \"staging_dir_path\": \"${staging_dir}\"
 }" > ${staging_dir_builder_options_file}
 
 canned_fs_config=$(mktemp)
@@ -109,15 +113,11 @@ echo "/ 0 2000 0755
 
 apexer_tool_paths=${avb_tool_path}:${avb_tool_path}:${e2fsdroid_path}:${mke2fs_path}:${resize2fs_path}:${debugfs_path}:${soong_zip_path}:${aapt2_path}:${sefcontext_compile_path}
 
-staging_dir=$(mktemp -d /tmp/temporary-dir.XXXXXXXX)
-trap 'rm -rf -- "${staging_dir}"' EXIT
-
 #############################################
 # run staging_dir_builder
 #############################################
 "${RUNFILES_DIR}/__main__/build/bazel/rules/staging_dir_builder" \
   ${staging_dir_builder_options_file} \
-  ${staging_dir} \
   ${apexer_tool_path} \
   --manifest ${manifest_file} \
   --file_contexts ${file_contexts_file} \
