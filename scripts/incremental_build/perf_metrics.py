@@ -62,6 +62,13 @@ CRITICAL_PATH = "soong.log"
 SOONG_BUILD_PB = "soong_build_metrics.pb"
 SOONG_PB = "soong_metrics"
 
+def _convert_pprof_to_human_readable_format(pprof: Path, output_type: str = 'pdf'):
+    output = pprof.with_suffix("." + output_type).name
+    subprocess.run(
+        f"go tool pprof -{output_type} -output {output} {pprof.name}",
+        shell=True,
+        cwd=pprof.parent
+    )
 
 def _archive_pprof(envvar: str, d:Path):
     if envvar not in os.environ:
@@ -76,6 +83,7 @@ def _archive_pprof(envvar: str, d:Path):
     for profile in os.listdir(str(pprof_prefix.parent)):
         if profile.startswith(f"{pprof_prefix.name}."):
             shutil.move(pprof_prefix.with_name(profile), d)
+            _convert_pprof_to_human_readable_format(d.joinpath(profile))
 
 
 def archive_run(d: Path, build_info: util.BuildInfo):
