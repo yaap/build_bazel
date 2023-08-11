@@ -14,62 +14,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import argparse
 import json
 import os
 import shutil
 import subprocess
 import sys
-import argparse
+import tempfile
 
-def build_staging_dir(options_path, staging_dir_path, command_argv):
+def build_staging_dir(staging_dir_path, file_mapping, command_argv, base_staging_dir=None):
     '''Create a staging dir with provided file mapping and apply the command in the dir.
 
     At least
 
     Args:
-      options_path (str): path to the options json
       staging_dir_path (str): path to the staging directory
+      file_mapping (str:str dict): Mapping from paths in the staging directory to source paths
       command_argv (str list): the command to be executed, with the first arg as the executable
+      base_staging_dir (optional str): The path to another staging directory to copy into this one before adding the files from the file_mapping
     '''
 
-    try:
-        with open(options_path, 'r') as f:
-            options = json.load(f)
-    except OSError as e:
-        sys.exit(str(e))
-    except json.JSONDecodeError as e:
-        sys.exit(options_path + ": JSON decode error: " + str(e))
-
-    # Validate and clean the options by making sure it's a dict[str, ?] with only these keys:
-    #   - file_mapping, which must be a dict[str, str]. Then we:
-    #     - Normalize the paths in the staging dir and stripping leading /s
-    #     - Make sure there are no duplicate paths in the staging dir
-    #     - Make sure no paths use .. to break out of the staging dir
-    if not isinstance(options, dict):
-        sys.exit(options_path + ": expected a JSON dict[str, ?]")
-    for k in options.keys():
-        if k not in ["file_mapping", "base_staging_dir"]:
-            sys.exit("Unknown option: " + str(k))
-    if not isinstance(options.get("file_mapping", {}), dict):
-        sys.exit(options_path + ": file_mapping: expected a JSON dict[str, str]")
-
-    file_mapping = {}
-    for path_in_staging_dir, path_in_bazel in options.get("file_mapping", {}).items():
-        if not isinstance(path_in_staging_dir, str) or not isinstance(path_in_bazel, str):
-            sys.exit(options_path + ": expected a JSON dict[str, str]")
-        path_in_staging_dir = os.path.normpath(path_in_staging_dir).lstrip('/')
-        if path_in_staging_dir in file_mapping:
-            sys.exit("Staging dir path repeated twice: " + path_in_staging_dir)
-        if path_in_staging_dir.startswith('../'):
-            sys.exit("Path attempts to break out of staging dir: " + path_in_staging_dir)
-        file_mapping[path_in_staging_dir] = path_in_bazel
-
-    if options.get("base_staging_dir"):
-        base_staging_dir = options["base_staging_dir"]
+    if base_staging_dir:
         # Resolve the symlink because we want to use copytree with symlinks=True later
         while os.path.islink(base_staging_dir):
             base_staging_dir = os.path.normpath(os.path.join(os.path.dirname(base_staging_dir), os.readlink(base_staging_dir)))
-        shutil.copytree(base_staging_dir, staging_dir_path, symlinks=True)
+        shutil.copytree(base_staging_dir, staging_dir_path, symlinks=True, dirs_exist_ok=True)
 
     for path_in_staging_dir, path_in_bazel in file_mapping.items():
         path_in_staging_dir = os.path.join(staging_dir_path, path_in_staging_dir)
@@ -130,20 +99,60 @@ def main():
     be copied there. The rest of the arguments will be run as a separate command.
 
     Example:
-    staging_dir_builder options.json path/to/staging_dir path/to/apexer --various-apexer-flags path/to/out.apex.unsigned
+    staging_dir_builder options.json path/to/apexer --various-apexer-flags path/to/out.apex.unsigned
     '''
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "options_path",
         help="""Path to a JSON file containing options for staging_dir_builder. The top level object must be a dict. The keys for the dict can be:
-file_mapping: A dict mapping from <staging dir path> to <bazel input path>""",
-    )
-    parser.add_argument(
-        "staging_dir_path",
-        help="Path to a directory to store the staging directory content.",
+file_mapping: A dict mapping from <staging dir path> to <bazel input path>
+staging_dir_path: A string path to use as the output staging dir. If not given, a temporary directory will be used, and STAGING_DIR_PLACEHOLDER in the command will be substituted with the path to the temporary directory.
+base_staging_dir: A string path to a staging dir to copy to the output staging dir before any of the files from the file_mapping are copied. Used to import the Make staging directory.""",
     )
     args, command_argv = parser.parse_known_args()
-    build_staging_dir(args.options_path, args.staging_dir_path, command_argv)
+
+    try:
+        with open(args.options_path, 'r') as f:
+            options = json.load(f)
+    except OSError as e:
+        sys.exit(str(e))
+    except json.JSONDecodeError as e:
+        sys.exit(options_path + ": JSON decode error: " + str(e))
+
+    # Validate and clean the options by making sure it's a dict[str, ?] with only these keys:
+    #   - file_mapping, which must be a dict[str, str]. Then we:
+    #     - Normalize the paths in the staging dir and stripping leading /s
+    #     - Make sure there are no duplicate paths in the staging dir
+    #     - Make sure no paths use .. to break out of the staging dir
+    if not isinstance(options, dict):
+        sys.exit(options_path + ": expected a JSON dict[str, ?]")
+    for k in options.keys():
+        if k not in ["file_mapping", "base_staging_dir", "staging_dir_path"]:
+            sys.exit("Unknown option: " + str(k))
+    if not isinstance(options.get("file_mapping", {}), dict):
+        sys.exit(options_path + ": file_mapping: expected a JSON dict[str, str]")
+
+    file_mapping = {}
+    for path_in_staging_dir, path_in_bazel in options.get("file_mapping", {}).items():
+        if not isinstance(path_in_staging_dir, str) or not isinstance(path_in_bazel, str):
+            sys.exit(options_path + ": expected a JSON dict[str, str]")
+        path_in_staging_dir = os.path.normpath(path_in_staging_dir).lstrip('/')
+        if path_in_staging_dir in file_mapping:
+            sys.exit("Staging dir path repeated twice: " + path_in_staging_dir)
+        if path_in_staging_dir.startswith('../'):
+            sys.exit("Path attempts to break out of staging dir: " + path_in_staging_dir)
+        file_mapping[path_in_staging_dir] = path_in_bazel
+
+    if options.get("staging_dir_path"):
+        build_staging_dir(options.get("staging_dir_path"), file_mapping, command_argv, options.get("base_staging_dir"))
+    else:
+        if "STAGING_DIR_PLACEHOLDER" not in command_argv:
+            sys.exit('At least one argument must be "STAGING_DIR_PLACEHOLDER"')
+        with tempfile.TemporaryDirectory() as staging_dir_path:
+            for i in range(len(command_argv)):
+                if command_argv[i] == "STAGING_DIR_PLACEHOLDER":
+                    command_argv[i] = staging_dir_path
+            build_staging_dir(staging_dir_path, file_mapping, command_argv, options.get("base_staging_dir"))
 
 if __name__ == '__main__':
     main()
