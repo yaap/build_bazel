@@ -15,7 +15,7 @@
 load("@soong_injection//product_config_platforms:product_labels.bzl", _product_labels = "product_labels")
 load("//build/bazel/platforms/arch/variants:constants.bzl", _arch_constants = "constants")
 load(
-    "//prebuilts/clang/host/linux-x86:cc_toolchain_constants.bzl",
+    "//build/bazel/toolchains/clang/host/linux-x86:cc_toolchain_constants.bzl",
     "arch_to_variants",
     "variant_constraints",
     "variant_name",
