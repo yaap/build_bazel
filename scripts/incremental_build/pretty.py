@@ -36,9 +36,13 @@ def _normalize_rebuild(row: Row):
         r"^(rebuild)-[\d+](.*)$", "\\1\\2", row.get("description")
     )
 
+def _get_tagged_build_type(row: Row) -> str:
+    build_type = row.get("build_type")
+    tag = row.get("tag")
+    return build_type if not tag else f"{build_type}:{tag}"
 
 def _build_types(rows: list[Row]) -> list[str]:
-    return list(dict.fromkeys(r.get("build_type") for r in rows).keys())
+    return list(dict.fromkeys(_get_tagged_build_type(row) for row in rows).keys())
 
 
 def _write_table(lines: list[list[str]]) -> str:
@@ -123,7 +127,7 @@ def summarize_helper(metrics: TextIO, regex: str, agg: Aggregation) -> dict[str,
         by_targets = util.groupby(cuj_rows, lambda l: l.get("targets"))
         lines = []
         for targets, target_rows in by_targets.items():
-            by_build_type = util.groupby(target_rows, lambda l: l.get("build_type"))
+            by_build_type = util.groupby(target_rows, _get_tagged_build_type)
             vals = [
                 _aggregate(prop, by_build_type.get(build_type), agg)
                 for build_type in build_types
