@@ -2183,7 +2183,7 @@ def get_features(
     compile_only_flags = ctx.attr.compiler_flags
     linker_only_flags = ctx.attr.linker_flags
     deviceMaxPageSize = ctx.attr._device_max_page_size_supported[BuildSettingInfo].value
-    if deviceMaxPageSize and (target_arch == "arm" or target_arch == "arm64"):
+    if deviceMaxPageSize and target_arch == "arm64":
         linker_only_flags = ctx.attr.linker_flags + \
                             ["-Wl,-z,max-page-size=" + deviceMaxPageSize]
 
