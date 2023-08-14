@@ -60,8 +60,6 @@ HOST_ONLY_TEST_TARGETS=(
   //tools/metalava:metalava
   # TODO(b/268186228): adb_test fails only on CI
   -//packages/modules/adb:adb_test
-  # TODO(b/268185249): libbase_test asserts on the Soong basename of the test
-  -//system/libbase:libbase_test__tf_deviceless_test
   # TODO(b/290909930): "jemalloc5_stresstests did not report any run"
   -//external/jemalloc_new:jemalloc5_stresstests__tf_deviceless_test
   # TODO(b/290909364): "logplot_tests did not report any run"
