@@ -22,7 +22,11 @@ cc_library_static {
     name: "cc_library_with_proto_that_imports_another_proto_in_src",
     srcs: [
         "foo.proto",
-        "import_foo.proto", // contains an `import "foo.proto"`
+        // contains an `import "foo.proto"`
+        "import_foo.proto",
+        // contains an `import "foo.proto"`
+        // but this is is in a different package because there is an Android.bp file
+        "subpackage/import_foo.proto",
     ],
     host_supported: true,
     proto: {
