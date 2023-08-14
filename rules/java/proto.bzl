@@ -120,6 +120,7 @@ def _java_proto_library(
         srcs = [proto_sources_name],
         deps = deps,
         sdk_version = sdk_version,
+        exports = [proto_dep],
         **kwargs
     )
 
