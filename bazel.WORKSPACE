@@ -214,3 +214,8 @@ go_wrap_sdk(
 go_rules_dependencies()
 
 go_register_toolchains(experiments = [])
+
+local_repository(
+    name = "rules_rust",
+    path = "external/bazelbuild-rules_rust",
+)
