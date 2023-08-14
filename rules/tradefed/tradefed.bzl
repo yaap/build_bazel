@@ -462,7 +462,7 @@ def tradefed_test_suite(
             # There shouldn't be package-external dependencies on the internal tests.
             ("visibility", ["//visibility:private"]),
             # The internal tests shouldn't run with ... or :all target patterns
-            ("tags", ["manual"]),
+            ("tags", ["manual"] + tags),
             # Tradefed harness always builds for host.
             ("target_compatible_with", ["//build/bazel/platforms/os:linux"]),
         ],

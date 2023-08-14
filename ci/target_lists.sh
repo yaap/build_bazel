@@ -58,8 +58,8 @@ TEST_TARGETS=(
 HOST_ONLY_TEST_TARGETS=(
   //tools/trebuchet:AnalyzerKt
   //tools/metalava:metalava
-  # TODO(b/268186228): adb_test fails only on CI
-  -//packages/modules/adb:adb_test
+  # This is explicitly listed to prevent b/294514745
+  //packages/modules/adb:adb_test
   # TODO(b/290909930): "jemalloc5_stresstests did not report any run"
   -//external/jemalloc_new:jemalloc5_stresstests__tf_deviceless_test
   # TODO(b/290909364): "logplot_tests did not report any run"
