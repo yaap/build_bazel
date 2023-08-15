@@ -1,3 +1,17 @@
+# Copyright (C) 2023 The Android Open Source Project
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """Feature definitions for Android's C/C++ toolchain.
 
 This top level list of features are available through the get_features function.
@@ -13,6 +27,8 @@ load(
     "variable_with_value",
     "with_feature_set",
 )
+load("@soong_injection//api_levels:platform_versions.bzl", "platform_versions")
+load("//build/bazel/rules/common:api.bzl", "api")
 load(
     ":cc_toolchain_constants.bzl",
     _actions = "actions",
@@ -29,8 +45,6 @@ load(
     _generated_sanitizer_constants = "generated_sanitizer_constants",
     _oses = "oses",
 )
-load("//build/bazel/rules/common:api.bzl", "api")
-load("@soong_injection//api_levels:platform_versions.bzl", "platform_versions")
 
 def is_os_device(os):
     return os == _oses.Android
