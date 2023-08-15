@@ -510,6 +510,11 @@ def adjacency_list_from_json(
   def collect_dependencies(module, deps_names):
     module_info = None
     name = module["Name"]
+    props = dependency_analysis.get_properties(module)
+    converted = (
+        props.get("Bazel_module.Bp2build_available", "false") == "true"
+        or props.get("Bazel_module.Label", "") != ""
+    )
     name_to_info.setdefault(
         name,
         ModuleInfo(
@@ -521,6 +526,7 @@ def adjacency_list_from_json(
             ),
             dirname=os.path.dirname(module["Blueprint"]),
             num_deps=len(deps_names),
+            converted=converted,
         ),
     )
 
@@ -682,7 +688,7 @@ Stderr:
   return module_adjacency_list, props_by_converted_module_type
 
 
-def add_created_by_to_converted(
+def add_manual_conversion_to_converted(
     converted: Set[str], module_adjacency_list: Dict[ModuleInfo, DepInfo]
 ) -> Set[str]:
   modules_by_name = {m.name: m for m in module_adjacency_list.keys()}
@@ -696,7 +702,7 @@ def add_created_by_to_converted(
     if module_name not in modules_by_name:
       return False
     module = modules_by_name[module_name]
-    if module.created_by and _update_converted(module.created_by):
+    if module.converted:
       converted_modules.add(module_name)
       return True
     return False
@@ -894,7 +900,7 @@ def main():
         f" ({args.type}) or package {args.package_dir} you requested are valid."
     )
 
-  converted = add_created_by_to_converted(converted, module_adjacency_list)
+  converted = add_manual_conversion_to_converted(converted, module_adjacency_list)
 
   output_file = args.out_file
   if mode == "graph":
