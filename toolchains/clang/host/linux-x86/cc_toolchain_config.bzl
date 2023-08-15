@@ -1,11 +1,26 @@
+# Copyright (C) 2023 The Android Open Source Project
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+load("@bazel_skylib//lib:paths.bzl", "paths")
+load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 load(
     "@bazel_tools//tools/cpp:cc_toolchain_config_lib.bzl",
     "action_config",
     "tool",
     "tool_path",
 )
-load("@bazel_skylib//lib:paths.bzl", "paths")
-load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
+load("//build/bazel/platforms/arch/variants:constants.bzl", _arch_constants = "constants")
 load(
     ":cc_toolchain_constants.bzl",
     "arch_to_variants",
@@ -17,7 +32,6 @@ load(
     "x86_musl_host_toolchains",
     _actions = "actions",
     _enabled_features = "enabled_features",
-    _flags = "flags",
     _generated_config_constants = "generated_config_constants",
     _generated_sanitizer_constants = "generated_sanitizer_constants",
 )
@@ -28,7 +42,6 @@ load(
     "int_overflow_ignorelist_path",
     "sanitizer_blocklist_dict",
 )
-load("//build/bazel/platforms/arch/variants:constants.bzl", _arch_constants = "constants")
 
 # Clang-specific configuration.
 _ClangVersionInfo = provider(fields = ["clang_version", "includes"])
