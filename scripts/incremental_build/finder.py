@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # Copyright (C) 2023 The Android Open Source Project
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,11 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import functools
+import argparse
 import glob
 import os
 import subprocess
 from pathlib import Path
+import textwrap
+from typing import Generator, Iterator
 
 from util import get_out_dir
 from util import get_top_dir
@@ -32,73 +35,107 @@ def is_git_repo(p: Path) -> bool:
     return git.returncode == 0
 
 
-def any_file(pattern: str) -> Path:
-    return any_file_under(get_top_dir(), pattern)
+def confirm(root_dir: Path, *globs: str):
+    for g in globs:
+        disallowed = g.startswith("!")
+        if disallowed:
+            g = g[1:]
+        paths = glob.iglob(g, root_dir=root_dir, recursive=True)
+        path = next(paths, None)
+        if disallowed:
+            if path is not None:
+                raise RuntimeError(f"{root_dir}/{path} unexpected")
+        else:
+            if path is None:
+                raise RuntimeError(f"{root_dir}/{g} doesn't match")
 
 
-def any_file_under(root: Path, pattern: str) -> Path:
-    if pattern.startswith("!"):
-        raise RuntimeError(f"provide a filename instead of {pattern}")
-    d, files = any_match_under(get_top_dir() if root is None else root, pattern)
-    files = [d.joinpath(f) for f in files]
-    try:
-        file = next(f for f in files if f.is_file())
-        return file
-    except StopIteration:
-        raise RuntimeError(f"no file matched {pattern}")
+def _should_visit(c: os.DirEntry) -> bool:
+    return c.is_dir() and not (
+        c.is_symlink()
+        or "." in c.name
+        or "test" in c.name
+        or Path(c.path) == get_out_dir()
+    )
 
 
-def any_dir_under(root: Path, *patterns: str) -> Path:
-    d, _ = any_match_under(root, *patterns)
-    return d
-
-
-def any_match(*patterns: str) -> tuple[Path, list[str]]:
-    return any_match_under(get_top_dir(), *patterns)
-
-
-@functools.cache
-def any_match_under(root: Path, *patterns: str) -> tuple[Path, list[str]]:
+def find_matches(root_dir: Path, *globs: str) -> Generator[Path, None, None]:
     """
     Finds sub-paths satisfying the patterns
-    :param patterns glob pattern to match or unmatch if starting with "!"
-    :param root the first directory to start searching from
-    :returns the dir and sub-paths matching the pattern
+    :param root_dir the first directory to start searching from
+    :param globs glob patterns to require or disallow (if starting with "!")
+    :returns dirs satisfying the glbos
     """
-    bfs: list[Path] = [root]
+    bfs: list[Path] = [root_dir]
     while len(bfs) > 0:
         first = bfs.pop(0)
         if is_git_repo(first):
-            matches: list[str] = []
-            for pattern in patterns:
-                negate = pattern.startswith("!")
-                if negate:
-                    pattern = pattern.removeprefix("!")
-                try:
-                    found_match = next(
-                        glob.iglob(pattern, root_dir=first, recursive=True)
-                    )
-                except StopIteration:
-                    found_match = None
-                if negate and found_match is not None:
-                    break
-                if not negate:
-                    if found_match is None:
-                        break
-                    else:
-                        matches.append(found_match)
-            else:
-                return Path(first), matches
-
-        def should_visit(c: os.DirEntry) -> bool:
-            return c.is_dir() and not (
-                c.is_symlink()
-                or "." in c.name
-                or "test" in c.name
-                or Path(c.path) == get_out_dir()
-            )
-
-        children = [Path(c.path) for c in os.scandir(first) if should_visit(c)]
+            try:
+                confirm(first, *globs)
+                yield first
+            except RuntimeError:
+                pass
+        children = [Path(c.path) for c in os.scandir(first) if _should_visit(c)]
         children.sort()
         bfs.extend(children)
-    raise RuntimeError(f"No suitable directory for {patterns}")
+
+
+def main():
+    p = argparse.ArgumentParser(
+        formatter_class=argparse.RawTextHelpFormatter,
+        description=textwrap.dedent(
+            f"""\
+            A utility to find a directory that have descendants that satisfy
+            specified required glob patterns and have no descendent that
+            contradict any specified disallowed glob pattern.
+
+            Example:
+                {Path(__file__).name} '**/Android.bp'
+                {Path(__file__).name} '!**/BUILD' '**/Android.bp'
+
+            Don't forget to SINGLE QUOTE patterns to avoid shell glob expansion!
+            """
+        ),
+    )
+    p.add_argument(
+        "globs",
+        nargs="+",
+        help="""glob patterns to require or disallow(if preceded with "!")""",
+    )
+    p.add_argument(
+        "--root_dir",
+        "-r",
+        type=lambda s: Path(s).resolve(),
+        default=get_top_dir(),
+        help=textwrap.dedent(
+            """\
+                top dir to interpret the glob patterns relative to
+                defaults to %(default)s
+            """
+        ),
+    )
+    p.add_argument(
+        "--max",
+        "-m",
+        type=int,
+        default=1,
+        help=textwrap.dedent(
+            """\
+                maximum number of matching directories to show
+                defaults to %(default)s
+            """
+        ),
+    )
+    options = p.parse_args()
+    results = find_matches(options.root_dir, *options.globs)
+    max: int = options.max
+    while max > 0:
+        max -= 1
+        path = next(results, None)
+        if path is None:
+            break
+        print(f"{path.relative_to(get_top_dir())}")
+
+
+if __name__ == "__main__":
+    main()
