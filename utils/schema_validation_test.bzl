@@ -298,6 +298,38 @@ def _tuple_of_strings_failure():
     )
     return test_name
 
+def _unique_list_of_strings_success():
+    test_name = "unique_list_of_strings_success"
+    data = ["a", "b"]
+    schema = {
+        "type": "list",
+        "of": {"type": "string"},
+        "unique": True,
+    }
+    message = validate(data, schema, fail_on_error = False)
+    _string_comparison_test(
+        name = test_name,
+        expected = "",
+        actual = message,
+    )
+    return test_name
+
+def _unique_list_of_strings_failure():
+    test_name = "unique_list_of_strings_failure"
+    data = ["a", "b", "a"]
+    schema = {
+        "type": "list",
+        "of": {"type": "string"},
+        "unique": True,
+    }
+    message = validate(data, schema, fail_on_error = False)
+    _string_comparison_test(
+        name = test_name,
+        expected = "Expected all elements to be unique, but saw 'a' twice",
+        actual = message,
+    )
+    return test_name
+
 def _dict_success():
     test_name = "dict_success"
     data = {
@@ -504,6 +536,8 @@ def schema_validation_test_suite(name):
             _list_of_strings_failure(),
             _tuple_of_strings_success(),
             _tuple_of_strings_failure(),
+            _unique_list_of_strings_success(),
+            _unique_list_of_strings_failure(),
             _dict_success(),
             _dict_missing_required_key(),
             _dict_extra_keys(),
