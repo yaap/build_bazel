@@ -57,6 +57,7 @@ _schema_schema = {
             ],
         },
         "of": {},  # to be filled in later
+        "unique": {"type": "bool"},
         "length": {"or": [
             {"type": "string"},
             {"type": "int"},
@@ -176,6 +177,24 @@ def _validate_impl(obj, schema):
                 if obj != schema["value"]:
                     ret = "Expected %s, got %s" % (schema["value"], obj)
                     stack.pop()
+                    continue
+            if schema.get("unique", False):
+                if ty != "list" and ty != "tuple":
+                    fail("'unique' is only valid for lists or tuples, got: " + ty)
+                l = sorted(obj)
+                done = False
+                for i in range(len(l) - 1):
+                    if type(l[i]) not in ["string", "int", "float", "bool", "NoneType", "bytes"]:
+                        ret = "'unique' only works on lists/tuples of scalar types, got: " + type(l[i])
+                        stack.pop()
+                        done = True
+                        break
+                    if l[i] == l[i + 1]:
+                        ret = "Expected all elements to be unique, but saw '%s' twice" % str(l[i])
+                        stack.pop()
+                        done = True
+                        break
+                if done:
                     continue
             if "of" in schema:
                 if ty != "list" and ty != "tuple":
