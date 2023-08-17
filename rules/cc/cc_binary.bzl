@@ -52,6 +52,7 @@ def cc_binary(
         stl = "",
         cpp_std = "",
         additional_linker_inputs = None,
+        additional_compiler_inputs = [],
         strip = {},
         features = [],
         target_compatible_with = [],
@@ -156,6 +157,7 @@ def cc_binary(
         tidy_disabled_srcs = tidy_disabled_srcs,
         tidy_timeout_srcs = tidy_timeout_srcs,
         native_coverage = native_coverage,
+        additional_compiler_inputs = additional_compiler_inputs,
     )
 
     binary_dynamic_deps = add_lists_defaulting_to_none(

@@ -74,6 +74,7 @@ def cc_library_shared(
         cpp_std = "",
         c_std = "",
         additional_linker_inputs = None,
+        additional_compiler_inputs = [],
 
         # Purely _shared arguments
         strip = {},
@@ -197,6 +198,7 @@ def cc_library_shared(
         tidy_disabled_srcs = tidy_disabled_srcs,
         tidy_timeout_srcs = tidy_timeout_srcs,
         tidy_gen_header_filter = tidy_gen_header_filter,
+        additional_compiler_inputs = additional_compiler_inputs,
     )
 
     # dynamic deps are to be linked into the shared library via
