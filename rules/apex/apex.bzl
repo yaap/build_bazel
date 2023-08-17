@@ -109,7 +109,7 @@ def _create_file_mapping(ctx):
                     stripped.basename,
                     stripped,
                     "nativeSharedLib",
-                    stripped.owner,
+                    lib_file.generating_rule_owner,
                     arch = arch,
                     unstripped = unstripped,
                     metadata_file = lib_file.metadata_file,
