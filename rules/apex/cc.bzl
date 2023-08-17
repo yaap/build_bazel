@@ -224,9 +224,24 @@ This apex should likely use stubs of the target instead." % (target, ctx.attr._a
             stripped = target[CcSharedLibraryOutputInfo].output_file,
             unstripped = target[CcUnstrippedInfo].unstripped,
             metadata_file = target[MetadataFileInfo].metadata_file,
+            generating_rule_owner = target[CcSharedLibraryOutputInfo].output_file.owner,
         ))
         if hasattr(ctx.rule.attr, "shared"):
             transitive_deps.append(ctx.rule.attr.shared[0])
+    elif ctx.rule.kind == "cc_prebuilt_library_shared":
+        files = target[DefaultInfo].files.to_list()
+        if len(files) != 1:
+            fail("expected only 1 file in %s[DefaultInfo].files, but got %d" % (target.label, len(files)))
+        shared_object_files.append(struct(
+            # TODO: This file needs to actually be stripped.
+            stripped = files[0],
+            unstripped = files[0],
+            metadata_file = None,
+            # Normally the generating_rule_owner is the owner of the stripped
+            # output file, but the owner of files[0] has slashes in its name,
+            # and the APEX's make_module_name must not contain a slash.
+            generating_rule_owner = target.label,
+        ))
     elif ctx.rule.kind in ["cc_shared_library", "cc_binary"]:
         # Propagate along the dynamic_deps edges for binaries and shared libs
         if hasattr(ctx.rule.attr, "dynamic_deps"):
@@ -252,6 +267,7 @@ This apex should likely use stubs of the target instead." % (target, ctx.attr._a
                         stripped = output_file,
                         unstripped = unstripped,
                         metadata_file = dep[MetadataFileInfo].metadata_file,
+                        generating_rule_owner = output_file.owner,
                     ))
             transitive_deps.append(dep)
 
