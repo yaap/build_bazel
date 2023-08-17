@@ -47,6 +47,7 @@ def _cc_test_provides_androidmk_info():
         deps = [dep_name],
         whole_archive_deps = [whole_archive_dep_name],
         dynamic_deps = [dynamic_dep_name],
+        runs_on = ["host_without_device", "device"],
         target_compatible_with = ["//build/bazel/platforms/os:linux"],
         tags = ["manual"],
     )
