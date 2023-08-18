@@ -48,6 +48,7 @@ def cc_test(
         template_test_config = None,
         template_configs = [],
         template_install_base = None,
+        runs_on = [],
         visibility = None,
         target_compatible_with = None,
         **kwargs):
@@ -85,6 +86,8 @@ def cc_test(
         template_install_base = template_install_base,
         deviceless_test_config = "//build/make/core:native_host_test_config_template.xml",
         device_driven_test_config = "//build/make/core:native_test_config_template.xml",
+        host_driven_device_test_config = "//build/make/core:native_host_test_config_template.xml",
+        runs_on = runs_on,
         tags = tags,
         visibility = visibility,
         test_language = LANGUAGE_CC,
