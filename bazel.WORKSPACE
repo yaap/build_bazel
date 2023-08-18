@@ -45,8 +45,7 @@ local_repository(
 
 local_repository(
     name = "rules_cc",
-    # TODO(b/200202912): Re-route this when rules_cc is pulled into AOSP.
-    path = "build/bazel/rules/cc/stub_rules_cc",
+    path = "external/bazelbuild-rules_cc",
 )
 
 register_toolchains(
