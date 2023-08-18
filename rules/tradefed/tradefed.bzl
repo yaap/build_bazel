@@ -419,7 +419,8 @@ def tradefed_test_suite(
         test_language = "",
         deviceless_test_config = None,
         device_driven_test_config = None,
-        host_driven_device_test_config = None):
+        host_driven_device_test_config = None,
+        runs_on = []):
     """The tradefed_test_suite macro groups all three test types under a single test_suite.o
 
     This enables users or tools to simply run 'b test //path/to:foo_test_suite' and bazel
@@ -439,12 +440,29 @@ def tradefed_test_suite(
       deviceless_test_config: default Tradefed test config for the deviceless execution mode.
       device_driven_test_config: default Tradefed test config for the device driven execution mode.
       host_driven_device_test_config: default Tradefed test config for the host driven execution mode.
+      runs_on: platform variants that this test runs on. The allowed values are 'device', 'host_with_device' and 'host_without_device'.
     """
 
     # Validate names.
     if not test_dep.endswith(TEST_DEP_SUFFIX) or test_dep.removesuffix(TEST_DEP_SUFFIX) != name:
         fail("tradefed_test_suite.test_dep must be named %s%s, " % (name, TEST_DEP_SUFFIX) +
              "but got %s" % test_dep)
+
+    # TODO(b/296312548): Make `runs_on` a required attribute.
+    if runs_on:
+        if [p for p in runs_on if p not in ["device", "host_with_device", "host_without_device"]]:
+            fail("Invalid value in 'runs_on' attribute: has to be within 'device', 'host_with_device' and 'host_without_device'.")
+        if "host_with_device" in runs_on and "device" in runs_on:
+            fail("'host_with_device' and 'device' should not exist in the 'runs_on' attribute at same time.")
+        if "host_with_device" in runs_on and "host_without_device" in runs_on:
+            fail("'host_with_device' and 'host_without_device' should not exist in the 'runs_on' attribute at same time.")
+
+        if "host_with_device" not in runs_on:
+            host_driven_device_test_config = None
+        if "host_without_device" not in runs_on:
+            deviceless_test_config = None
+        if "device" not in runs_on:
+            device_driven_test_config = None
 
     # Shared attributes between all three test types. The only difference between them
     # are the default template_test_config at this level.
@@ -468,14 +486,17 @@ def tradefed_test_suite(
         ],
     )
 
+    tests = []
+
     # Tradefed deviceless test. Device NOT necessary. Tradefed will be invoked with --null-device.
-    tradefed_deviceless_test_name = name + "__tf_deviceless_test"
-    tests = [tradefed_deviceless_test_name]
-    tradefed_deviceless_test(
-        name = tradefed_deviceless_test_name,
-        template_test_config = None if test_config else deviceless_test_config,
-        **common_tradefed_attrs
-    )
+    if deviceless_test_config:
+        tradefed_deviceless_test_name = name + "__tf_deviceless_test"
+        tests.append(tradefed_deviceless_test_name)
+        tradefed_deviceless_test(
+            name = tradefed_deviceless_test_name,
+            template_test_config = None if test_config else deviceless_test_config,
+            **common_tradefed_attrs
+        )
 
     # | type             | deviceless / unit     | device-driven | host-driven device |
     # |------------------+-----------------------+---------------+--------------------|
