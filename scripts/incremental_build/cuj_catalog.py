@@ -28,6 +28,8 @@ import cuj
 import finder
 import ui
 import util
+import random
+import re
 from cuj import CujGroup
 from cuj import CujStep
 from cuj import InWorkspace
@@ -70,6 +72,69 @@ def modify_revert(file: Path, text: Optional[str] = None) -> CujGroup:
     return CujGroup(
         de_src(file), [CujStep("modify", add_line), CujStep("revert", revert)]
     )
+
+
+def regex_modify_revert(file: Path, pattern: str, replacement: str, modify_type: str) -> CujGroup:
+    """
+    :param file: the file to be edited and reverted
+    :param pattern: the strings that will be replaced
+    :param replacement: the replaced strings
+    :param modify_type: types of modification
+    :return: A pair of CujSteps, where the fist modifies the file and the
+    second reverts it
+    """
+    if not file.exists():
+        raise RuntimeError(f"{file} does not exist")
+
+    original_text: str
+
+    def modify():
+        nonlocal original_text
+        original_text = file.read_text()
+        modified_text = re.sub(pattern, replacement, original_text, count=1, flags=re.MULTILINE)
+        file.write_text(modified_text)
+
+    def revert():
+        file.write_text(original_text)
+
+    return CujGroup(
+        de_src(file), [CujStep(modify_type, modify), CujStep("revert", revert)]
+    )
+
+
+def modify_private_method(file: Path) -> CujGroup:
+    pattern = r'(private static boolean.*{)'
+    replacement =  r'\1 Log.d("Placeholder", "Placeholder{}");'.format(random.randint(0,1000))
+    modify_type = "modify_private_method"
+    return regex_modify_revert(file, pattern, replacement, modify_type)
+
+
+def add_private_field(file: Path) -> CujGroup:
+    pattern = r'^\}$'
+    replacement =  r'private static final int FOO = ' + str(random.randint(0,1000)) + ';\n}'
+    modify_type = "add_private_field"
+    return regex_modify_revert(file, pattern, replacement, modify_type)
+
+
+def add_public_api(file: Path) -> CujGroup:
+    pattern = r'\}$'
+    replacement =  r'public static final int BAZ = ' + str(random.randint(0,1000)) + ';\n}'
+    modify_type = "add_public_api"
+    return regex_modify_revert(file, pattern, replacement, modify_type)
+
+
+def modify_resource(file: Path) -> CujGroup:
+    pattern = r'>0<'
+    replacement = r'>' + str(random.randint(0,1000)) + r'<'
+    modify_type = "modify_resource"
+    return regex_modify_revert(file, pattern, replacement, modify_type)
+
+
+def add_resource(file: Path) -> CujGroup:
+    pattern = r'</resources>'
+    replacement = r'    <integer name="foo">' + str(random.randint(0,1000)) + r'</integer>\n</resources>'
+    modify_type = "add_resource"
+    return regex_modify_revert(file, pattern, replacement, modify_type)
 
 
 def create_delete(file: Path, ws: InWorkspace, text: Optional[str] = None) -> CujGroup:
@@ -376,6 +441,14 @@ def get_cujgroups() -> list[CujGroup]:
         modify_revert(src("packages/modules/adb/daemon/main.cpp")),
         modify_revert(src("frameworks/base/core/java/android/view/View.java")),
         modify_revert(src("frameworks/base/core/java/android/provider/Settings.java")),
+        modify_private_method(src("frameworks/base/core/java/android/provider/Settings.java")),
+        add_private_field(src("frameworks/base/core/java/android/provider/Settings.java")),
+        add_public_api(src("frameworks/base/core/java/android/provider/Settings.java")),
+        modify_private_method(src("frameworks/base/services/core/java/com/android/server/am/ActivityManagerService.java")),
+        add_private_field(src("frameworks/base/services/core/java/com/android/server/am/ActivityManagerService.java")),
+        add_public_api(src("frameworks/base/services/core/java/com/android/server/am/ActivityManagerService.java")),
+        modify_resource(src("frameworks/base/core/res/res/values/config.xml")),
+        add_resource(src("frameworks/base/core/res/res/values/config.xml")),
     ]
     unreferenced_file_cujs = [
         *[
