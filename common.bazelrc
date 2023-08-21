@@ -155,3 +155,10 @@ build --@io_bazel_rules_go//go/config:pure
 
 # Breaking bazel feature for the 7/25 release. b/292565910
 common --noincompatible_use_host_features
+
+# Run GoToolchainBinaryBuild in a sandbox
+# Without sandboxing, the action will run in an execution root that contains a symlink to prebuilts/go
+# This causes issues due to two separate factors combining together
+# a. The GOROOT in our checked in go binary is relative to android build top
+# b. GoToolchainBinaryBuild uses GOCACHE=$(mktemp -d)
+build --strategy GoToolchainBinaryBuild=sandboxed
