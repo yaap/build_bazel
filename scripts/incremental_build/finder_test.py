@@ -15,10 +15,15 @@ import os
 import unittest
 
 from finder import any_match
+from finder import is_git_repo
 from util import get_top_dir
 
 
 class UtilTest(unittest.TestCase):
+    def test_is_git_repo(self):
+        self.assertFalse(is_git_repo(get_top_dir()))
+        self.assertTrue(is_git_repo(get_top_dir().joinpath("build/soong")))
+
     def test_any_match(self):
         with self.subTest("root.bp"):
             path, matches = any_match("root.bp")
