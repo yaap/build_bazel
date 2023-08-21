@@ -32,12 +32,11 @@ class UtilTest(unittest.TestCase):
 
     def test_next_path(self):
         examples = [
-            ("output", "output-1"),
-            ("output.x", "output-1.x"),
-            ("output.x.y", "output-1.x.y"),
-            ("output-1", "output-2"),
-            ("output-9", "output-10"),
-            ("output-10", "output-11"),
+            ("output", "output-001"),
+            ("output-1", "output-002"),
+            ("output-09", "output-010"),
+            ("output-010", "output-011"),
+            ("output-999", "output-1000"),
         ]
         for pattern, expected in examples:
             with self.subTest(msg=pattern, pattern=pattern, expected=expected):
