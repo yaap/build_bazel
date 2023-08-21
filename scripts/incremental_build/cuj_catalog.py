@@ -17,7 +17,6 @@ import io
 import logging
 import shutil
 import tempfile
-import textwrap
 import uuid
 from pathlib import Path
 from typing import Final, Optional
@@ -358,41 +357,35 @@ def create_delete_unkept_build_file(build_file) -> CujGroup:
     )
 
 
-NON_LEAF = "*/*"
-"""If `a/*/*` is a valid path `a` is not a leaf directory"""
-LEAF = "!*/*"
-"""If `a/*/*` is not a valid path `a` is a leaf directory, i.e. has no other
-non-empty sub-directories"""
-PKG = ["Android.bp", "!BUILD", "!BUILD.bazel"]
-"""limiting the candidate to Android.bp file with no sibling bazel files"""
-PKG_FREE = ["!**/Android.bp", "!**/BUILD", "!**/BUILD.bazel"]
-"""no Android.bp or BUILD or BUILD.bazel file anywhere"""
-
-
 def _kept_build_cujs() -> list[CujGroup]:
     # Bp2BuildKeepExistingBuildFile(build/bazel) is True(recursive)
     kept = src("build/bazel")
-    pkg = finder.any_dir_under(kept, *PKG)
-    examples = [pkg.joinpath("BUILD"), pkg.joinpath("BUILD.bazel")]
+    finder.confirm(
+        kept,
+        "compliance/Android.bp",
+        "!compliance/BUILD",
+        "!compliance/BUILD.bazel",
+        "rules/python/BUILD",
+    )
 
     return [
-        *[create_delete_kept_build_file(build_file) for build_file in examples],
-        create_delete(pkg.joinpath("BUILD/kept-dir"), InWorkspace.SYMLINK),
-        modify_revert_kept_build_file(finder.any_file_under(kept, "BUILD")),
+        *[
+            create_delete_kept_build_file(kept.joinpath("compliance").joinpath(b))
+            for b in ["BUILD", "BUILD.bazel"]
+        ],
+        create_delete(kept.joinpath("BUILD/kept-dir"), InWorkspace.SYMLINK),
+        modify_revert_kept_build_file(kept.joinpath("rules/python/BUILD")),
     ]
 
 
 def _unkept_build_cujs() -> list[CujGroup]:
     # Bp2BuildKeepExistingBuildFile(bionic) is False(recursive)
-    unkept = src("bionic")
-    pkg = finder.any_dir_under(unkept, *PKG)
+    unkept = src("bionic/libm")
+    finder.confirm(unkept, "Android.bp", "!BUILD", "!BUILD.bazel")
     return [
         *[
-            create_delete_unkept_build_file(build_file)
-            for build_file in [
-                pkg.joinpath("BUILD"),
-                pkg.joinpath("BUILD.bazel"),
-            ]
+            create_delete_unkept_build_file(unkept.joinpath(b))
+            for b in ["BUILD", "BUILD.bazel"]
         ],
         *[
             create_delete(build_file, InWorkspace.OMISSION)
@@ -401,7 +394,7 @@ def _unkept_build_cujs() -> list[CujGroup]:
                 unkept.joinpath("bogus-unkept/BUILD.bazel"),
             ]
         ],
-        create_delete(pkg.joinpath("BUILD/unkept-dir"), InWorkspace.SYMLINK),
+        create_delete(unkept.joinpath("BUILD/unkept-dir"), InWorkspace.SYMLINK),
     ]
 
 
@@ -410,23 +403,15 @@ def get_cujgroups() -> list[CujGroup]:
     # we are choosing "package" directories that have Android.bp but
     # not BUILD nor BUILD.bazel because
     # we can't tell if ShouldKeepExistingBuildFile would be True or not
-    pkg, p_why = finder.any_match(NON_LEAF, *PKG)
-    pkg_free, f_why = finder.any_match(NON_LEAF, *PKG_FREE)
-    leaf_pkg_free, _ = finder.any_match(LEAF, *PKG_FREE)
-    ancestor, a_why = finder.any_match(
-        "!Android.bp", "!BUILD", "!BUILD.bazel", "**/Android.bp"
-    )
-    logging.info(
-        textwrap.dedent(
-            f"""\
-                Choosing:
-                          package: {de_src(pkg)} has {p_why}
-                 package ancestor: {de_src(ancestor)} has {a_why} but no direct Android.bp
-                     package free: {de_src(pkg_free)} has {f_why} but no Android.bp anywhere
-                leaf package free: {de_src(leaf_pkg_free)} has neither Android.bp nor sub-dirs
-            """
-        )
-    )
+    non_empty_dir = "*/*"
+    pkg = src("art")
+    finder.confirm(pkg, non_empty_dir, "Android.bp", "!BUILD*")
+    pkg_free = src("bionic/docs")
+    finder.confirm(pkg_free, non_empty_dir, "!**/Android.bp", "!**/BUILD*")
+    ancestor = src("bionic")
+    finder.confirm(ancestor, "**/Android.bp", "!Android.bp", "!BUILD*")
+    leaf_pkg_free = src("bionic/build")
+    finder.confirm(leaf_pkg_free, f"!{non_empty_dir}", "!**/Android.bp", "!**/BUILD*")
 
     android_bp_cujs = [
         modify_revert(src("Android.bp")),
@@ -502,8 +487,8 @@ def get_cujgroups() -> list[CujGroup]:
         *[
             delete_restore(f, InWorkspace.SYMLINK)
             for f in [
-                finder.any_file("version_script.txt"),
-                finder.any_file("AndroidManifest.xml"),
+                src("bionic/libc/version_script.txt"),
+                src("external/cbor-java/AndroidManifest.xml"),
             ]
         ],
         *unreferenced_file_cujs,
