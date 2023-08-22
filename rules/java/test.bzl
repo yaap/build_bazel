@@ -49,6 +49,7 @@ def java_test(
         name = name,
         test_dep = test_dep_name,
         test_config = None,
+        template_test_config = None,
         template_configs = None,
         template_install_base = None,
         tags = tags,
