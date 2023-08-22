@@ -412,6 +412,7 @@ def tradefed_test_suite(
         name,
         test_dep,
         test_config,
+        template_test_config,
         template_configs,
         template_install_base,
         tags,
@@ -432,6 +433,7 @@ def tradefed_test_suite(
       name: name of the test suite. This is the canonical name of the test, e.g. "hello_world_test".
       test_dep: label of the language-specific test dependency.
       test_config: label of a custom Tradefed XML config. if specified, skip auto generation with default configs.
+      template_test_config: label of a custom template of Tradefed XML config. If specified, skip using default template.
       template_configs: additional lines to be added to the test config.
       template_install_base: the default install location on device for files.
       tags: additional tags for the top level test_suite target. This can be used for filtering tests.
@@ -447,6 +449,9 @@ def tradefed_test_suite(
     if not test_dep.endswith(TEST_DEP_SUFFIX) or test_dep.removesuffix(TEST_DEP_SUFFIX) != name:
         fail("tradefed_test_suite.test_dep must be named %s%s, " % (name, TEST_DEP_SUFFIX) +
              "but got %s" % test_dep)
+
+    if test_config and template_test_config:
+        fail("'test_config' and 'template_test_config' should not be specified at same time.")
 
     # TODO(b/296312548): Make `runs_on` a required attribute.
     if runs_on:
@@ -494,7 +499,7 @@ def tradefed_test_suite(
         tests.append(tradefed_deviceless_test_name)
         tradefed_deviceless_test(
             name = tradefed_deviceless_test_name,
-            template_test_config = None if test_config else deviceless_test_config,
+            template_test_config = None if test_config else template_test_config or deviceless_test_config,
             **common_tradefed_attrs
         )
 
@@ -517,13 +522,13 @@ def tradefed_test_suite(
         if device_driven_test_config:
             tradefed_device_driven_test(
                 name = tradefed_device_test_name,
-                template_test_config = None if test_config else device_driven_test_config,
+                template_test_config = None if test_config else template_test_config or device_driven_test_config,
                 **common_tradefed_attrs
             )
         else:
             tradefed_host_driven_device_test(
                 name = tradefed_device_test_name,
-                template_test_config = None if test_config else host_driven_device_test_config,
+                template_test_config = None if test_config else template_test_config or host_driven_device_test_config,
                 **common_tradefed_attrs
             )
 

@@ -82,6 +82,7 @@ def cc_test(
         name = name,
         test_dep = test_dep_name,
         test_config = test_config,
+        template_test_config = template_test_config,
         template_configs = template_configs,
         template_install_base = template_install_base,
         deviceless_test_config = "//build/make/core:native_host_test_config_template.xml",
