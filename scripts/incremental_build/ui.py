@@ -71,7 +71,7 @@ def get_user_input() -> UserInput:
             if len(matching_cuj_groups):
                 return matching_cuj_groups
             logging.critical(
-                f'Invalid input: "{input_str}" does not many any CUJ. '
+                f'Invalid input: "{input_str}" does not match any CUJ. '
                 "Try --help to view the list of available CUJs"
             )
             raise argparse.ArgumentTypeError()
