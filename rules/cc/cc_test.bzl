@@ -45,10 +45,12 @@ def cc_test(
         tidy_disabled_srcs = None,
         tidy_timeout_srcs = None,
         test_config = None,
+        dynamic_config = None,
         template_test_config = None,
         template_configs = [],
         template_install_base = None,
         runs_on = [],
+        suffix = "",
         visibility = None,
         target_compatible_with = None,
         **kwargs):
@@ -73,6 +75,7 @@ def cc_test(
         tidy_disabled_srcs = tidy_disabled_srcs,
         tidy_timeout_srcs = tidy_timeout_srcs,
         tags = tags + ["manual"],
+        suffix = suffix,
         target_compatible_with = target_compatible_with,
         visibility = visibility,
         **kwargs
@@ -83,6 +86,7 @@ def cc_test(
         test_dep = test_dep_name,
         test_config = test_config,
         template_test_config = template_test_config,
+        dynamic_config = dynamic_config,
         template_configs = template_configs,
         template_install_base = template_install_base,
         deviceless_test_config = "//build/make/core:native_host_test_config_template.xml",
@@ -90,6 +94,7 @@ def cc_test(
         host_driven_device_test_config = "//build/make/core:native_host_test_config_template.xml",
         runs_on = runs_on,
         tags = tags,
+        suffix = suffix,
         visibility = visibility,
         test_language = LANGUAGE_CC,
     )
