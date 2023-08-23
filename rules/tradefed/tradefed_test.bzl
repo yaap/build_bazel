@@ -68,6 +68,7 @@ def tradefed_cc_outputs():
         tags = ["manual"],
         test = target,
         test_config = "//build/bazel/rules/tradefed/test:example_config.xml",
+        dynamic_config = "//build/bazel/rules/tradefed/test:dynamic_config.xml",
         target_compatible_with = ["//build/bazel/platforms/os:linux"],
     )
 
@@ -79,6 +80,7 @@ def tradefed_cc_outputs():
             name + ".sh",
             "result-reporters.xml",
             paths.join(name, "testcases", target + ".config"),
+            paths.join(name, "testcases", target + ".dynamic"),
         ],
         target_compatible_with = ["//build/bazel/platforms/os:linux"],
     )
@@ -103,6 +105,7 @@ def tradefed_cc_host_outputs():
         tags = ["manual"],
         test = target,
         test_config = "//build/bazel/rules/tradefed/test:example_config.xml",
+        dynamic_config = "//build/bazel/rules/tradefed/test:dynamic_config.xml",
         target_compatible_with = ["//build/bazel/platforms/os:linux"],
     )
 
@@ -114,6 +117,7 @@ def tradefed_cc_host_outputs():
             name + ".sh",
             "result-reporters.xml",
             paths.join(name, "testcases", target + ".config"),
+            paths.join(name, "testcases", target + ".dynamic"),
         ],
         target_compatible_with = ["//build/bazel/platforms/os:linux"],
     )
@@ -142,6 +146,7 @@ def tradefed_cc_host_outputs_generate_test_config():
             "<option name=\"config-descriptor:metadata\" key=\"parameter\" value=\"not_multi_abi\" />",
             "<option name=\"config-descriptor:metadata\" key=\"parameter\" value=\"secondary_user\" />",
         ],
+        dynamic_config = "//build/bazel/rules/tradefed/test:dynamic_config.xml",
         target_compatible_with = ["//build/bazel/platforms/os:linux"],
     )
 
@@ -153,6 +158,7 @@ def tradefed_cc_host_outputs_generate_test_config():
             name + ".sh",
             "result-reporters.xml",
             paths.join(name, "testcases", target + ".config"),
+            paths.join(name, "testcases", target + ".dynamic"),
         ],
         target_compatible_with = ["//build/bazel/platforms/os:linux"],
     )
@@ -242,6 +248,7 @@ def tradefed_cc_copy_runfiles():
         tags = ["manual"],
         test = name + "__tf_internal",
         test_config = "//build/bazel/rules/tradefed/test:example_config.xml",
+        dynamic_config = "//build/bazel/rules/tradefed/test:dynamic_config.xml",
     )
 
     tradefed_cc_copy_runfiles_test(
@@ -249,6 +256,7 @@ def tradefed_cc_copy_runfiles():
         target_under_test = name,
         expected_files = [
             "tradefed_cc_copy_runfiles.config",
+            "tradefed_cc_copy_runfiles.dynamic",
             "tradefed_cc_copy_runfiles",
             "data/a.text",
             "lib64/tradefed_cc_copy_runfiles_shared_lib_1.so",
