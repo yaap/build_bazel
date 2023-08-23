@@ -106,6 +106,10 @@ _TRADEFED_TEST_ATTRIBUTES = {
         allow_single_file = True,
         doc = "Test/Tradefed config.",
     ),
+    "dynamic_config": attr.label(
+        allow_single_file = True,
+        doc = "Dynamic test config.",
+    ),
     "template_test_config": attr.label(
         allow_single_file = True,
         doc = "Template to generate test config.",
@@ -121,6 +125,11 @@ _TRADEFED_TEST_ATTRIBUTES = {
         default = "",
         values = ["", LANGUAGE_CC, LANGUAGE_JAVA],
         doc = "the programming language the test uses",
+    ),
+    "suffix": attr.string(
+        default = "",
+        values = ["", "32", "64"],
+        doc = "the suffix of the test binary",
     ),
 }
 
@@ -156,6 +165,13 @@ def _get_or_generate_test_config(ctx, tf_test_dir, test_executable, test_languag
 
     basename = _normalize_test_name(test_executable.basename)
 
+    # If dynamic_config is specified copy it with a new name.
+    dynamic_config = None
+    if ctx.file.dynamic_config:
+        # Dynamic config file is specified in test config file and doesn't have the 32/64 suffix.
+        dynamic_config = ctx.actions.declare_file(paths.join(tf_test_dir, basename.removesuffix(ctx.attr.suffix) + ".dynamic"))
+        _copy_file(ctx, ctx.file.dynamic_config, dynamic_config)
+
     # If existing tradefed config is specified, copy to it and return early.
     #
     # The config needs to be a sibling file to the test executable, and both
@@ -166,10 +182,10 @@ def _get_or_generate_test_config(ctx, tf_test_dir, test_executable, test_languag
     # bazel-bin/packages/modules/adb/adb_test__tf_deviceless_test/testcases/
     # ├── adb_test
     # └── adb_test.config
-    out = ctx.actions.declare_file(paths.join(tf_test_dir, basename + ".config"))
+    test_config = ctx.actions.declare_file(paths.join(tf_test_dir, basename + ".config"))
     if ctx.file.test_config:
-        _copy_file(ctx, ctx.file.test_config, out)
-        return out
+        _copy_file(ctx, ctx.file.test_config, test_config)
+        return test_config, dynamic_config
 
     # No test config specified, generate config from template. Join extra
     # configs together and add xml spacing indent.
@@ -178,14 +194,14 @@ def _get_or_generate_test_config(ctx, tf_test_dir, test_executable, test_languag
         basename = basename.removesuffix(".jar")
     ctx.actions.expand_template(
         template = ctx.file.template_test_config,
-        output = out,
+        output = test_config,
         substitutions = {
             "{MODULE}": basename,
             "{EXTRA_CONFIGS}": "\n    ".join(ctx.attr.template_configs),
             "{TEST_INSTALL_BASE}": ctx.attr.template_install_base,
         },
     )
-    return out
+    return test_config, dynamic_config
 
 # Generate tradefed result reporter config.
 def _create_result_reporter_config(ctx):
@@ -219,8 +235,7 @@ def _get_test_target(ctx):
 
 # Generate and run tradefed bash script entry point and associated runfiles.
 def _tradefed_test_impl(ctx, tradefed_options = []):
-    tf_test_dir = ctx.label.name + "/testcases"
-
+    tf_test_dir = paths.join(ctx.label.name, "testcases")
     test_target = _get_test_target(ctx)
     test_language = ctx.attr.test_language
 
@@ -231,8 +246,13 @@ def _tradefed_test_impl(ctx, tradefed_options = []):
     test_executable = test_target.files_to_run.executable
     test_basename = _normalize_test_name(test_executable.basename)
 
+    test_config_files = []
+
     # Get or generate test config.
-    test_config = _get_or_generate_test_config(ctx, tf_test_dir, test_executable, test_language)
+    test_config, dynamic_config = _get_or_generate_test_config(ctx, tf_test_dir, test_executable, test_language)
+    test_config_files.append(test_config)
+    if dynamic_config != None:
+        test_config_files.append(dynamic_config)
 
     # Generate result reporter config file.
     report_config = _create_result_reporter_config(ctx)
@@ -286,8 +306,7 @@ def _tradefed_test_impl(ctx, tradefed_options = []):
 
     # Gather runfiles.
     runfiles = ctx.runfiles(
-        files = test_runfiles + [
-            test_config,
+        files = test_runfiles + test_config_files + [
             report_config,
             ctx.file._atest_tradefed_launcher,
             ctx.file._atest_helper,
@@ -417,7 +436,9 @@ def tradefed_test_suite(
         template_install_base,
         tags,
         visibility,
+        dynamic_config = None,
         test_language = "",
+        suffix = "",
         deviceless_test_config = None,
         device_driven_test_config = None,
         host_driven_device_test_config = None,
@@ -434,11 +455,13 @@ def tradefed_test_suite(
       test_dep: label of the language-specific test dependency.
       test_config: label of a custom Tradefed XML config. if specified, skip auto generation with default configs.
       template_test_config: label of a custom template of Tradefed XML config. If specified, skip using default template.
+      dynamic_config: label of a custom dynamic test config, by default it is the DynamicConfig.xml file.
       template_configs: additional lines to be added to the test config.
       template_install_base: the default install location on device for files.
       tags: additional tags for the top level test_suite target. This can be used for filtering tests.
       visibility: Bazel visibility declarations for this target.
       test_language: language used for the test dependency. One of [LANGUAGE_CC, LANGUAGE_JAVA].
+      suffix: the suffix such as 32 or 64 of the test binary.
       deviceless_test_config: default Tradefed test config for the deviceless execution mode.
       device_driven_test_config: default Tradefed test config for the device driven execution mode.
       host_driven_device_test_config: default Tradefed test config for the host driven execution mode.
@@ -476,12 +499,14 @@ def tradefed_test_suite(
             ("test", test_dep),
             # User-specified test config should take precedence over auto-generated ones.
             ("test_config", test_config),
+            ("dynamic_config", dynamic_config),
             # Extra lines to go into the test config.
             ("template_configs", template_configs),
             # Path to install the test executable on device.
             ("template_install_base", template_install_base),
             # Test language helps to determine test_executable and fit test into config templates.
             ("test_language", test_language),
+            ("suffix", suffix),
             # There shouldn't be package-external dependencies on the internal tests.
             ("visibility", ["//visibility:private"]),
             # The internal tests shouldn't run with ... or :all target patterns
