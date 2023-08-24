@@ -539,13 +539,21 @@ def _is_java_auto_dep(dep):
   tag = dep["Tag"]
   if not tag:
     return False
+
+  if tag.startswith("java.dependencyTag") and (
+      "name:system modules" in tag or "name:bootclasspath" in tag
+  ):
+    name = dep["Name"]
+    # only remove automatically added bootclasspath/system modules
+    return name in frozenset([
+        "legacy-core-platform-api-stubs-system-modules",
+        "stable-core-platform-api-stubs-system-modules",
+    ]) or (name.startswith("core-") and name.endswith("-stubs-system-modules"))
   return (
       (
           tag.startswith("java.dependencyTag")
           and (
               "name:proguard-raise" in tag
-              or "name:bootclasspath" in tag
-              or "name:system modules" in tag
               or "name:framework-res" in tag
               or "name:sdklib" in tag
               or "name:java9lib" in tag
