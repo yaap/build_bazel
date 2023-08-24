@@ -50,9 +50,7 @@ def _partition_impl(ctx):
 
     # build_image requires that the output file be named specifically <type>.img, so
     # put all the outputs under a name-qualified folder.
-    image_info = ctx.actions.declare_file(ctx.attr.name + "/image_info.txt")
     output_image = ctx.actions.declare_file(ctx.attr.name + "/" + ctx.attr.type + ".img")
-    ctx.actions.write(image_info, ctx.attr.image_properties)
 
     files = {}
     for dep in ctx.attr.deps:
@@ -71,6 +69,13 @@ def _partition_impl(ctx):
     if ctx.attr.base_staging_dir:
         staging_dir_builder_options["base_staging_dir"] = ctx.file.base_staging_dir.path
         extra_inputs.append(ctx.file.base_staging_dir)
+
+    image_info = ctx.actions.declare_file(ctx.attr.name + "/image_info.txt")
+    image_info_contents = ctx.attr.image_properties
+    if ctx.attr.root_dir:
+        extra_inputs.append(ctx.file.root_dir)
+        image_info_contents += "\nroot_dir=" + ctx.file.root_dir.path + "\n"
+    ctx.actions.write(image_info, image_info_contents)
 
     staging_dir_builder_options_file = ctx.actions.declare_file(ctx.attr.name + "/staging_dir_builder_options.json")
     ctx.actions.write(staging_dir_builder_options_file, json.encode(staging_dir_builder_options))
@@ -137,6 +142,10 @@ _partition = rule(
         "deps": attr.label_list(
             providers = [[InstallableInfo]],
             aspects = [installable_aspect],
+        ),
+        "root_dir": attr.label(
+            allow_single_file = True,
+            doc = "A folder to add as the root_dir property in the property file",
         ),
         "_staging_dir_builder": attr.label(
             cfg = "exec",
