@@ -218,3 +218,13 @@ local_repository(
     name = "rules_rust",
     path = "external/bazelbuild-rules_rust",
 )
+
+new_local_repository(
+    name = "rules_rust_tinyjson",
+    build_file = "@rules_rust//util/process_wrapper:BUILD.tinyjson.bazel",
+    path = "external/rust/crates/tinyjson",
+)
+
+register_toolchains(
+    "build/bazel/toolchains/rust:toolchain_x86_64_unknown-linux-gnu",
+)

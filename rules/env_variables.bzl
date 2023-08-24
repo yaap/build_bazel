@@ -35,6 +35,7 @@ CAPTURED_ENV_VARS = [
     "UNBUNDLED_BUILD_TARGET_SDK_WITH_API_FINGERPRINT",
     "CLANG_DEFAULT_DEBUG_LEVEL",
     "RUN_ERROR_PRONE",
+    "RUST_PREBUILTS_VERSION",
 
     # Overrides the version in the apex_manifest.json. The version is unique for
     # each branch (internal, aosp, mainline releases, dessert releases).  This
