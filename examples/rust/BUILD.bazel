@@ -1,0 +1,22 @@
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library")
+
+rust_binary(
+    name = "hello_world",
+    srcs = ["hello_world.rs"],
+    target_compatible_with = select({
+        # TODO: Fix final_rust_toolchain and/or to link rust binary properly
+        "//build/bazel/platforms/os:android": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
+)
+
+rust_library(
+    name = "libhello_world",
+    srcs = ["hello_world.rs"],
+    crate_name = "hello_world",
+    target_compatible_with = select({
+        # TODO: Fix final_rust_toolchain and/or to link rust binary properly
+        "//build/bazel/platforms/os:android": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
+)
