@@ -28,3 +28,15 @@ bazel_sandwich_imported_file(
     implicit_deps = ["target/product/$(DeviceName)/obj/PACKAGING/systemimage_intermediates/staging_dir.stamp"],
     target = "target/product/$(DeviceName)/system",
 )
+
+bazel_sandwich_imported_file(
+    name = "root_staging_dir",
+    depend_on_target = False,
+    implicit_deps = ["target/product/$(DeviceName)/obj/PACKAGING/systemimage_intermediates/staging_dir.stamp"],
+    target = "target/product/$(DeviceName)/root",
+)
+
+bazel_sandwich_imported_file(
+    name = "make_system_image",
+    target = "target/product/$(DeviceName)/system.img",
+)
