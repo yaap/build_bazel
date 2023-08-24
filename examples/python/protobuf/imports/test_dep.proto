@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 The Android Open Source Project
+ * Copyright (C) 2023 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,22 +13,5 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package {
-    default_applicable_licenses: ["Android-Apache-2.0"],
-}
 
-python_binary_host {
-    name: "build_bazel_examples_python_protobuf_main",
-    srcs: ["main.py"],
-    libs: ["build_bazel_examples_python_protobuf_protos"],
-    main: "main.py",
-}
-
-python_library_host {
-    name: "build_bazel_examples_python_protobuf_protos",
-    srcs: ["test.proto"],
-    proto: {
-        canonical_path_from_root: false,
-        local_include_dirs: ["imports"],
-    },
-}
+syntax = "proto3";
