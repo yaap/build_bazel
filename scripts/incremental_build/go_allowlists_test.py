@@ -78,3 +78,7 @@ class GoListLocatorTest(unittest.TestCase):
         with self.subTest("preceding sibling lists are NOT re-indexed"):
             self.assertEqual(begin, empty.begin)
             self.assertEqual(end, empty.end)
+
+
+if __name__ == "__main__":
+    unittest.main()
