@@ -18,13 +18,6 @@ load("//build/bazel/rules:proto_file_utils.bzl", "proto_file_utils")
 _TYPE_DICTIONARY = {".py": "_pb2.py"}
 
 def _py_proto_sources_gen_rule_impl(ctx):
-    for dep in ctx.attr.deps:
-        proto_info = dep[ProtoInfo]
-
-        # It's not clear what to do with transititve imports/sources
-        if len(proto_info.transitive_imports.to_list()) > len(proto_info.direct_sources) or len(proto_info.transitive_sources.to_list()) > len(proto_info.direct_sources):
-            fail("TODO: Transitive imports/sources of python protos")
-
     out_files_map = proto_file_utils.generate_proto_action(
         proto_infos = [dep[ProtoInfo] for dep in ctx.attr.deps],
         protoc = ctx.executable._protoc,
@@ -34,7 +27,7 @@ def _py_proto_sources_gen_rule_impl(ctx):
         plugin_executable = None,
         out_arg = "--python_out",
         mnemonic = "PyProtoGen",
-        transitive_proto_infos = [],  # TODO - b/285140726: support transitive proto deps via proto.include_dirs
+        transitive_proto_infos = [dep[ProtoInfo] for dep in ctx.attr.transitive_deps],
     )
 
     # proto_file_utils generates the files at <package>/<label>
@@ -61,6 +54,13 @@ _py_proto_sources_gen = rule(
             doc = "proto_library or any other target exposing ProtoInfo provider with *.proto files",
             mandatory = True,
         ),
+        "transitive_deps": attr.label_list(
+            providers = [ProtoInfo],
+            doc = """
+proto_library that will be added to aprotoc -I when compiling the direct .proto sources.
+WARNING: This is an experimental attribute and is expected to be deprecated in the future.
+""",
+        ),
         "_protoc": attr.label(
             default = Label("//external/protobuf:aprotoc"),
             executable = True,
@@ -72,6 +72,7 @@ _py_proto_sources_gen = rule(
 def py_proto_library(
         name,
         deps = [],
+        transitive_deps = [],
         target_compatible_with = [],
         data = [],
         **kwargs):
@@ -80,6 +81,7 @@ def py_proto_library(
     _py_proto_sources_gen(
         name = proto_lib_name,
         deps = deps,
+        transitive_deps = transitive_deps,
         **kwargs
     )
 
