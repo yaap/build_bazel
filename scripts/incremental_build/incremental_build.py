@@ -292,7 +292,7 @@ def main():
 
     def run_cuj_group(cuj_group: cuj_catalog.CujGroup):
         nonlocal stop_building
-        for cujstep in cuj_group.steps:
+        for cujstep in cuj_group.get_steps():
             desc = cujstep.verb
             desc = f"{desc} {cuj_group.description}".strip()
             logging.info(
@@ -347,7 +347,7 @@ def main():
         util.CURRENT_BUILD_TYPE = build_type
         # warm-up run reduces variations attributable to OS caches
         if user_input.chosen_cujgroups and not user_input.no_warmup:
-            run_cuj_group(cuj_catalog.Warmup)
+            run_cuj_group(cuj_catalog.Warmup())
         for i in user_input.chosen_cujgroups:
             run_cuj_group(cuj_catalog.get_cujgroups()[i])
     _display(r"^(?:time|bp2build|soong_build/\*\.bazel)$")
@@ -381,6 +381,8 @@ class ColoredLoggingFormatter(logging.Formatter):
 
 
 def configure_logger():
+    logging.root.setLevel(logging.INFO)
+
     eh = logging.StreamHandler(stream=sys.stderr)
     eh.setLevel(logging.WARNING)
     eh.setFormatter(ColoredLoggingFormatter())

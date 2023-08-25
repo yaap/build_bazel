@@ -16,11 +16,8 @@ import unittest
 from io import StringIO
 
 from clone import ModuleName
-from clone import ModuleType
 from clone import _extract_templates_helper
-from clone import conjunction
 from clone import module_defs
-from clone import negate
 from clone import name_in
 from clone import type_in
 
@@ -127,16 +124,6 @@ class CloneTest(unittest.TestCase):
             ),
         )
 
-    def test_conjunction(self):
-        a = name_in("a")
-        b = type_in("A")
-        f = conjunction(a, b)
-        self.assertTrue(f(ModuleType("A"), ModuleName("a")))
-        self.assertFalse(f(ModuleType("A"), ModuleName("b")))
-        self.assertFalse(f(ModuleType("B"), ModuleName("a")))
 
-    def test_negate(self):
-        a = name_in("a")
-        not_a = negate(a)
-        self.assertTrue(not_a(ModuleType(""), ModuleName("b")))
-        self.assertFalse(not_a(ModuleType(""), ModuleName("a")))
+if __name__ == "__main__":
+    unittest.main()
