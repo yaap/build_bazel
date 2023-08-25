@@ -15,6 +15,7 @@
 py_library(
     name = "dependency_analysis",
     srcs = ["dependency_analysis.py"],
+    imports = ["."],
     visibility = ["//visibility:public"],
     deps = ["//build/soong/ui/metrics:metrics-py-proto"],
 )
@@ -23,6 +24,7 @@ py_library(
     name = "queryview_xml",
     testonly = True,
     srcs = ["queryview_xml.py"],
+    imports = ["."],
     visibility = ["//visibility:public"],
 )
 
@@ -30,6 +32,7 @@ py_library(
     name = "soong_module_json",
     testonly = True,
     srcs = ["soong_module_json.py"],
+    imports = ["."],
     visibility = ["//visibility:public"],
 )
 
