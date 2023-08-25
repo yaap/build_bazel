@@ -76,6 +76,7 @@ py_library(
         "finder.py",
         "util.py",
     ],
+    imports = ["."],
 )
 
 py_test(
