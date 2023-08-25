@@ -19,13 +19,11 @@ import shutil
 import tempfile
 import uuid
 from pathlib import Path
-from typing import Callable, Final
-from typing import Optional
+from typing import Callable, Final, Optional
 
 import clone
 import cuj
 import finder
-import ui
 import util
 import random
 import re
@@ -44,14 +42,6 @@ would like the metrics to be collated in the metrics.csv file, use
 """
 
 
-class Warmup(CujGroup):
-    def __init__(self):
-        super().__init__("WARMUP")
-
-    def get_steps(self) -> list[CujStep]:
-        return [CujStep("", lambda: None)]
-
-
 class Clean(CujGroup):
     def __init__(self):
         super().__init__("clean")
@@ -64,10 +54,16 @@ class Clean(CujGroup):
         return [CujStep("", clean)]
 
 
-class NoChange(Warmup):
+class NoChange(CujGroup):
     def __init__(self):
-        super().__init__()
-        self._desc = "no change"
+        super().__init__("no change")
+
+    def get_steps(self) -> list[CujStep]:
+        return [CujStep("", lambda: None)]
+
+
+Warmup: Final[CujGroup] = NoChange()
+Warmup._desc = "WARMUP"
 
 
 class Modify(CujGroup):
