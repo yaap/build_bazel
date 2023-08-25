@@ -22,7 +22,7 @@ import os
 import os.path
 import subprocess
 import sys
-from typing import Optional, Set
+from typing import Dict, Optional, Set
 import xml.etree.ElementTree
 from bp2build_metrics_proto.bp2build_metrics_pb2 import Bp2BuildMetrics
 
@@ -451,20 +451,21 @@ def visit_queryview_xml_module_graph_post_order(
     queryview_module_graph_post_traversal(name_with_variant)
 
 
-def get_bp2build_converted_modules(target_product) -> Set[str]:
+def get_bp2build_converted_modules(target_product) -> Dict[str, Set[str]]:
   """Returns the list of modules that bp2build can currently convert."""
   _build_with_soong("bp2build", target_product)
   # Parse the list of converted module names from bp2build
   with open(
       os.path.join(
           SRC_ROOT_DIR,
-          "out/soong/soong_injection/metrics/converted_modules.txt",
+          "out/soong/soong_injection/metrics/converted_modules.json",
       ),
       "r",
   ) as f:
-    # Read line by line, excluding comments.
-    # Each line is a module name.
-    ret = set(line.strip() for line in f if not line.strip().startswith("#"))
+    converted_mods = json.loads(f.read())
+    ret = collections.defaultdict(set)
+    for m in converted_mods:
+      ret[m["name"]].add(m["type"])
   return ret
 
 

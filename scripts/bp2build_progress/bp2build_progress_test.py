@@ -767,7 +767,7 @@ class Bp2BuildProgressTest(unittest.TestCase):
 
     report_data = bp2build_progress.generate_report_data(
         module_graph,
-        {'d', 'g'},
+        {d.name: {d.kind}, g.name: {g.kind}},
         bp2build_progress.GraphFilterInfo(
             module_names={'a', 'f'}, package_dir=None
         ),
@@ -813,7 +813,7 @@ class Bp2BuildProgressTest(unittest.TestCase):
             'type3: 1',
             'type4: 1',
         },
-        converted={'d', 'g'},
+        converted={d.name: {d.kind}, g.name: {g.kind}},
         show_converted=False,
         hide_unconverted_modules_reasons=True,
         package_dir=None,
@@ -868,7 +868,7 @@ class Bp2BuildProgressTest(unittest.TestCase):
 
     report_data = bp2build_progress.generate_report_data(
         module_graph,
-        {'d', 'g'},
+        {d.name: {d.kind}, g.name: {g.kind}},
         bp2build_progress.GraphFilterInfo(
             module_types={'type1', 'type4'}, package_dir=None
         ),
@@ -910,7 +910,7 @@ class Bp2BuildProgressTest(unittest.TestCase):
         blocked_modules_transitive=blocked_modules_transitive,
         dirs_with_unconverted_modules={'pkg', 'other', 'pkg2'},
         kind_of_unconverted_modules={'type1', 'type2', 'type4'},
-        converted={'d', 'g'},
+        converted={d.name: {d.kind}, g.name: {g.kind}},
         show_converted=False,
         hide_unconverted_modules_reasons=True,
         package_dir=None,
@@ -943,7 +943,7 @@ class Bp2BuildProgressTest(unittest.TestCase):
 
     report_data = bp2build_progress.generate_report_data(
         module_graph,
-        {'b'},
+        {b.name: {b.kind}},
         bp2build_progress.GraphFilterInfo(module_names={'a'}, package_dir=None),
         props_by_converted_module_type=collections.defaultdict(set),
         use_queryview=False,
@@ -976,7 +976,7 @@ class Bp2BuildProgressTest(unittest.TestCase):
         blocked_modules_transitive=blocked_modules_transitive,
         dirs_with_unconverted_modules={'pkg', 'other'},
         kind_of_unconverted_modules={'type1: 1', 'type3: 1'},
-        converted={'b'},
+        converted={b.name:{b.kind}},
         show_converted=True,
         hide_unconverted_modules_reasons=True,
         package_dir=None,
@@ -1088,7 +1088,7 @@ class Bp2BuildProgressTest(unittest.TestCase):
 
     report_data = bp2build_progress.generate_report_data(
         module_graph,
-        {'d', 'g'},
+        {d.name: {d.kind}, g.name: {g.kind}},
         bp2build_progress.GraphFilterInfo(
             module_names={'a', 'f'}, package_dir=None
         ),
@@ -1133,7 +1133,7 @@ class Bp2BuildProgressTest(unittest.TestCase):
             'type3: 1',
             'type4: 1',
         },
-        converted={'d', 'g'},
+        converted={d.name: {d.kind}, g.name: {g.kind}},
         show_converted=False,
         hide_unconverted_modules_reasons=False,
         package_dir=None,
@@ -1184,7 +1184,7 @@ class Bp2BuildProgressTest(unittest.TestCase):
     report_data_show_unconverted_modules_reasons = (
         bp2build_progress.generate_report_data(
             module_graph,
-            {'b', 'c'},
+            {b.name:{b.kind}, c.name:{c.kind}},
             bp2build_progress.GraphFilterInfo(
                 module_names={'a'}, package_dir=None
             ),
@@ -1196,7 +1196,7 @@ class Bp2BuildProgressTest(unittest.TestCase):
     report_data_hide_unconverted_modules_reasons = (
         bp2build_progress.generate_report_data(
             module_graph,
-            {'b', 'c'},
+            {b.name:{b.kind}, c.name:{c.kind}},
             bp2build_progress.GraphFilterInfo(
                 module_names={'a'}, package_dir=None
             ),
@@ -1397,7 +1397,7 @@ Generated at: {datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S %z")}"""
 
     report_data = bp2build_progress.generate_report_data(
         module_graph,
-        {'d', 'g'},
+        {d.name: {d.kind}, g.name: {g.kind}},
         bp2build_progress.GraphFilterInfo(
             module_names={'a', 'f'}, package_dir=None
         ),
@@ -1529,7 +1529,7 @@ Generated at: {datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S %z")}"""
 
     report_data = bp2build_progress.generate_report_data(
         module_graph,
-        {'d', 'g'},
+        {d.name: {d.kind}, g.name: {g.kind}},
         bp2build_progress.GraphFilterInfo(
             module_names={'a', 'f'}, package_dir=None
         ),
@@ -1586,7 +1586,9 @@ Generated at: {datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S %z")}"""
     module_graph[d] = bp2build_progress.DepInfo()
     module_graph[e] = bp2build_progress.DepInfo()
 
-    dot_graph = bp2build_progress.generate_dot_file(module_graph, {'e'}, False)
+    dot_graph = bp2build_progress.generate_dot_file(
+        module_graph, {'e': {'type2'}}, False
+    )
 
     expected_dot_graph = """
 digraph mygraph {{
@@ -1628,7 +1630,9 @@ digraph mygraph {{
     module_graph[d] = bp2build_progress.DepInfo()
     module_graph[e] = bp2build_progress.DepInfo()
 
-    dot_graph = bp2build_progress.generate_dot_file(module_graph, {'e'}, True)
+    dot_graph = bp2build_progress.generate_dot_file(
+        module_graph, {'e': {'type2'}}, True
+    )
 
     expected_dot_graph = """
 digraph mygraph {{
