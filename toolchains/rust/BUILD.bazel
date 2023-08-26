@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 load("@env//:env.bzl", "env")
+load("@rules_rust//proto/protobuf:toolchain.bzl", "rust_proto_toolchain")
 load("@rules_rust//rust:toolchain.bzl", "rust_toolchain")
 load("@soong_injection//rust_toolchain:constants.bzl", "constants")
 
@@ -23,6 +24,32 @@ rust_version = env.get(
 )
 
 package_path = "//prebuilts/rust/linux-x86/" + rust_version
+
+genrule(
+    name = "no_op_file",
+    outs = ["no_op_file.txt"],
+    cmd = "touch $(OUTS)",
+)
+
+rust_proto_toolchain(
+    name = "proto-toolchain-impl",
+    edition = "2021",
+    grpc_compile_deps = [],
+    # TODO: GRPC-providing rust_protobuf_host modules still use protobuf2
+    # so that grpc_rust_plugin still depend son deprecated protobuf modules
+    # Fix libbt_facade_proto and libbt_topshim_facade_protobuf to use protobuf3
+    # and upgrade grpc_rust_plugin to use new protobuf modules like protoc-gen-rust
+    grpc_plugin = ":no_op_file",
+    proto_compile_deps = ["//external/rust/crates/protobuf:libprotobuf"],
+    proto_plugin = "//external/rust/crates/protobuf-codegen:protoc-gen-rust",
+    protoc = "//external/protobuf:aprotoc",
+)
+
+toolchain(
+    name = "proto-toolchain",
+    toolchain = ":proto-toolchain-impl",
+    toolchain_type = "@rules_rust//proto/protobuf:toolchain_type",
+)
 
 rust_toolchain(
     name = "toolchain_x86_64_unknown-linux-gnu_impl",
