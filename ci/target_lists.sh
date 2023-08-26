@@ -47,6 +47,9 @@ BUILD_TARGETS=(
   -//frameworks/native/opengl/libs:libGLESv2
   -//system/core/libutils:all
   -//system/unwinding/libunwindstack:all
+  # TODO(b/297550356): Remove denylisted external/rust/crates/protobuf package
+  # after https://github.com/bazelbuild/rules_rust/pull/2133 is merged
+  -//external/rust/crates/protobuf:all
 )
 
 TEST_TARGETS=(
