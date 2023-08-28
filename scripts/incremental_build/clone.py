@@ -304,7 +304,7 @@ class Clone(cuj.CujGroup):
         super().__init__(group_name)
         self.bps = bps
 
-    def get_steps(self):
+    def get_steps(self) -> Iterable[cuj.CujStep]:
         bp2templates = _extract_templates(self.bps)
         bp_count = len(bp2templates)
         if bp_count == 0:
