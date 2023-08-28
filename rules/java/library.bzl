@@ -19,6 +19,7 @@ load(
     _java_library = "java_library",
 )
 load("//build/bazel/rules/java:sdk_transition.bzl", "sdk_transition_attrs")
+load(":import.bzl", "java_import")
 
 # TODO(b/277801336): document these attributes.
 def java_library(
@@ -32,6 +33,7 @@ def java_library(
         tags = [],
         target_compatible_with = [],
         visibility = None,
+        additional_resources = None,
         **kwargs):
     """ java_library macro wrapper that handles custom attrs needed in AOSP
 
@@ -47,6 +49,12 @@ def java_library(
     if errorprone_force_enable == None:
         # TODO (b/227504307) temporarily disable errorprone until environment variable is handled
         opts = opts + ["-XepDisableAllChecks"]
+
+    if additional_resources != None:
+        java_import(
+            name = name + "__additional_resources",
+            jars = additional_resources,
+        )
 
     _java_library(
         name = lib_name,
