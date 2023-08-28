@@ -14,54 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-load("@bazel_skylib//lib:paths.bzl", "paths")
 load("@rules_kotlin//kotlin:compiler_opt.bzl", "kt_compiler_opt")
 load("@rules_kotlin//kotlin:jvm_library.bzl", _kt_jvm_library = "kt_jvm_library")
 load("//build/bazel/rules/java:import.bzl", "java_import")
+load("//build/bazel/rules/java:java_resources.bzl", "java_resources")
 load("//build/bazel/rules/java:sdk_transition.bzl", "sdk_transition_attrs")
-
-def _kotlin_resources_impl(ctx):
-    java_runtime = ctx.attr._runtime[java_common.JavaRuntimeInfo]
-
-    output_file = ctx.actions.declare_file(ctx.attr.name + "_kt_resources.jar")
-
-    ctx.actions.run_shell(
-        outputs = [output_file],
-        inputs = ctx.files.srcs,
-        tools = java_runtime.files,
-        command = "{} cvf {} -C {} .".format(
-            paths.join(java_runtime.java_home, "bin", "jar"),
-            output_file.path,
-            ctx.attr.resource_strip_prefix,
-        ),
-    )
-
-    return [DefaultInfo(files = depset([output_file]))]
-
-kotlin_resources = rule(
-    doc = """
-    Package srcs into a jar, with the option of stripping a path prefix
-    """,
-    implementation = _kotlin_resources_impl,
-    attrs = {
-        "srcs": attr.label_list(allow_files = True),
-        "resource_strip_prefix": attr.string(
-            doc = """The path prefix to strip from resources.
-                   If specified, this path prefix is stripped from every fil
-                   in the resources attribute. It is an error for a resource
-                   file not to be under this directory. If not specified
-                   (the default), the path of resource file is determined
-                   according to the same logic as the Java package of source
-                   files. For example, a source file at stuff/java/foo/bar/a.txt
-                    will be located at foo/bar/a.txt.""",
-        ),
-        "_runtime": attr.label(
-            default = Label("@bazel_tools//tools/jdk:current_java_runtime"),
-            cfg = "exec",
-            providers = [java_common.JavaRuntimeInfo],
-        ),
-    },
-)
 
 def make_kt_compiler_opt(
         name,
@@ -101,16 +58,17 @@ def kt_jvm_library(
             module by adding the "-XepDisableAllChecks" flag to javacopts
         """
     if resource_strip_prefix != None:
-        java_import_name = name + "resources"
-        kt_res_jar_name = name + "resources_jar"
+        java_import_name = name + "__kt_res"
+        kt_res_jar_name = name + "__kt_res_jar"
+
         java_import(
             name = java_import_name,
             jars = [":" + kt_res_jar_name],
         )
 
-        kotlin_resources(
+        java_resources(
             name = kt_res_jar_name,
-            srcs = resources,
+            resources = resources,
             resource_strip_prefix = resource_strip_prefix,
         )
 
