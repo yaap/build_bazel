@@ -42,7 +42,8 @@ def _generate_jar_proto_action(
         out_flags = [],
         plugin_executable = None,
         out_arg = None,
-        mnemonic = "ProtoGen"):
+        mnemonic = "ProtoGen",
+        transitive_proto_infos = []):
     jar_basename = ctx.label.name + "-proto_gen"
     jar_name = jar_basename + "-src.jar"
     jar_file = ctx.actions.declare_file(jar_name)
@@ -56,6 +57,7 @@ def _generate_jar_proto_action(
         out_arg = out_arg,
         mnemonic = mnemonic,
         output_file = jar_file,
+        transitive_proto_infos = transitive_proto_infos,
     )
 
     srcjar_name = jar_basename + ".srcjar"
