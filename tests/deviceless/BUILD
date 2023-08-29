@@ -26,7 +26,6 @@ test_suite(
             "//external/minijail:mj_system_unittest_gtest",
             "//external/minijail:mj_util_unittest_gtest",
             "//external/musl:libc_musl_ldso_trampoline_test",
-            "//external/scudo:scudo_hooks_unit_tests",
             "//external/selinux/libselinux:libselinux_test",
             "//external/sqlite/android:libsqlite3_phone_number_utils_test",
             "//external/zlib:zlib_tests",
