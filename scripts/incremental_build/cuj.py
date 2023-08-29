@@ -17,8 +17,7 @@ import enum
 import logging
 import os
 from pathlib import Path
-from typing import Callable
-from typing import TypeAlias
+from typing import Callable, Iterable, TypeAlias
 
 import util
 from util import BuildType
@@ -133,7 +132,7 @@ class CujGroup(abc.ABC):
         return self._desc
 
     @abc.abstractmethod
-    def get_steps(self) -> list[CujStep]:
+    def get_steps(self) -> Iterable[CujStep]:
         pass
 
 

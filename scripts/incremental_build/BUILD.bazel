@@ -18,6 +18,7 @@ py_binary(
         "clone.py",
         "cuj.py",
         "cuj_catalog.py",
+        "cuj_regex_based.py",
         "go_allowlists.py",
         "incremental_build.py",
         "pretty.py",

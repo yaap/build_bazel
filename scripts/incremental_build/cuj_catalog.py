@@ -19,14 +19,13 @@ import shutil
 import tempfile
 import uuid
 from pathlib import Path
-from typing import Callable, Final, Optional
+from typing import Final, Iterable, Optional
 
 import clone
 import cuj
 import finder
 import util
-import random
-import re
+import cuj_regex_based
 from cuj import CujGroup
 from cuj import CujStep
 from cuj import InWorkspace
@@ -46,7 +45,7 @@ class Clean(CujGroup):
     def __init__(self):
         super().__init__("clean")
 
-    def get_steps(self) -> list[CujStep]:
+    def get_steps(self) -> Iterable[CujStep]:
         def clean():
             if util.get_out_dir().exists():
                 shutil.rmtree(util.get_out_dir())
@@ -58,7 +57,7 @@ class NoChange(CujGroup):
     def __init__(self):
         super().__init__("no change")
 
-    def get_steps(self) -> list[CujStep]:
+    def get_steps(self) -> Iterable[CujStep]:
         return [CujStep("", lambda: None)]
 
 
@@ -82,7 +81,7 @@ class Modify(CujGroup):
         self.file = file
         self.text = text
 
-    def get_steps(self):
+    def get_steps(self) -> Iterable[CujStep]:
         if self.text is None:
             self.text = f"//BOGUS {uuid.uuid4()}\n"
 
@@ -97,106 +96,6 @@ class Modify(CujGroup):
                 f.truncate()
 
         return [CujStep("", add_line), CujStep("revert", revert)]
-
-
-class RegexModify(CujGroup):
-    """
-    A pair of CujSteps, where the fist modifies the file and the
-    second reverts it
-    Attributes:
-        file: the file to be edited and reverted
-        pattern: the string that will be replaced, only the FIRST occurrence will be replaced
-        replace: a function that generates the replacement string
-        modify_type: types of modification
-    """
-
-    def __init__(
-        self, file: Path, pattern: str, replacer: Callable[[], str], modify_type: str
-    ):
-        super().__init__(f"{modify_type} {de_src(file)}")
-        if not file.exists():
-            raise RuntimeError(f"{file} does not exist")
-        self.file = file
-        self.pattern = pattern
-        self.replacer = replacer
-
-    def get_steps(self) -> list[CujStep]:
-        original_text: str
-
-        def modify():
-            nonlocal original_text
-            original_text = self.file.read_text()
-            modified_text = re.sub(
-                self.pattern,
-                self.replacer(),
-                original_text,
-                count=1,
-                flags=re.MULTILINE,
-            )
-            self.file.write_text(modified_text)
-
-        def revert():
-            self.file.write_text(original_text)
-
-        return [CujStep("", modify), CujStep("revert", revert)]
-
-
-def modify_private_method(file: Path) -> CujGroup:
-    pattern = r"(private static boolean.*{)"
-
-    def replacement():
-        return r'\1 Log.d("Placeholder", "Placeholder{}");'.format(
-            random.randint(0, 1000)
-        )
-
-    modify_type = "modify_private_method"
-    return RegexModify(file, pattern, replacement, modify_type)
-
-
-def add_private_field(file: Path) -> CujGroup:
-    pattern = r"^\}$"
-
-    def replacement():
-        return (
-            r"private static final int FOO = " + str(random.randint(0, 1000)) + ";\n}"
-        )
-
-    modify_type = "add_private_field"
-    return RegexModify(file, pattern, replacement, modify_type)
-
-
-def add_public_api(file: Path) -> CujGroup:
-    pattern = r"\}$"
-
-    def replacement():
-        return r"public static final int BAZ = " + str(random.randint(0, 1000)) + ";\n}"
-
-    modify_type = "add_public_api"
-    return RegexModify(file, pattern, replacement, modify_type)
-
-
-def modify_resource(file: Path) -> CujGroup:
-    pattern = r">0<"
-
-    def replacement():
-        return r">" + str(random.randint(0, 1000)) + r"<"
-
-    modify_type = "modify_resource"
-    return RegexModify(file, pattern, replacement, modify_type)
-
-
-def add_resource(file: Path) -> CujGroup:
-    pattern = r"</resources>"
-
-    def replacement():
-        return (
-            r'    <integer name="foo">'
-            + str(random.randint(0, 1000))
-            + r"</integer>\n</resources>"
-        )
-
-    modify_type = "add_resource"
-    return RegexModify(file, pattern, replacement, modify_type)
 
 
 class Create(CujGroup):
@@ -223,7 +122,7 @@ class Create(CujGroup):
         if self.text is None:
             self.text = f"//Test File: safe to delete {uuid.uuid4()}\n"
 
-    def get_steps(self):
+    def get_steps(self) -> Iterable[CujStep]:
         missing_dirs = [f for f in self.file.parents if not f.exists()]
         shallowest_missing_dir = missing_dirs[-1] if len(missing_dirs) else None
 
@@ -274,7 +173,7 @@ class Delete(CujGroup):
         self.original = original
         self.ws = ws
 
-    def get_steps(self):
+    def get_steps(self) -> Iterable[CujStep]:
         tempdir = Path(tempfile.gettempdir())
         if tempdir.is_relative_to(util.get_top_dir()):
             raise SystemExit(f"Temp dir {tempdir} is under source tree")
@@ -309,7 +208,7 @@ class ReplaceFileWithDir(CujGroup):
         super().__init__(f"replace {de_src(p)} with dir")
         self.p = p
 
-    def get_steps(self):
+    def get_steps(self) -> Iterable[CujStep]:
         # an Android.bp is always a symlink in the workspace and thus its parent
         # will be a directory in the workspace
         create_dir: CujStep
@@ -369,7 +268,7 @@ class ModifyKeptBuildFile(CujGroup):
         super().__init__(f"modify kept {de_src(build_file)}")
         self.build_file = build_file
 
-    def get_steps(self):
+    def get_steps(self) -> Iterable[CujStep]:
         content = f"//BOGUS {uuid.uuid4()}\n"
         step1, step2, *tail = Modify(self.build_file, content).get_steps()
         assert len(tail) == 0
@@ -450,7 +349,7 @@ class CreateUnkeptBuildFile(CujGroup):
         ]
 
 
-def _kept_build_cujs() -> list[CujGroup]:
+def _kept_build_cujs() -> tuple[CujGroup, ...]:
     # Bp2BuildKeepExistingBuildFile(build/bazel) is True(recursive)
     kept = src("build/bazel")
     finder.confirm(
@@ -461,105 +360,65 @@ def _kept_build_cujs() -> list[CujGroup]:
         "rules/python/BUILD",
     )
 
-    return [
-        *[
+    return (
+        *(
             CreateKeptBuildFile(kept.joinpath("compliance").joinpath(b))
             for b in ["BUILD", "BUILD.bazel"]
-        ],
+        ),
         Create(kept.joinpath("BUILD/kept-dir"), InWorkspace.SYMLINK),
         ModifyKeptBuildFile(kept.joinpath("rules/python/BUILD")),
-    ]
+    )
 
 
-def _unkept_build_cujs() -> list[CujGroup]:
+def _unkept_build_cujs() -> tuple[CujGroup, ...]:
     # Bp2BuildKeepExistingBuildFile(bionic) is False(recursive)
     unkept = src("bionic/libm")
     finder.confirm(unkept, "Android.bp", "!BUILD", "!BUILD.bazel")
-    return [
-        *[CreateUnkeptBuildFile(unkept.joinpath(b)) for b in ["BUILD", "BUILD.bazel"]],
-        *[
+    return (
+        *(CreateUnkeptBuildFile(unkept.joinpath(b)) for b in ["BUILD", "BUILD.bazel"]),
+        *(
             Create(build_file, InWorkspace.OMISSION)
             for build_file in [
                 unkept.joinpath("bogus-unkept/BUILD"),
                 unkept.joinpath("bogus-unkept/BUILD.bazel"),
             ]
-        ],
+        ),
         # TODO: b/258873199 - Support directories named BUILD.
         Create(unkept.joinpath("BUILD/unkept-dir"), InWorkspace.SYMLINK),
-    ]
+    )
 
 
-@functools.cache
-def get_cujgroups() -> list[CujGroup]:
-    # we are choosing "package" directories that have Android.bp but
-    # not BUILD nor BUILD.bazel because
-    # we can't tell if ShouldKeepExistingBuildFile would be True or not
-    non_empty_dir = "*/*"
-    pkg = src("art")
-    finder.confirm(pkg, non_empty_dir, "Android.bp", "!BUILD*")
-    pkg_free = src("bionic/docs")
-    finder.confirm(pkg_free, non_empty_dir, "!**/Android.bp", "!**/BUILD*")
-    ancestor = src("bionic")
-    finder.confirm(ancestor, "**/Android.bp", "!Android.bp", "!BUILD*")
-    leaf_pkg_free = src("bionic/build")
-    finder.confirm(leaf_pkg_free, f"!{non_empty_dir}", "!**/Android.bp", "!**/BUILD*")
-
-    android_bp_cujs = [
-        Modify(src("Android.bp")),
-        *[
-            CreateBp(d.joinpath("Android.bp"))
-            for d in [ancestor, pkg_free, leaf_pkg_free]
-        ],
-    ]
-    mixed_build_launch_cujs = [
+def _mixed_build_launch_cujs() -> tuple[CujGroup, ...]:
+    core_settings = src("frameworks/base/core/java/android/provider/Settings.java")
+    ams = src(
+        "frameworks/base/services/core/java/com/android/server/am/ActivityManagerService.java"
+    )
+    resource = src("frameworks/base/core/res/res/values/config.xml")
+    return (
         Modify(src("bionic/libc/tzcode/asctime.c")),
         Modify(src("bionic/libc/stdio/stdio.cpp")),
         Modify(src("packages/modules/adb/daemon/main.cpp")),
         Modify(src("frameworks/base/core/java/android/view/View.java")),
-        Modify(src("frameworks/base/core/java/android/provider/Settings.java")),
-        modify_private_method(
-            src("frameworks/base/core/java/android/provider/Settings.java")
-        ),
-        add_private_field(
-            src("frameworks/base/core/java/android/provider/Settings.java")
-        ),
-        add_public_api(src("frameworks/base/core/java/android/provider/Settings.java")),
-        modify_private_method(
-            src(
-                "frameworks/base/services/core/java/com/android/server/am/ActivityManagerService.java"
-            )
-        ),
-        add_private_field(
-            src(
-                "frameworks/base/services/core/java/com/android/server/am/ActivityManagerService.java"
-            )
-        ),
-        add_public_api(
-            src(
-                "frameworks/base/services/core/java/com/android/server/am/ActivityManagerService.java"
-            )
-        ),
-        modify_resource(src("frameworks/base/core/res/res/values/config.xml")),
-        add_resource(src("frameworks/base/core/res/res/values/config.xml")),
-    ]
-    unreferenced_file_cujs = [
-        *[
-            Create(d.joinpath("unreferenced.txt"), InWorkspace.SYMLINK)
-            for d in [ancestor, pkg]
-        ],
-        *[
-            Create(d.joinpath("unreferenced.txt"), InWorkspace.UNDER_SYMLINK)
-            for d in [pkg_free, leaf_pkg_free]
-        ],
-    ]
+        Modify(core_settings),
+        cuj_regex_based.modify_private_method(core_settings),
+        cuj_regex_based.add_private_field(core_settings),
+        cuj_regex_based.add_public_api(core_settings),
+        cuj_regex_based.modify_private_method(ams),
+        cuj_regex_based.add_private_field(ams),
+        cuj_regex_based.add_public_api(ams),
+        cuj_regex_based.modify_resource(resource),
+        cuj_regex_based.add_resource(resource),
+    )
 
+
+def _cloning_cujs() -> tuple[CujGroup, ...]:
     cc_ = (
         lambda t, name: t.startswith("cc_")
         and "test" not in t
         and not name.startswith("libcrypto")  # has some unique hash
     )
     libNN = lambda t, name: t == "cc_library_shared" and name == "libneuralnetworks"
-    cloning_cujs = [
+    return (
         clone.Clone("clone genrules", {src("."): clone.type_in("genrule")}),
         clone.Clone("clone cc_", {src("."): cc_}),
         clone.Clone(
@@ -577,26 +436,60 @@ def get_cujgroups() -> list[CujGroup]:
                 src("packages/modules/NeuralNetworks/runtime/Android.bp"): libNN,
             },
         ),
-    ]
+    )
 
-    return [
+
+@functools.cache
+def get_cujgroups() -> tuple[CujGroup, ...]:
+    # we are choosing "package" directories that have Android.bp but
+    # not BUILD nor BUILD.bazel because
+    # we can't tell if ShouldKeepExistingBuildFile would be True or not
+    non_empty_dir = "*/*"
+    pkg = src("art")
+    finder.confirm(pkg, non_empty_dir, "Android.bp", "!BUILD*")
+    pkg_free = src("bionic/docs")
+    finder.confirm(pkg_free, non_empty_dir, "!**/Android.bp", "!**/BUILD*")
+    ancestor = src("bionic")
+    finder.confirm(ancestor, "**/Android.bp", "!Android.bp", "!BUILD*")
+    leaf_pkg_free = src("bionic/build")
+    finder.confirm(leaf_pkg_free, f"!{non_empty_dir}", "!**/Android.bp", "!**/BUILD*")
+
+    android_bp_cujs = (
+        Modify(src("Android.bp")),
+        *(
+            CreateBp(d.joinpath("Android.bp"))
+            for d in [ancestor, pkg_free, leaf_pkg_free]
+        ),
+    )
+    unreferenced_file_cujs = (
+        *(
+            Create(d.joinpath("unreferenced.txt"), InWorkspace.SYMLINK)
+            for d in [ancestor, pkg]
+        ),
+        *(
+            Create(d.joinpath("unreferenced.txt"), InWorkspace.UNDER_SYMLINK)
+            for d in [pkg_free, leaf_pkg_free]
+        ),
+    )
+
+    return (
         Clean(),
         NoChange(),
-        *cloning_cujs,
+        *_cloning_cujs(),
         Create(src("bionic/libc/tzcode/globbed.c"), InWorkspace.UNDER_SYMLINK),
         # TODO (usta): find targets that should be affected
-        *[
+        *(
             Delete(f, InWorkspace.SYMLINK)
             for f in [
                 src("bionic/libc/version_script.txt"),
                 src("external/cbor-java/AndroidManifest.xml"),
             ]
-        ],
+        ),
         *unreferenced_file_cujs,
-        *mixed_build_launch_cujs,
+        *_mixed_build_launch_cujs(),
         *android_bp_cujs,
         *_unkept_build_cujs(),
         *_kept_build_cujs(),
         ReplaceFileWithDir(src("bionic/README.txt")),
         # TODO(usta): add a dangling symlink
-    ]
+    )
