@@ -66,6 +66,8 @@ HOST_ONLY_TEST_TARGETS=(
   # TODO (b/282953338): these tests depend on adb which is unconverted
   -//packages/modules/adb:adb_integration_test_adb
   -//packages/modules/adb:adb_integration_test_device
+  # TODO - b/297952899: this test is flaky in b builds
+  -//build/soong/cmd/zip2zip:zip2zip-test
 )
 
 # These targets are used to ensure that the aosp-specific rule wrappers forward
