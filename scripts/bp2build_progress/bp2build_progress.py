@@ -72,8 +72,8 @@ class ModuleInfo:
         reason_from_metric=self.reason_from_metric
     )
 
-  def is_converted(self, converted: Set[str]):
-    return self.name in converted
+  def is_converted(self, converted: Dict[str, Set[str]]):
+    return self.name in converted and self.kind in converted[self.name]
 
   def is_skipped(self):
     # these are implementation details of another module type that can never be
@@ -83,7 +83,7 @@ class ModuleInfo:
         or self.kind.endswith("__topDownMutatorModule")
     )
 
-  def is_converted_or_skipped(self, converted: Set[str]):
+  def is_converted_or_skipped(self, converted: Dict[str, Set[str]]):
     return self.is_converted(converted) or self.is_skipped()
 
 
@@ -120,7 +120,7 @@ class ReportData:
   blocked_modules_transitive: Dict[ModuleInfo, Set[str]]
   dirs_with_unconverted_modules: Set[str]
   kind_of_unconverted_modules: Set[str]
-  converted: Set[str]
+  converted: Dict[str, Set[str]]
   show_converted: bool
   hide_unconverted_modules_reasons: bool
   package_dir: str
@@ -131,7 +131,7 @@ class ReportData:
 # Generate a dot file containing the transitive closure of the module.
 def generate_dot_file(
     modules: Dict[ModuleInfo, DepInfo],
-    converted: Set[str],
+    converted: Dict[str, Set[str]],
     show_converted: bool,
 ):
   # Check that all modules in the argument are in the list of converted modules
@@ -176,7 +176,7 @@ def get_transitive_unconverted_deps(
     cache: Dict[DepInfo, Set[DepInfo]],
     module: ModuleInfo,
     modules: Dict[ModuleInfo, DepInfo],
-    converted: Set[str],
+    converted: Dict[str, Set[str]],
 ) -> Set[str]:
   if module in cache:
     return cache[module]
@@ -689,11 +689,11 @@ Stderr:
 
 
 def add_manual_conversion_to_converted(
-    converted: Set[str], module_adjacency_list: Dict[ModuleInfo, DepInfo]
+    converted: Dict[str, Set[str]], module_adjacency_list: Dict[ModuleInfo, DepInfo]
 ) -> Set[str]:
   modules_by_name = {m.name: m for m in module_adjacency_list.keys()}
 
-  converted_modules = set()
+  converted_modules = collections.defaultdict(set)
   converted_modules.update(converted)
 
   def _update_converted(module_name):
@@ -703,7 +703,7 @@ def add_manual_conversion_to_converted(
       return False
     module = modules_by_name[module_name]
     if module.converted:
-      converted_modules.add(module_name)
+      converted_modules[module_name].add(module.kind)
       return True
     return False
 
