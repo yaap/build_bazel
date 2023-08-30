@@ -1791,6 +1791,41 @@ def _get_cfi_features(target_arch, target_os):
 
     return features
 
+def _get_memtag_features(target_arch, target_os):
+    features = []
+    if target_os != _oses.Android or target_arch != _arches.Arm64:
+        return features
+
+    features.append(
+        feature(
+            name = "memtag_heap",
+            enabled = False,
+            requires = [feature_set(features = ["cc_binary"])],
+            flag_sets = [
+                _make_flag_set(
+                    actions = _actions.compile + _actions.link,
+                    flags = ["-fsanitize=memtag-heap"],
+                ),
+                _make_flag_set(
+                    actions = _actions.link,
+                    flags = ["-fsanitize-memtag-mode=sync"],
+                    with_features = ["diag_memtag_heap"],
+                ),
+                _make_flag_set(
+                    actions = _actions.link,
+                    flags = ["-fsanitize-memtag-mode=async"],
+                    with_not_features = ["diag_memtag_heap"],
+                ),
+            ],
+            implies = ["sanitizers_enabled"],
+        ),
+    )
+
+    features.append(feature(name = "cc_binary"))
+    features.append(feature(name = "diag_memtag_heap"))
+
+    return features
+
 def _get_visibiility_hidden_feature():
     return [
         feature(
@@ -2185,6 +2220,7 @@ def get_features(
         _get_thinlto_features(),
         # Sanitizers
         _get_cfi_features(target_arch, target_os),
+        _get_memtag_features(target_arch, target_os),
         _get_ubsan_features(target_os, libclang_rt_ubsan_minimal),
         _get_misc_sanitizer_features(),
         # Misc features
