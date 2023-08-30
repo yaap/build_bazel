@@ -172,7 +172,7 @@ def _build(build_type: BuildType, run_dir: Path) -> BuildInfo:
         except FileNotFoundError:
             return -1
 
-    @skip_for(BuildType.SOONG_ONLY, BuildType.B, BuildType.B_ANDROID)
+    @skip_for(BuildType.SOONG_ONLY, BuildType.B_BUILD, BuildType.B_ANDROID)
     def get_cquery_size() -> int:
         return os.stat(cquery_out).st_size if cquery_out.exists() else None
 
