@@ -209,7 +209,7 @@ def get_user_input() -> UserInput:
     )
     if len(bazel_labels) > 0:
         non_b = [
-            b.name for b in build_types if b != BuildType.B and b != BuildType.B_ANDROID
+            b.name for b in build_types if b != BuildType.B_BUILD and b != BuildType.B_ANDROID
         ]
         if len(non_b):
             raise RuntimeError(f"bazel labels can not be used with {non_b}")
