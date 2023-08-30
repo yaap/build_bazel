@@ -559,10 +559,24 @@ def _is_java_auto_dep(dep):
   ):
     name = dep["Name"]
     # only remove automatically added bootclasspath/system modules
-    return name in frozenset([
-        "legacy-core-platform-api-stubs-system-modules",
-        "stable-core-platform-api-stubs-system-modules",
-    ]) or (name.startswith("core-") and name.endswith("-stubs-system-modules"))
+    return (
+        name
+        in frozenset([
+            "core-lambda-stubs",
+            "core-module-lib-stubs-system-modules",
+            "core-public-stubs-system-modules",
+            "core-system-server-stubs-system-modules",
+            "core-system-stubs-system-modules",
+            "core-test-stubs-system-modules",
+            "core.current.stubs",
+            "legacy-core-platform-api-stubs-system-modules",
+            "legacy.core.platform.api.stubs",
+            "stable-core-platform-api-stubs-system-modules",
+            "stable.core.platform.api.stubs",
+        ])
+        or (name.startswith("android_") and name.endswith("_stubs_current"))
+        or (name.startswith("sdk_") and name.endswith("_system_modules"))
+    )
   return (
       (
           tag.startswith("java.dependencyTag")
