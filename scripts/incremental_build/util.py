@@ -80,8 +80,8 @@ class BuildType(enum.Enum):
     SOONG_ONLY = [*_soong_cmd, "BUILD_BROKEN_DISABLE_BAZEL=true"]
     MIXED_PROD = [*_soong_cmd, "--bazel-mode"]
     MIXED_STAGING = [*_soong_cmd, "--bazel-mode-staging"]
-    B = ["build/bazel/bin/b", "build"]
-    B_ANDROID = [*B, "--config=android"]
+    B_BUILD = ["build/bazel/bin/b", "build"]
+    B_ANDROID = [*B_BUILD, "--config=android"]
 
     @staticmethod
     def from_flag(s: str) -> list["BuildType"]:
