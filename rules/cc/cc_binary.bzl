@@ -75,6 +75,7 @@ def cc_binary(
     unstripped_name = name + "_unstripped"
 
     toolchain_features = []
+    toolchain_features.append("cc_binary")
     toolchain_features.extend(["-pic", "pie"])
     if linkshared:
         toolchain_features.extend(["dynamic_executable", "dynamic_linker"])
@@ -86,8 +87,6 @@ def cc_binary(
 
     if min_sdk_version:
         toolchain_features += parse_sdk_version(min_sdk_version) + ["-sdk_version_default"]
-
-    toolchain_features += features
 
     system_dynamic_deps = []
     system_static_deps = []
@@ -116,6 +115,11 @@ def cc_binary(
             "//build/bazel/rules/cc:android_coverage_lib_flag_cfi": ["//system/extras/toolchain-extras:libprofile-clang-extras_cfi_support"],
             "//conditions:default": [],
         })
+
+    # add the passed in features last, the reason is that it might include select statement so
+    # using append() function will not work, but the formatter will insist you to use that for
+    # adding single element.
+    toolchain_features += features
 
     stl_info = stl_info_from_attr(stl, linkshared, is_binary = True)
     linkopts = linkopts + stl_info.linkopts
