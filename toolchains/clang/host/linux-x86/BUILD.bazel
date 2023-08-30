@@ -21,6 +21,7 @@ load(":cc_toolchain_features_cfi_test.bzl", "cc_toolchain_features_cfi_test_suit
 load(":cc_toolchain_features_env_based_flags_test.bzl", "cc_toolchain_features_env_based_flags_test_suite")
 load(":cc_toolchain_features_flag_order_test.bzl", "cc_toolchain_features_flag_order_test_suite")
 load(":cc_toolchain_features_linker_alignment_test.bzl", "cc_toolchain_features_linker_alignment_test_suite")
+load(":cc_toolchain_features_memtag_test.bzl", "cc_toolchain_features_memtag_test_suite")
 load(":cc_toolchain_features_misc_test.bzl", "cc_toolchain_features_test_suite")
 load(":cc_toolchain_features_pack_relocation_test.bzl", "cc_toolchain_features_pack_relocation_test_suite")
 load(":cc_toolchain_features_thinlto_test.bzl", "cc_toolchain_features_lto_test_suite")
@@ -109,4 +110,8 @@ cc_toolchain_features_flag_order_test_suite(
 
 cc_toolchain_features_linker_alignment_test_suite(
     name = "cc_toolchain_features_linker_alignment_tests",
+)
+
+cc_toolchain_features_memtag_test_suite(
+    name = "cc_toolchain_features_memtag_tests",
 )
