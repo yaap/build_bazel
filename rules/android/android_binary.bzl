@@ -43,6 +43,7 @@ def _android_binary_helper(**attrs):
     )
 
     attrs.pop("$enable_manifest_merging", None)
+    attrs["proguard_specs"] = []
 
     native.android_binary(
         application_resources = android_binary_aosp_internal_name,
@@ -57,6 +58,7 @@ def android_binary(
         errorprone_force_enable = None,
         javacopts = [],
         java_version = None,
+        optimize = True,
         tags = [],
         target_compatible_with = [],
         visibility = None,
@@ -109,6 +111,11 @@ def android_binary(
         )
 
         debug_signing_keys.append(app_keystore_name)
+
+    if optimize:
+        kwargs["proguard_specs"] = [
+            "//build/make/core:global_proguard_flags",
+        ] + kwargs.get("proguard_specs", [])
 
     bin_name = name + "_private"
     _android_binary_helper(
