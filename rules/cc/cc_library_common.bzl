@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@bazel_skylib//lib:paths.bzl", "paths")
 load("@bazel_tools//tools/cpp:toolchain_utils.bzl", "find_cpp_toolchain")
 load("@soong_injection//android:constants.bzl", android_constants = "constants")
 load("@soong_injection//api_levels:platform_versions.bzl", "platform_versions")
@@ -452,3 +453,19 @@ def check_valid_ldlibs(ctx, linkopts):
     bad_libs = [lib for lib in libs_in_linkopts if lib not in libs_available]
     if bad_libs:
         fail("Host library(s) requested via -l is not available in the toolchain. Got: %s, Supported: %s" % (bad_libs, libs_available))
+
+def path_in_list(path, list):
+    path_parts = paths.normalize(path).split("/")
+    found = False
+    for value in list:
+        value_parts = paths.normalize(value).split("/")
+        if len(value_parts) > len(path_parts):
+            continue
+        match = True
+        for i in range(len(value_parts)):
+            if path_parts[i] != value_parts[i]:
+                match = False
+                break
+        if match == True:
+            found = True
+    return found
