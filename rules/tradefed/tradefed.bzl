@@ -516,9 +516,6 @@ def tradefed_test_suite(
 
     tests = []
 
-    # The internal tests shouldn't run with ... or :all target patterns
-    tags = ["manual"] + tags
-
     # Tradefed deviceless test. Device NOT necessary. Tradefed will be invoked with --null-device.
     if deviceless_test_config:
         tradefed_deviceless_test_name = name + "__tf_deviceless_test"
@@ -526,7 +523,8 @@ def tradefed_test_suite(
         tradefed_deviceless_test(
             name = tradefed_deviceless_test_name,
             template_test_config = None if test_config else template_test_config or deviceless_test_config,
-            tags = tags,
+            # The internal tests shouldn't run with ... or :all target patterns
+            tags = tags + ["manual"],
             **common_tradefed_attrs
         )
 
@@ -550,20 +548,24 @@ def tradefed_test_suite(
             tradefed_device_driven_test(
                 name = tradefed_device_test_name,
                 template_test_config = None if test_config else template_test_config or device_driven_test_config,
-                # Device tests should run exclusively (one at a time), since they tend
+                # manual: The internal tests shouldn't run with ... or :all target patterns.
+                #
+                # exclusive: Device tests should run exclusively (one at a time), since they tend
                 # to acquire resources and can often result in oddities when running in parellel.
                 # Think Activity-based or port-based tests for example.
-                tags = tags + ["exclusive"],
+                tags = tags + ["manual", "exclusive"],
                 **common_tradefed_attrs
             )
         else:
             tradefed_host_driven_device_test(
                 name = tradefed_device_test_name,
                 template_test_config = None if test_config else template_test_config or host_driven_device_test_config,
-                # Device tests should run exclusively (one at a time), since they tend
+                # manual: The internal tests shouldn't run with ... or :all target patterns.
+                #
+                # exclusive: Device tests should run exclusively (one at a time), since they tend
                 # to acquire resources and can often result in oddities when running in parellel.
                 # Think Activity-based or port-based tests for example.
-                tags = tags + ["exclusive"],
+                tags = tags + ["manual", "exclusive"],
                 **common_tradefed_attrs
             )
 
