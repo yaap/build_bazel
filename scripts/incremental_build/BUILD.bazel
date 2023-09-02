@@ -21,12 +21,14 @@ py_binary(
         "cuj_regex_based.py",
         "go_allowlists.py",
         "incremental_build.py",
-        "pretty.py",
         "ui.py",
     ],
     main = "incremental_build.py",
     python_version = "PY3",
-    deps = [":perf_metrics"],
+    deps = [
+        ":perf_metrics",
+        ":pretty",
+    ],
 )
 
 py_binary(
