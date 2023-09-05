@@ -14,6 +14,9 @@ _string_list_variables = [
     "cfi_include_paths",
     "device_abi",
     "manifest_package_name_overrides",
+    "memtag_heap_exclude_paths",
+    "memtag_heap_async_include_paths",
+    "memtag_heap_sync_include_paths",
     "tidy_checks",
     "unbundled_build_apps",
 ]
