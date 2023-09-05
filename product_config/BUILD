@@ -8,7 +8,15 @@ package(default_visibility = ["//visibility:public"])
 # Soong had this feature, so it was ported to bazel.
 product_variables_for_attributes(name = "product_variables_for_attributes")
 
+# This label flag will always point to the device platform for the current android product.
+# It can be used to transition into the device configuration from the host configuration.
+label_flag(
+    name = "device_platform",
+    build_setting_default = "//build/bazel/utils:fail",
+)
+
 _string_list_variables = [
+    # keep-sorted start
     "build_version_tags",
     "cfi_exclude_paths",
     "cfi_include_paths",
@@ -16,9 +24,11 @@ _string_list_variables = [
     "manifest_package_name_overrides",
     "tidy_checks",
     "unbundled_build_apps",
+    # keep-sorted end
 ]
 
 _string_variables = [
+    # keep-sorted start
     "apex_global_min_sdk_version_override",
     "build_id",
     "default_app_certificate",
@@ -33,9 +43,11 @@ _string_variables = [
     "product_brand",
     "product_manufacturer",
     "target_build_variant",
+    # keep-sorted end
 ]
 
 _bool_variables = [
+    # keep-sorted start
     "always_use_prebuilt_sdks",
     "arc",
     "binder32bit",
@@ -55,6 +67,7 @@ _bool_variables = [
     "treble_linker_namespaces",
     "uml",
     "unbundled_build",
+    # keep-sorted end
 ]
 
 [
