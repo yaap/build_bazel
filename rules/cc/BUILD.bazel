@@ -34,6 +34,7 @@ load(":cfi_transition_test.bzl", "cfi_transition_test_suite")
 load(":clang_tidy_test.bzl", "clang_tidy_test_suite")
 load(":flex_test.bzl", "flex_test_suite")
 load(":lto_transitions_test.bzl", "lto_transition_test_suite")
+load(":memtag_heap_transitions_test.bzl", "memtag_heap_transitions_test_suite")
 load(":rscript_to_cpp_test.bzl", "rscript_to_cpp_test_suite")
 load(":sanitizer_blocklist_test.bzl", "sanitizer_blocklist_test_suite")
 load(":stl_test.bzl", "stl_test_suite")
@@ -138,6 +139,8 @@ clang_tidy_test_suite(name = "clang_tidy_tests")
 flex_test_suite(name = "flex_tests")
 
 lto_transition_test_suite(name = "lto_transition_tests")
+
+memtag_heap_transitions_test_suite(name = "memtag_heap_transitions_test")
 
 sanitizer_blocklist_test_suite(name = "sanitizer_blocklist_tests")
 
