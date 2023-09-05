@@ -22,6 +22,7 @@ load(
     "apply_fdo_profile",
 )
 load(":lto_transitions.bzl", "apply_drop_lto", "apply_lto_deps")
+load(":memtag_heap_transitions.bzl", "apply_drop_memtag_heap", "apply_memtag_heap_transition")
 load(
     ":sanitizer_enablement_transition.bzl",
     "apply_sanitizer_enablement_transition",
@@ -69,6 +70,7 @@ def _lto_and_sanitizer_deps_transition_impl(settings, attr):
     features = getattr(attr, transition_constants.features_attr_key)
     old_cli_features = settings[transition_constants.cli_features_key]
     new_cli_features = apply_lto_deps(features, old_cli_features)
+    new_cli_features = apply_memtag_heap_transition(settings, attr, new_cli_features)
     cfi_include_paths = settings[transition_constants.cfi_include_paths_key]
     cfi_exclude_paths = settings[transition_constants.cfi_exclude_paths_key]
     new_cli_features = apply_cfi_deps(
@@ -101,6 +103,9 @@ lto_and_sanitizer_deps_transition = transition(
         transition_constants.cfi_exclude_paths_key,
         transition_constants.enable_cfi_key,
         transition_constants.cli_platforms_key,
+        transition_constants.memtag_heap_async_include_paths_key,
+        transition_constants.memtag_heap_sync_include_paths_key,
+        transition_constants.memtag_heap_exclude_paths_key,
     ],
     outputs = [
         transition_constants.cli_features_key,
@@ -139,6 +144,8 @@ lto_and_sanitizer_static_transition = transition(
 def _apply_drop_lto_and_sanitizers(old_cli_features):
     new_cli_features = apply_drop_lto(old_cli_features)
     new_cli_features = apply_drop_cfi(new_cli_features)
+    new_cli_features = apply_drop_memtag_heap(new_cli_features)
+
     return {
         transition_constants.cli_features_key: new_cli_features,
     }
