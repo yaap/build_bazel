@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@bazel_skylib//lib:paths.bzl", "paths")
 load("//build/bazel/product_config:android_product.bzl", "host_platforms")
+load(":cc_library_common.bzl", "path_in_list")
 
 CFI_FEATURE = "android_cfi"
 CFI_ASSEMBLY_FEATURE = "android_cfi_assembly_support"
@@ -65,22 +65,6 @@ def apply_drop_cfi(old_cli_features):
     if DISABLE_CFI_FEATURE not in old_cli_features:
         new_cli_features.append(DISABLE_CFI_FEATURE)
     return new_cli_features
-
-def path_in_list(path, list):
-    path_parts = paths.normalize(path).split("/")
-    found = False
-    for value in list:
-        value_parts = paths.normalize(value).split("/")
-        if len(value_parts) > len(path_parts):
-            continue
-        match = True
-        for i in range(len(value_parts)):
-            if path_parts[i] != value_parts[i]:
-                match = False
-                break
-        if match == True:
-            found = True
-    return found
 
 def _os_is_android(platform):
     if type(platform) != "string":
