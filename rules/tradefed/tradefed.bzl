@@ -50,19 +50,14 @@ LANGUAGE_JAVA = "java"
 # "both"` by default, so this may drop the secondary arch of the test, depending
 # on the TARGET_PRODUCT.
 def _tradefed_always_device_transition_impl(settings, _):
-    old_platform = str(settings["//command_line_option:platforms"][0])
-
-    # TODO(b/290716626): This is brittle handling for distinguishing between
-    # device / not-device of the current target platform. Could use better
-    # helpers.
-    new_platform = old_platform.removesuffix("_linux_x86_64")
+    device_platform = str(settings["//build/bazel/product_config:device_platform"])
     return {
-        "//command_line_option:platforms": new_platform,
+        "//command_line_option:platforms": device_platform,
     }
 
 _tradefed_always_device_transition = transition(
     implementation = _tradefed_always_device_transition_impl,
-    inputs = ["//command_line_option:platforms"],
+    inputs = ["//build/bazel/product_config:device_platform"],
     outputs = ["//command_line_option:platforms"],
 )
 
