@@ -61,3 +61,8 @@ selects.config_setting_group(
 )
 
 filegroup(name = "empty_filegroup")
+
+sh_binary(
+    name = "fail",
+    srcs = ["fail.sh"],
+)
