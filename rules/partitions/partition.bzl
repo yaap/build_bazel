@@ -69,6 +69,9 @@ def _partition_impl(ctx):
     if ctx.attr.base_staging_dir:
         staging_dir_builder_options["base_staging_dir"] = ctx.file.base_staging_dir.path
         extra_inputs.append(ctx.file.base_staging_dir)
+        if ctx.attr.base_staging_dir_file_list:
+            staging_dir_builder_options["base_staging_dir_file_list"] = ctx.file.base_staging_dir_file_list.path
+            extra_inputs.append(ctx.file.base_staging_dir_file_list)
 
     image_info = ctx.actions.declare_file(ctx.attr.name + "/image_info.txt")
     image_info_contents = ctx.attr.image_properties
@@ -138,6 +141,10 @@ _partition = rule(
         "base_staging_dir": attr.label(
             allow_single_file = True,
             doc = "A staging dir that the deps will be added to. This is intended to be used to import a make-built staging directory when building the partition with bazel.",
+        ),
+        "base_staging_dir_file_list": attr.label(
+            allow_single_file = True,
+            doc = "A file list that will be used to filter the base_staging_dir.",
         ),
         "deps": attr.label_list(
             providers = [[InstallableInfo]],
