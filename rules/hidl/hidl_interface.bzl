@@ -37,6 +37,11 @@ def hidl_interface(
         root = root,
     )
 
+    native.filegroup(
+        name = name + "_hal",
+        srcs = srcs,
+    )
+
     cc_hidl_library(
         name = name,
         interface = interface_name,
