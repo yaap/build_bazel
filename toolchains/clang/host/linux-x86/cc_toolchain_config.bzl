@@ -90,17 +90,10 @@ _libclang_rt_ubsan_minimal_prebuilt_map = {
     "linux_musl_x86_64": "x86_64-unknown-linux-musl/lib/linux/libclang_rt.ubsan_minimal-x86_64.a",
 }
 
-def _is_relative_path(path, root):
-    path_parts = paths.normalize(path).split("/")
-    root_parts = paths.normalize(root).split("/")
-    for i in range(len(root_parts)):
-        if path_parts[i] != root_parts[i]:
-            return False
-    return True
-
 def _clang_version_info_impl(ctx):
     clang_version = ctx.attr.clang_version[BuildSettingInfo].value
     clang_version_directory = paths.join(ctx.label.package, clang_version)
+    clang_version_dir_prefix = clang_version_directory + "/"
     clang_short_version = ctx.attr.clang_short_version[BuildSettingInfo].value
 
     all_files = {}  # a set to do fast prebuilt lookups later
@@ -113,9 +106,9 @@ def _clang_version_info_impl(ctx):
     }
 
     for file in ctx.files.clang_files:
-        if not _is_relative_path(file.short_path, clang_version_directory):
+        if not file.short_path.startswith(clang_version_dir_prefix):
             continue
-        file_path = paths.relativize(file.short_path, clang_version_directory)
+        file_path = file.short_path.removeprefix(clang_version_dir_prefix)
         all_files[file_path] = file
 
         file_path_parts = file_path.split("/")
