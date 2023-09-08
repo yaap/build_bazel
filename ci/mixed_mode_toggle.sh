@@ -41,7 +41,7 @@ build/soong/soong_ui.bash --make-mode \
 
 # PLEASE NOTE - IF TZDATA IS EVER REMOVED FROM THE PROD ALLOWLIST, THIS _WILL_ FAIL
 # Should that happen, look into reverting to the assertions on bazel-out or switching
-sentinel_file="${OUT_DIR}/bazel/output/execroot/__main__/bazel-out/*/bin/system/timezone/apex/com.android.tzdata_staging_dir/etc/tz/tzdata"
+sentinel_file="${OUT_DIR}/bazel/output/execroot/__main__/bazel-out/*/bin/system/timezone/apex/com.android.tzdata.apex"
 
 if [[ $(ls ${sentinel_file} | wc -l) -ne 1 ]]; then
   echo "Expected a single configuration of tzdata files under bazel-out"
