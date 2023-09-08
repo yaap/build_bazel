@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@soong_injection//cc_toolchain:ndk_libs.bzl", "ndk_libs")
 load("//build/bazel/platforms:platform_utils.bzl", "platforms")
 load("//build/bazel/rules/apis:api_surface.bzl", "MODULE_LIB_API")
 load("//build/bazel/rules/common:api.bzl", "api")
@@ -53,7 +54,15 @@ def _cc_stub_gen_impl(ctx):
 
     # TODO(b/207812332): This always parses and builds the stub library as a dependency of an APEX. Parameterize this
     # for non-APEX use cases.
-    ndkstubgen_args.add_all(["--systemapi", "--apex", ctx.file.symbol_file])
+    apex_stub_args = ["--systemapi", "--apex"]
+
+    # If this is not an ndk library, add --no-ndk
+    if ctx.attr.source_library_label.label.name not in [ndk_lib.removesuffix(".ndk") for ndk_lib in ndk_libs]:
+        # https://cs.android.com/android/_/android/platform/build/soong/+/main:cc/library.go;l=1318-1323;drc=d9b7f17f372a196efc82112c29efb86abf91e266;bpv=1;bpt=0
+        apex_stub_args.append("--no-ndk")
+
+    ndkstubgen_args.add_all(apex_stub_args)
+    ndkstubgen_args.add(ctx.file.symbol_file)
     ndkstubgen_args.add_all(outputs)
     ctx.actions.run(
         executable = ctx.executable._ndkstubgen,
@@ -86,6 +95,7 @@ cc_stub_gen = rule(
         # Public attributes
         "symbol_file": attr.label(mandatory = True, allow_single_file = [".map.txt"]),
         "version": attr.string(mandatory = True, default = "current"),
+        "source_library_label": attr.label(mandatory = True),
         # Private attributes
         "_api_levels_file": attr.label(default = "@soong_injection//api_levels:api_levels.json", allow_single_file = True),
         "_ndkstubgen": attr.label(default = "//build/soong/cc/ndkstubgen", executable = True, cfg = "exec"),
@@ -110,6 +120,7 @@ def cc_stub_library_shared(name, stubs_symbol_file, version, export_includes, so
         name = name + "_files",
         symbol_file = stubs_symbol_file,
         version = version,
+        source_library_label = source_library_label,
         target_compatible_with = target_compatible_with,
         tags = ["manual"],
     )
