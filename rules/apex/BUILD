@@ -57,6 +57,17 @@ config_setting(
     },
 )
 
+# config setting to build sdk variants
+config_setting(
+    name = "unbundled_app",
+    constraint_values = [
+        arch_variant_to_constraints["android"],
+    ],
+    flag_values = {
+        ":api_domain": "unbundled_app",
+    },
+)
+
 config_setting(
     name = "in_apex",
     flag_values = {
