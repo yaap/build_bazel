@@ -35,6 +35,8 @@ if [ ! -n "${TARGET_PRODUCT}" ] || [ ! -n "${TARGET_BUILD_VARIANT}" ] ; then
     TARGET_BUILD_VARIANT=userdebug
 fi
 
+remote_cache="grpcs://${RBE_service%:*}"
+
 out=$(get_build_var PRODUCT_OUT)
 
 # ANDROID_BUILD_TOP is deprecated, so don't use it throughout the script.
@@ -62,6 +64,7 @@ ${OUT_DIR}/host/linux-x86/bin/atest-dev \
   --bazel-arg=--remote_instance_name="${RBE_instance}" \
   --bazel-arg=--bes_keywords="${ROBOLEAF_BES_KEYWORDS}" \
   --bazel-arg=--bes_results_url="${ROBOLEAF_BES_RESULTS_URL}" \
+  --bazel-arg=--remote_cache="${remote_cache}" \
   --bazel-arg=--project_id="${BES_PROJECT_ID}" \
   --bazel-arg=--build_metadata=ab_branch="${BRANCH_NAME}" \
   --bazel-arg=--build_metadata=ab_target="${BUILD_TARGET_NAME}" \
