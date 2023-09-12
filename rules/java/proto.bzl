@@ -47,7 +47,7 @@ def _java_proto_sources_gen_rule_impl(ctx):
         DefaultInfo(files = depset(direct = srcs)),
     ]
 
-_java_proto_sources_gen = rule(
+java_proto_sources_gen = rule(
     implementation = _java_proto_sources_gen_rule_impl,
     attrs = {
         "deps": attr.label_list(
@@ -113,7 +113,7 @@ def _java_proto_library(
         **kwargs):
     proto_sources_name = name + "_proto_gen"
 
-    _java_proto_sources_gen(
+    java_proto_sources_gen(
         name = proto_sources_name,
         deps = deps,
         transitive_deps = transitive_deps,
