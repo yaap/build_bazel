@@ -173,7 +173,7 @@ diff ${input_dir}/file1 ${output_dir}/dir1/file1
 diff ${input_dir}/file2 ${output_dir}/dir2/dir3/file2
 diff ${input_dir}/file1 ${output_dir}/dir4/one_level_sym
 diff ${input_dir}/file2 ${output_dir}/dir5/two_level_sym_in_execroot
-[ `readlink ${output_dir}/dir6/two_level_sym_not_in_execroot`="${input_dir}/file1" ]
+[ `readlink ${output_dir}/dir6/two_level_sym_not_in_execroot` = "${input_dir}/file1" ]
 diff ${input_dir}/file2 ${output_dir}/dir7/three_level_sym_in_execroot
 
 input_perms="$(stat -c '%A' ${input_dir}/file1)"
