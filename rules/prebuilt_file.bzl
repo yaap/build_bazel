@@ -24,9 +24,7 @@ PrebuiltFileInfo = provider(
 _handled_dirs = ["etc", "usr/share"]
 
 def _prebuilt_file_rule_impl(ctx):
-    srcs = ctx.files.src
-    if len(srcs) != 1:
-        fail("src for", ctx.label.name, "is expected to be singular, but is of len", len(srcs), ":\n", srcs)
+    src = ctx.file.src
 
     # Is this an acceptable directory, or a subdir under one?
     dir = ctx.attr.dir
@@ -43,19 +41,19 @@ def _prebuilt_file_rule_impl(ctx):
     elif ctx.attr.filename != "":
         filename = ctx.attr.filename
     elif ctx.attr.filename_from_src:
-        filename = srcs[0].basename
+        filename = src.basename
     else:
         filename = ctx.attr.name
 
     return [
         PrebuiltFileInfo(
-            src = srcs[0],
+            src = src,
             dir = dir,
             filename = filename,
             installable = ctx.attr.installable,
         ),
         DefaultInfo(
-            files = depset(srcs),
+            files = depset([src]),
         ),
     ]
 
@@ -64,9 +62,7 @@ _prebuilt_file = rule(
     attrs = {
         "src": attr.label(
             mandatory = True,
-            allow_files = True,
-            # TODO(b/217908237): reenable allow_single_file
-            # allow_single_file = True,
+            allow_single_file = True,
         ),
         "dir": attr.string(mandatory = True),
         "filename": attr.string(),
