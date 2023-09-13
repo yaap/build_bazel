@@ -19,8 +19,7 @@ load(
     "android_binary_aosp_internal_macro",
 )
 load("//build/bazel/rules/java:sdk_transition.bzl", "sdk_transition_attrs")
-load("android_app_certificate.bzl", "android_app_certificate_with_default_cert")
-load("android_app_keystore.bzl", "android_app_keystore")
+load(":debug_signing_key.bzl", "debug_signing_key")
 
 # TODO(b/277801336): document these attributes.
 def _android_binary_helper(**attrs):
@@ -90,27 +89,8 @@ def android_binary(
         # TODO (b/227504307) temporarily disable errorprone until environment variable is handled
         opts = opts + ["-XepDisableAllChecks"]
 
-    if certificate and certificate_name:
-        fail("Cannot use both certificate_name and certificate attributes together. Use only one of them.")
-
     debug_signing_keys = kwargs.pop("debug_signing_keys", [])
-
-    if certificate or certificate_name:
-        if certificate_name:
-            app_cert_name = name + "_app_certificate"
-            android_app_certificate_with_default_cert(
-                name = app_cert_name,
-                cert_name = certificate_name,
-            )
-            certificate = ":" + app_cert_name
-
-        app_keystore_name = name + "_keystore"
-        android_app_keystore(
-            name = app_keystore_name,
-            certificate = certificate,
-        )
-
-        debug_signing_keys.append(app_keystore_name)
+    debug_signing_keys.extend(debug_signing_key(name, certificate, certificate_name))
 
     if optimize:
         kwargs["proguard_specs"] = [
