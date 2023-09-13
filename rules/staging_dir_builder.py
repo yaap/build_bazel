@@ -90,11 +90,15 @@ def build_staging_dir(staging_dir_path, file_mapping, command_argv, base_staging
         # execroot/__main__/bazel-out/android_target-fastbuild/bin/system/timezone/apex/
         # apex_manifest.pb
         if os.path.islink(path_in_bazel):
-            path_in_bazel = os.readlink(path_in_bazel)
+            # Some of the symlinks are relative (start with ../). They're relative to the location
+            # of the symlink, not to the cwd. So we have to join the directory of the symlink with
+            # the symlink's target. If the symlink was absolute, os.path.join() will take it as-is
+            # and ignore the first argument.
+            path_in_bazel = os.path.abspath(os.path.join(os.path.dirname(path_in_bazel), os.readlink(path_in_bazel)))
 
             # For sandbox run these are the 2nd level symlinks and we need to resolve
             while os.path.islink(path_in_bazel) and 'execroot/__main__' in path_in_bazel:
-                path_in_bazel = os.readlink(path_in_bazel)
+                path_in_bazel = os.path.abspath(os.path.join(os.path.dirname(path_in_bazel), os.readlink(path_in_bazel)))
 
         if os.path.exists(path_in_staging_dir):
             sys.exit("error: " + path_in_staging_dir + " already exists because of the base_staging_dir")
