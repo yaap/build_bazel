@@ -67,39 +67,22 @@ def android_app_certificate(
         **kwargs
     )
 
-def _search_cert_files(cert_name, cert_filegroups):
+def _search_cert_files(cert_name, cert_filegroup):
     pk8 = None
     pem = None
-    searched_files = []
-    for target in cert_filegroups:
-        files = target[DefaultInfo].files.to_list()
-        searched_files.extend(files)
-        if target.label.name.removesuffix("__internal_filegroup") == cert_name:
-            # For overriding to a specific android_app_certificate target named as cert_name
-            for f in files:
-                # the files may not be named as cert_name
-                if f.basename.endswith(".pk8"):
-                    pk8 = f
-                elif f.basename.endswith(".x509.pem"):
-                    # can't use f.extension because it only picks up .pem without .x509
-                    pem = f
+    files = cert_filegroup[DefaultInfo].files.to_list()
 
-        elif target.label.name == "android_certificate_directory":
-            # For overriding to a specific *file* in a provided directory with cert_name in the actual filename
-            for f in files:
-                if f.basename == cert_name + ".pk8":
-                    pk8 = f
-                elif f.basename == cert_name + ".x509.pem":
-                    pem = f
-        if pk8 or pem:
-            # found, stop looking
-            # use 'or' so that we don't accidentally read the two files from different modules.
-            break
+    # For overriding to a specific *file* in a provided directory with cert_name in the actual filename
+    for f in files:
+        if f.basename == cert_name + ".pk8":
+            pk8 = f
+        elif f.basename == cert_name + ".x509.pem":
+            pem = f
 
     if not pk8:
-        fail("Could not find .pk8 file for the module '%s' in the list: %s" % (cert_name, searched_files))
+        fail("Could not find .pk8 file for the module '%s' in the list: %s" % (cert_name, files))
     if not pem:
-        fail("Could not find .x509.pem file for the module '%s' in the list: %s" % (cert_name, searched_files))
+        fail("Could not find .x509.pem file for the module '%s' in the list: %s" % (cert_name, files))
 
     return pk8, pem
 
@@ -122,11 +105,11 @@ def _android_app_certificate_with_default_cert_impl(ctx):
         cert_dir = default_cert_directory
 
     if cert_dir != default_cert_directory:
-        filegroups_to_search = [ctx.attr._default_app_certificate_filegroup]
+        filegroup_to_search = ctx.attr._default_app_certificate_filegroup
     else:
-        filegroups_to_search = [ctx.attr._hardcoded_certs]
+        filegroup_to_search = ctx.attr._hardcoded_certs
 
-    pk8, pem = _search_cert_files(cert_name, filegroups_to_search)
+    pk8, pem = _search_cert_files(cert_name, filegroup_to_search)
 
     return [
         AndroidAppCertificateInfo(
