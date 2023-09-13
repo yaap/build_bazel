@@ -20,6 +20,11 @@ _ANDROID_STATIC_DEPS = ["//external/libcxxabi:libc++demangle"]
 _STATIC_DEP = ["//external/libcxx:libc++_static"]
 _ANDROID_BINARY_STATIC_DEP = ["//prebuilts/clang/host/linux-x86:libunwind"]
 _SHARED_DEP = ["//external/libcxx:libc++"]
+_SDK_SYSTEM_DEPS = ["//bionic/libc:libstdc++", "//prebuilts/ndk:ndk_system"]
+_SDK_LIBUNWIND = "//prebuilts/ndk:ndk_libunwind"
+_SDK_LIBCXX = "//prebuilts/ndk:ndk_libc++_shared"
+_SDK_LIBCXX_STATIC = "//prebuilts/ndk:ndk_libc++_static"
+_SDK_LIBCXX_ABI = "//prebuilts/ndk:ndk_libc++abi"
 
 _ANDROID_CPPFLAGS = []
 _ANDROID_LINKOPTS = []
@@ -88,7 +93,8 @@ def _test_stl(
         linux_flags,
         linux_bionic_flags,
         darwin_flags,
-        windows_flags):
+        windows_flags,
+        sdk_deps):
     target_name = _stl_deps_target(stl, is_shared, is_binary)
     flags_target_name = _stl_flags_target(stl, is_shared, is_binary)
     android_test_name = target_name + "_android_test"
@@ -98,6 +104,7 @@ def _test_stl(
     linux_bionic_flags_test_name = target_name + "_linux_bionic_flags_test"
     darwin_flags_test_name = target_name + "_darwin_flags_test"
     windows_flags_test_name = target_name + "_windows_flags_test"
+    sdk_test_name = target_name + "_sdk_test"
 
     _stl_deps_android_test(
         name = android_test_name,
@@ -148,6 +155,13 @@ def _test_stl(
         target_under_test = flags_target_name,
     )
 
+    _stl_deps_sdk_test(
+        name = sdk_test_name,
+        static = sdk_deps.static,
+        shared = sdk_deps.shared,
+        target_under_test = target_name,
+    )
+
     return [
         android_test_name,
         non_android_test_name,
@@ -156,6 +170,7 @@ def _test_stl(
         linux_bionic_flags_test_name,
         darwin_flags_test_name,
         windows_flags_test_name,
+        sdk_test_name,
     ]
 
 def _stl_deps_target(name, is_shared, is_binary):
@@ -327,6 +342,23 @@ def _stl_deps_non_android_test(**kwargs):
         **kwargs
     )
 
+__stl_deps_sdk_test = analysistest.make(
+    impl = _stl_deps_test_impl,
+    attrs = {
+        "static": attr.string_list(),
+        "shared": attr.string_list(),
+    },
+    config_settings = {
+        "@//build/bazel/rules/apex:api_domain": "unbundled_app",
+    },
+)
+
+def _stl_deps_sdk_test(**kwargs):
+    __stl_deps_sdk_test(
+        target_compatible_with = ["//build/bazel/platforms/os:android"],
+        **kwargs
+    )
+
 def stl_test_suite(name):
     native.test_suite(
         name = name,
@@ -363,6 +395,10 @@ def stl_test_suite(name):
                     cppflags = _WINDOWS_CPPFLAGS,
                     linkopts = _WINDOWS_LINKOPTS,
                 ),
+                sdk_deps = struct(
+                    static = None,
+                    shared = _SDK_SYSTEM_DEPS,
+                ),
             ) +
             _test_stl(
                 stl = "system",
@@ -395,6 +431,10 @@ def stl_test_suite(name):
                 windows_flags = struct(
                     cppflags = _WINDOWS_CPPFLAGS,
                     linkopts = _WINDOWS_LINKOPTS,
+                ),
+                sdk_deps = struct(
+                    static = None,
+                    shared = _SDK_SYSTEM_DEPS,
                 ),
             ) +
             _test_stl(
@@ -429,6 +469,10 @@ def stl_test_suite(name):
                     cppflags = _WINDOWS_CPPFLAGS,
                     linkopts = _WINDOWS_LINKOPTS,
                 ),
+                sdk_deps = struct(
+                    static = [_SDK_LIBUNWIND],
+                    shared = [_SDK_LIBCXX],
+                ),
             ) +
             _test_stl(
                 stl = "libc++_static",
@@ -462,6 +506,10 @@ def stl_test_suite(name):
                     cppflags = _WINDOWS_CPPFLAGS,
                     linkopts = _WINDOWS_LINKOPTS,
                 ),
+                sdk_deps = struct(
+                    static = [_SDK_LIBUNWIND, _SDK_LIBCXX_STATIC, _SDK_LIBCXX_ABI],
+                    shared = None,
+                ),
             ) +
             _test_stl(
                 stl = "none",
@@ -494,6 +542,10 @@ def stl_test_suite(name):
                 windows_flags = struct(
                     cppflags = _WINDOWS_CPPFLAGS_STL_NONE,
                     linkopts = _WINDOWS_LINKOPTS,
+                ),
+                sdk_deps = struct(
+                    static = None,
+                    shared = None,
                 ),
             ) +
             _test_stl(
@@ -528,6 +580,10 @@ def stl_test_suite(name):
                     cppflags = _WINDOWS_CPPFLAGS,
                     linkopts = _WINDOWS_LINKOPTS,
                 ),
+                sdk_deps = struct(
+                    static = None,
+                    shared = _SDK_SYSTEM_DEPS,
+                ),
             ) +
             _test_stl(
                 stl = "system",
@@ -560,6 +616,10 @@ def stl_test_suite(name):
                 windows_flags = struct(
                     cppflags = _WINDOWS_CPPFLAGS,
                     linkopts = _WINDOWS_LINKOPTS,
+                ),
+                sdk_deps = struct(
+                    static = None,
+                    shared = _SDK_SYSTEM_DEPS,
                 ),
             ) +
             _test_stl(
@@ -594,6 +654,10 @@ def stl_test_suite(name):
                     cppflags = _WINDOWS_CPPFLAGS,
                     linkopts = _WINDOWS_LINKOPTS,
                 ),
+                sdk_deps = struct(
+                    static = [_SDK_LIBUNWIND],
+                    shared = [_SDK_LIBCXX],
+                ),
             ) +
             _test_stl(
                 stl = "libc++_static",
@@ -627,6 +691,10 @@ def stl_test_suite(name):
                     cppflags = _WINDOWS_CPPFLAGS,
                     linkopts = _WINDOWS_LINKOPTS,
                 ),
+                sdk_deps = struct(
+                    static = [_SDK_LIBUNWIND, _SDK_LIBCXX_STATIC, _SDK_LIBCXX_ABI],
+                    shared = None,
+                ),
             ) +
             _test_stl(
                 stl = "none",
@@ -660,6 +728,10 @@ def stl_test_suite(name):
                     cppflags = _WINDOWS_CPPFLAGS_STL_NONE,
                     linkopts = _WINDOWS_LINKOPTS,
                 ),
+                sdk_deps = struct(
+                    static = None,
+                    shared = None,
+                ),
             ) +
             _test_stl(
                 stl = "",
@@ -692,6 +764,10 @@ def stl_test_suite(name):
                 windows_flags = struct(
                     cppflags = _WINDOWS_CPPFLAGS,
                     linkopts = _WINDOWS_LINKOPTS,
+                ),
+                sdk_deps = struct(
+                    static = None,
+                    shared = _SDK_SYSTEM_DEPS,
                 ),
             ) +
             _test_stl(
@@ -726,6 +802,10 @@ def stl_test_suite(name):
                     cppflags = _WINDOWS_CPPFLAGS,
                     linkopts = _WINDOWS_LINKOPTS,
                 ),
+                sdk_deps = struct(
+                    static = None,
+                    shared = _SDK_SYSTEM_DEPS,
+                ),
             ) +
             _test_stl(
                 stl = "libc++",
@@ -758,6 +838,10 @@ def stl_test_suite(name):
                 windows_flags = struct(
                     cppflags = _WINDOWS_CPPFLAGS,
                     linkopts = _WINDOWS_LINKOPTS,
+                ),
+                sdk_deps = struct(
+                    static = [_SDK_LIBUNWIND],
+                    shared = [_SDK_LIBCXX],
                 ),
             ) +
             _test_stl(
@@ -792,6 +876,10 @@ def stl_test_suite(name):
                     cppflags = _WINDOWS_CPPFLAGS,
                     linkopts = _WINDOWS_LINKOPTS,
                 ),
+                sdk_deps = struct(
+                    static = [_SDK_LIBUNWIND, _SDK_LIBCXX_STATIC, _SDK_LIBCXX_ABI],
+                    shared = None,
+                ),
             ) +
             _test_stl(
                 stl = "none",
@@ -824,6 +912,10 @@ def stl_test_suite(name):
                 windows_flags = struct(
                     cppflags = _WINDOWS_CPPFLAGS_STL_NONE,
                     linkopts = _WINDOWS_LINKOPTS,
+                ),
+                sdk_deps = struct(
+                    static = None,
+                    shared = None,
                 ),
             ) +
             _test_stl(
@@ -858,6 +950,10 @@ def stl_test_suite(name):
                     cppflags = _WINDOWS_CPPFLAGS,
                     linkopts = _WINDOWS_LINKOPTS,
                 ),
+                sdk_deps = struct(
+                    static = None,
+                    shared = _SDK_SYSTEM_DEPS,
+                ),
             ) +
             _test_stl(
                 stl = "system",
@@ -890,6 +986,10 @@ def stl_test_suite(name):
                 windows_flags = struct(
                     cppflags = _WINDOWS_CPPFLAGS,
                     linkopts = _WINDOWS_LINKOPTS,
+                ),
+                sdk_deps = struct(
+                    static = None,
+                    shared = _SDK_SYSTEM_DEPS,
                 ),
             ) +
             _test_stl(
@@ -924,6 +1024,10 @@ def stl_test_suite(name):
                     cppflags = _WINDOWS_CPPFLAGS,
                     linkopts = _WINDOWS_LINKOPTS,
                 ),
+                sdk_deps = struct(
+                    static = [_SDK_LIBUNWIND],
+                    shared = [_SDK_LIBCXX],
+                ),
             ) +
             _test_stl(
                 stl = "libc++_static",
@@ -957,6 +1061,10 @@ def stl_test_suite(name):
                     cppflags = _WINDOWS_CPPFLAGS,
                     linkopts = _WINDOWS_LINKOPTS,
                 ),
+                sdk_deps = struct(
+                    static = [_SDK_LIBUNWIND, _SDK_LIBCXX_STATIC, _SDK_LIBCXX_ABI],
+                    shared = None,
+                ),
             ) +
             _test_stl(
                 stl = "none",
@@ -989,6 +1097,10 @@ def stl_test_suite(name):
                 windows_flags = struct(
                     cppflags = _WINDOWS_CPPFLAGS_STL_NONE,
                     linkopts = _WINDOWS_LINKOPTS,
+                ),
+                sdk_deps = struct(
+                    static = None,
+                    shared = None,
                 ),
             ),
     )
