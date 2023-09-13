@@ -105,8 +105,6 @@ versioned_shared_library = rule(
         common_attrs,
         src = attr.label(
             mandatory = True,
-            # TODO(b/217908237): reenable allow_single_file
-            # allow_single_file = True,
             providers = [CcSharedLibraryInfo],
         ),
     ),

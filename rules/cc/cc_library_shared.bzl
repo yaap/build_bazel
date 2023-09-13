@@ -519,10 +519,7 @@ _cc_library_shared_proxy = rule(
 )
 
 def _bssl_hash_injection_impl(ctx):
-    if len(ctx.files.src) != 1:
-        fail("Expected only one shared library file")
-
-    hashed_file = ctx.files.src[0]
+    hashed_file = ctx.file.src
     if ctx.attr.inject_bssl_hash:
         hashed_file = ctx.actions.declare_file("lib" + ctx.attr.name + ".so")
         args = ctx.actions.args()
@@ -549,8 +546,7 @@ _bssl_hash_injection = rule(
     attrs = {
         "src": attr.label(
             mandatory = True,
-            # TODO(b/217908237): reenable allow_single_file
-            # allow_single_file = True,
+            allow_single_file = True,
             providers = [CcSharedLibraryInfo],
         ),
         "inject_bssl_hash": attr.bool(
