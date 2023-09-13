@@ -1,5 +1,18 @@
+load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 load(":tradefed_test.bzl", "tradefed_test_suite")
 
 exports_files(glob(["*.tpl"]))
 
 tradefed_test_suite(name = "tradefed_tests")
+
+# A string flag used to accept the class&method reference.
+# The class&method reference is a string that is a series of class&method
+# references in atest format concatenated by ':'. Each class&method reference in
+# ATest format can contain one class and several methods. The class and methods
+# are separated by '#', and the methods are separated by ','. For example:
+#     ClassA#method1,method2:ClassB#method3:ClassC
+string_flag(
+    name = "class-method-reference",
+    build_setting_default = "",
+    visibility = ["//visibility:public"],
+)
