@@ -2,15 +2,25 @@
 set -e
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+MODULE_NAME="{module_name}"
 ATEST_TF_LAUNCHER="{atest_tradefed_launcher}"
 ATEST_HELPER="{atest_helper}"
 TRADEFED_CLASSPATH="{tradefed_classpath}"
 PATH_ADDITIONS="{path_additions}"
+TEST_FILTER_OUTPUT="{test_filter_output}"
 read -a ADDITIONAL_TRADEFED_OPTIONS <<< "{additional_tradefed_options}"
 
 export PATH="${PATH_ADDITIONS}:${PATH}"
 export ATEST_HELPER="${ATEST_HELPER}"
 export TF_PATH="${TRADEFED_CLASSPATH}"
+
+if [[ ! -z "${TEST_FILTER_OUTPUT}" ]]; then
+  TEST_FILTER=$(<${TEST_FILTER_OUTPUT})
+fi
+
+if [[ ! -z "${TEST_FILTER}" ]]; then
+  ADDITIONAL_TRADEFED_OPTIONS+=("--atest-include-filter" "${MODULE_NAME}:${TEST_FILTER}")
+fi
 
 # Prepend the REMOTE_JAVA_HOME environment variable to the path to ensure
 # that all Java invocations throughout the test execution flow use the same
@@ -29,7 +39,7 @@ exit_code_file="$(mktemp /tmp/tf-exec-XXXXXXXXXX)"
     --no-enable-granular-attempts \
     --no-early-device-release \
     --skip-host-arch-check \
-    --include-filter "{MODULE}" \
+    --include-filter "${MODULE_NAME}" \
     --skip-loading-config-jar \
     "${ADDITIONAL_TRADEFED_OPTIONS[@]}" \
     --bazel-exit-code-result-reporter:file=${exit_code_file} \

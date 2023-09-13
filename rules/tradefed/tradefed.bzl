@@ -34,11 +34,15 @@ SKIPPED automatically.
 
 load("@bazel_skylib//lib:dicts.bzl", "dicts")
 load("@bazel_skylib//lib:paths.bzl", "paths")
+load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 load("//build/bazel/platforms:platform_utils.bzl", "platforms")
 load(":cc_aspects.bzl", "CcTestSharedLibsInfo", "collect_cc_libs_aspect")
 
 # Apply this suffix to the name of the test dep target (e.g. the cc_test target)
 TEST_DEP_SUFFIX = "__tf_internal"
+
+# Apply this suffix to the name of the test filter generator target.
+FILTER_GENERATOR_SUFFIX = "__filter_generator"
 
 LANGUAGE_CC = "cc"
 LANGUAGE_JAVA = "java"
@@ -115,6 +119,10 @@ _TRADEFED_TEST_ATTRIBUTES = {
     "template_install_base": attr.string(
         default = "/data/local/tmp",
         doc = "Directory to install tests onto the device for generated config",
+    ),
+    "test_filter_generator": attr.label(
+        allow_single_file = True,
+        doc = "test filter to specify test class and method to run",
     ),
     "test_language": attr.string(
         default = "",
@@ -254,6 +262,11 @@ def _tradefed_test_impl(ctx, tradefed_options = []):
 
     test_runfiles = []
 
+    test_filter_output = None
+    if ctx.attr.test_filter_generator:
+        test_filter_output = ctx.file.test_filter_generator
+        test_runfiles.append(test_filter_output)
+
     out = ctx.actions.declare_file(test_basename, sibling = test_config)
 
     # Copy the test executable to the test cases directory
@@ -316,13 +329,14 @@ def _tradefed_test_impl(ctx, tradefed_options = []):
         output = script,
         is_executable = True,
         substitutions = {
-            "{MODULE}": test_basename,
+            "{module_name}": test_basename,
             "{atest_tradefed_launcher}": _abspath(ctx.file._atest_tradefed_launcher.short_path),
             "{atest_helper}": _abspath(ctx.file._atest_helper.short_path),
             "{tradefed_classpath}": _classpath(ctx.files._tradefed_dependencies),
             "{path_additions}": ":".join(path_additions),
             "{root_relative_tests_dir}": root_relative_tests_dir,
             "{additional_tradefed_options}": " ".join(tradefed_options),
+            "{test_filter_output}": _abspath(test_filter_output.short_path) if test_filter_output else "",
         },
     )
 
@@ -437,6 +451,7 @@ def tradefed_test_suite(
         deviceless_test_config = None,
         device_driven_test_config = None,
         host_driven_device_test_config = None,
+        test_filter_generator = None,
         runs_on = []):
     """The tradefed_test_suite macro groups all three test types under a single test_suite.o
 
@@ -460,6 +475,7 @@ def tradefed_test_suite(
       deviceless_test_config: default Tradefed test config for the deviceless execution mode.
       device_driven_test_config: default Tradefed test config for the device driven execution mode.
       host_driven_device_test_config: default Tradefed test config for the host driven execution mode.
+      test_filter_generator: label of a file containing a test filter that will be passed through to TradeFed.
       runs_on: platform variants that this test runs on. The allowed values are 'device', 'host_with_device' and 'host_without_device'.
     """
 
@@ -501,6 +517,7 @@ def tradefed_test_suite(
             ("template_install_base", template_install_base),
             # Test language helps to determine test_executable and fit test into config templates.
             ("test_language", test_language),
+            ("test_filter_generator", test_filter_generator),
             ("suffix", suffix),
             # There shouldn't be package-external dependencies on the internal tests.
             ("visibility", ["//visibility:private"]),
@@ -573,6 +590,60 @@ def tradefed_test_suite(
         tags = tags,
         target_compatible_with = ["//build/bazel/platforms/os:linux"],
     )
+
+def _cc_test_filter_generator_impl(ctx):
+    output = ctx.actions.declare_file(ctx.attr.name + "_cc_test_filter")
+    args = ["--out", output.path]
+
+    for f in ctx.files.srcs:
+        args.extend(["--class-file", f.path])
+
+    for f in ctx.attr._class_method_reference[BuildSettingInfo].value.split(":"):
+        if f:
+            args.extend(["--class-method-reference", f])
+
+    ctx.actions.run(
+        inputs = ctx.files.srcs,
+        outputs = [output],
+        arguments = args,
+        executable = ctx.attr._executable.files_to_run.executable,
+        tools = [ctx.attr._executable[DefaultInfo].files_to_run],
+        progress_message = "Generating the test filters for cc tests",
+    )
+
+    return [DefaultInfo(
+        files = depset([output]),
+    )]
+
+cc_test_filter_generator = rule(
+    attrs = {
+        "srcs": attr.label_list(
+            allow_files = True,
+            doc = "CC files containing the class and method that the test filter will match.",
+        ),
+        "_executable": attr.label(
+            default = "//tools/asuite/atest:cc-test-filter-generator",
+            doc = "Executable used to generate the cc test filter.",
+        ),
+        "_class_method_reference": attr.label(
+            default = ":class-method-reference",
+            doc = "String flag used to accept the class&method reference.",
+        ),
+    },
+    implementation = _cc_test_filter_generator_impl,
+    doc = """A rule used to generate the cc test filter
+
+An executable computes the cc test filter based on the given cc files and the
+class&method reference, and writes the result into a output file that is stored
+in the DefaultInfo provider.
+
+The class&method reference is a string that is a series of class&method
+references in atest format concatenated by ':'. Each class&method reference in
+ATest format can contain one class and several methods. The class and methods
+are separated by '#', and the methods are separated by ','. For example:
+    ClassA#method1,method2:ClassB#method3:ClassC
+""",
+)
 
 def _abspath(relative):
     return "${TEST_SRCDIR}/${TEST_WORKSPACE}/" + relative
