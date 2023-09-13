@@ -28,6 +28,7 @@ load("//build/bazel/rules/apex:transition.bzl", "apex_transition", "shared_lib_t
 load("//build/bazel/rules/cc:clang_tidy.bzl", "collect_deps_clang_tidy_info")
 load("//build/bazel/rules/cc:stripped_cc_common.bzl", "CcUnstrippedInfo", "StrippedCcBinaryInfo")
 load("//build/bazel/rules/common:api.bzl", "api")
+load("//build/bazel/rules/android:manifest_fixer.bzl", "manifest_fixer")
 load(
     "//build/bazel/rules/license:license_aspect.bzl",
     "RuleLicensedDependenciesInfo",
@@ -339,29 +340,19 @@ def _generate_file_contexts(ctx):
 
     return file_contexts
 
-# TODO(b/255592586): This can be reused by Java rules later.
 def _mark_manifest_as_test_only(ctx, apex_toolchain):
-    if ctx.file.android_manifest == None:
-        return None
-
     android_manifest = ctx.file.android_manifest
     dir_name = android_manifest.dirname
     base_name = android_manifest.basename
     android_manifest_fixed = ctx.actions.declare_file(paths.join(dir_name, "manifest_fixer", base_name))
-
-    args = ctx.actions.args()
-    args.add("--test-only")
-    args.add(android_manifest)
-    args.add(android_manifest_fixed)
-
-    ctx.actions.run(
-        inputs = [android_manifest],
-        outputs = [android_manifest_fixed],
-        executable = apex_toolchain.manifest_fixer[DefaultInfo].files_to_run,
-        arguments = [args],
+    manifest_fixer.fix(
+        ctx,
+        manifest_fixer = apex_toolchain.manifest_fixer[DefaultInfo].files_to_run,
+        in_manifest = android_manifest,
+        out_manifest = android_manifest_fixed,
         mnemonic = "MarkAndroidManifestTestOnly",
+        test_only = True,
     )
-
     return android_manifest_fixed
 
 # Generate <APEX>_backing.txt file which lists all libraries used by the APEX.
