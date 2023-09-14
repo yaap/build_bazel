@@ -8,6 +8,8 @@ ATEST_HELPER="{atest_helper}"
 TRADEFED_CLASSPATH="{tradefed_classpath}"
 PATH_ADDITIONS="{path_additions}"
 TEST_FILTER_OUTPUT="{test_filter_output}"
+LAUNCH_AVD_EXECUTABLE="{device_script}"
+
 read -a ADDITIONAL_TRADEFED_OPTIONS <<< "{additional_tradefed_options}"
 
 export PATH="${PATH_ADDITIONS}:${PATH}"
@@ -22,11 +24,14 @@ if [[ ! -z "${TEST_FILTER}" ]]; then
   ADDITIONAL_TRADEFED_OPTIONS+=("--atest-include-filter" "${MODULE_NAME}:${TEST_FILTER}")
 fi
 
-# Prepend the REMOTE_JAVA_HOME environment variable to the path to ensure
-# that all Java invocations throughout the test execution flow use the same
-# version.
-if [ ! -z "${REMOTE_JAVA_HOME}" ]; then
-  export PATH="${REMOTE_JAVA_HOME}/bin:${PATH}"
+# Execute device launch script if set. This is for remote device test.
+if [ ! -z LAUNCH_AVD_EXECUTABLE ];
+then
+    # Set java path for remote environment.
+    JAVA_HOME=/jdk/jdk17/linux-x86
+    export PATH=$JAVA_HOME/bin:$PATH
+    java -version
+    $LAUNCH_AVD_EXECUTABLE
 fi
 
 exit_code_file="$(mktemp /tmp/tf-exec-XXXXXXXXXX)"

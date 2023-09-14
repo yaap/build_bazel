@@ -37,6 +37,7 @@ load("@bazel_skylib//lib:paths.bzl", "paths")
 load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 load("//build/bazel/platforms:platform_utils.bzl", "platforms")
 load(":cc_aspects.bzl", "CcTestSharedLibsInfo", "collect_cc_libs_aspect")
+load("//build/bazel_common_rules/rules/remote_device/device:device_environment.bzl", "DeviceEnvironment")
 
 # Apply this suffix to the name of the test dep target (e.g. the cc_test target)
 TEST_DEP_SUFFIX = "__tf_internal"
@@ -238,6 +239,10 @@ def _get_test_target(ctx):
 
 # Generate and run tradefed bash script entry point and associated runfiles.
 def _tradefed_test_impl(ctx, tradefed_options = []):
+    device_script = ""
+    if _isRemoteDeviceTest(ctx):
+        device_script = _abspath(ctx.attr._run_with[DeviceEnvironment].runner.to_list()[0].short_path)
+
     tf_test_dir = paths.join(ctx.label.name, "testcases")
     test_target = _get_test_target(ctx)
     test_language = ctx.attr.test_language
@@ -322,6 +327,10 @@ def _tradefed_test_impl(ctx, tradefed_options = []):
     )
     runfiles = runfiles.merge(test_target.default_runfiles)
 
+    # Append remote device runfiles if using remote execution.
+    if _isRemoteDeviceTest(ctx):
+        runfiles = runfiles.merge(ctx.runfiles().merge(ctx.attr._run_with[DeviceEnvironment].data))
+
     # Generate script to run tradefed.
     script = ctx.actions.declare_file("%s.sh" % ctx.label.name)
     ctx.actions.expand_template(
@@ -337,6 +346,7 @@ def _tradefed_test_impl(ctx, tradefed_options = []):
             "{root_relative_tests_dir}": root_relative_tests_dir,
             "{additional_tradefed_options}": " ".join(tradefed_options),
             "{test_filter_output}": _abspath(test_filter_output.short_path) if test_filter_output else "",
+            "{device_script}": device_script,
         },
     )
 
@@ -385,6 +395,8 @@ tradefed_device_driven_test = rule(
             doc = "Test target to run in tradefed.",
             aspects = [collect_cc_libs_aspect],
         ),
+        "_exec_mode": attr.label(default = "//build/bazel_common_rules/rules/remote_device:exec_mode"),
+        "_run_with": attr.label(default = "//build/bazel_common_rules/rules/remote_device:target_device"),
         "_allowlist_function_transition": attr.label(
             default = "@bazel_tools//tools/allowlists/function_transition_allowlist",
         ),
@@ -565,7 +577,7 @@ def tradefed_test_suite(
                 # exclusive: Device tests should run exclusively (one at a time), since they tend
                 # to acquire resources and can often result in oddities when running in parellel.
                 # Think Activity-based or port-based tests for example.
-                tags = tags + ["manual", "exclusive"],
+                tags = tags + ["manual", "exclusive-if-local"],
                 **common_tradefed_attrs
             )
         else:
@@ -577,7 +589,7 @@ def tradefed_test_suite(
                 # exclusive: Device tests should run exclusively (one at a time), since they tend
                 # to acquire resources and can often result in oddities when running in parellel.
                 # Think Activity-based or port-based tests for example.
-                tags = tags + ["manual", "exclusive"],
+                tags = tags + ["manual", "exclusive-if-local"],
                 **common_tradefed_attrs
             )
 
@@ -650,3 +662,6 @@ def _abspath(relative):
 
 def _classpath(jars):
     return ":".join([_abspath(f.short_path) for f in depset(jars).to_list()])
+
+def _isRemoteDeviceTest(ctx):
+    return hasattr(ctx.attr, "_exec_mode") and ctx.attr._exec_mode[BuildSettingInfo].value == "remote"
