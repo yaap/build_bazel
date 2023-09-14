@@ -14,7 +14,7 @@
 
 load("@soong_injection//cc_toolchain:ndk_libs.bzl", "ndk_libs")
 load("//build/bazel/platforms:platform_utils.bzl", "platforms")
-load("//build/bazel/rules/apis:api_surface.bzl", "MODULE_LIB_API")
+load("//build/bazel/rules/apis:api_surface.bzl", "MODULE_LIB_API", "PUBLIC_API")
 load("//build/bazel/rules/common:api.bzl", "api")
 load(":cc_library_headers.bzl", "cc_library_headers")
 load(":cc_library_shared.bzl", "CcStubLibrariesInfo")
@@ -36,6 +36,20 @@ CcStubInfo = provider(
     },
 )
 
+def _stub_gen_additional_args(ctx):
+    if ctx.attr.api_surface == PUBLIC_API:
+        return []
+
+    # TODO: Support LLNDK
+    # Module-lib api, i.e. apex use case
+    apex_stub_args = ["--systemapi", "--apex"]
+
+    # If this is not an ndk library, add --no-ndk
+    if ctx.attr.source_library_label.label.name not in [ndk_lib.removesuffix(".ndk") for ndk_lib in ndk_libs]:
+        # https://cs.android.com/android/_/android/platform/build/soong/+/main:cc/library.go;l=1318-1323;drc=d9b7f17f372a196efc82112c29efb86abf91e266;bpv=1;bpt=0
+        apex_stub_args.append("--no-ndk")
+    return apex_stub_args
+
 def _cc_stub_gen_impl(ctx):
     # The name of this target.
     name = ctx.attr.name
@@ -52,16 +66,7 @@ def _cc_stub_gen_impl(ctx):
     ndkstubgen_args.add_all(["--api", ctx.attr.version])
     ndkstubgen_args.add_all(["--api-map", ctx.file._api_levels_file])
 
-    # TODO(b/207812332): This always parses and builds the stub library as a dependency of an APEX. Parameterize this
-    # for non-APEX use cases.
-    apex_stub_args = ["--systemapi", "--apex"]
-
-    # If this is not an ndk library, add --no-ndk
-    if ctx.attr.source_library_label.label.name not in [ndk_lib.removesuffix(".ndk") for ndk_lib in ndk_libs]:
-        # https://cs.android.com/android/_/android/platform/build/soong/+/main:cc/library.go;l=1318-1323;drc=d9b7f17f372a196efc82112c29efb86abf91e266;bpv=1;bpt=0
-        apex_stub_args.append("--no-ndk")
-
-    ndkstubgen_args.add_all(apex_stub_args)
+    ndkstubgen_args.add_all(_stub_gen_additional_args(ctx))
     ndkstubgen_args.add(ctx.file.symbol_file)
     ndkstubgen_args.add_all(outputs)
     ctx.actions.run(
@@ -96,6 +101,7 @@ cc_stub_gen = rule(
         "symbol_file": attr.label(mandatory = True, allow_single_file = [".map.txt"]),
         "version": attr.string(mandatory = True, default = "current"),
         "source_library_label": attr.label(mandatory = True),
+        "api_surface": attr.string(mandatory = True, values = [PUBLIC_API, MODULE_LIB_API]),
         # Private attributes
         "_api_levels_file": attr.label(default = "@soong_injection//api_levels:api_levels.json", allow_single_file = True),
         "_ndkstubgen": attr.label(default = "//build/soong/cc/ndkstubgen", executable = True, cfg = "exec"),
@@ -113,7 +119,7 @@ CcStubLibrarySharedInfo = provider(
 # from a library's .map.txt files and ndkstubgen. The top level target returns the same
 # providers as a cc_library_shared, with the addition of a CcStubInfo
 # containing metadata files and versions of the stub library.
-def cc_stub_library_shared(name, stubs_symbol_file, version, export_includes, soname, source_library_label, deps, target_compatible_with, features, tags):
+def cc_stub_library_shared(name, stubs_symbol_file, version, export_includes, soname, source_library_label, deps, target_compatible_with, features, tags, api_surface):
     # Call ndkstubgen to generate the stub.c source file from a .map.txt file. These
     # are accessible in the CcStubInfo provider of this target.
     cc_stub_gen(
@@ -122,6 +128,7 @@ def cc_stub_library_shared(name, stubs_symbol_file, version, export_includes, so
         version = version,
         source_library_label = source_library_label,
         target_compatible_with = target_compatible_with,
+        api_surface = api_surface,
         tags = ["manual"],
     )
 
@@ -284,7 +291,8 @@ def cc_stub_suite(
         data = [],  # @unused
         target_compatible_with = [],
         features = [],
-        tags = ["manual"]):
+        tags = ["manual"],
+        api_surface = PUBLIC_API):
     # Implicitly add "current" to versions. This copies the behavior from Soong (aosp/1641782)
     if "current" not in versions:
         versions.append("current")
@@ -302,6 +310,7 @@ def cc_stub_suite(
             target_compatible_with = target_compatible_with,
             features = features,
             tags = tags,
+            api_surface = api_surface,
         )
 
     # Create a header library target for this API surface (ModuleLibApi)
