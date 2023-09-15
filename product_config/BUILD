@@ -1,4 +1,5 @@
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag", "string_flag", "string_list_flag")
+load("//build/bazel/rules/aconfig:aconfig_value_set.bzl", "aconfig_value_set")
 load(":product_variables_for_attributes.bzl", "product_variables_for_attributes")
 
 package(default_visibility = ["//visibility:public"])
@@ -45,6 +46,8 @@ _string_variables = [
     "platform_version_name",
     "product_brand",
     "product_manufacturer",
+    "release_aconfig_flag_default_permission",
+    "release_version",
     "target_build_variant",
     # keep-sorted end
 ]
@@ -106,4 +109,15 @@ bool_flag(
 label_flag(
     name = "default_app_certificate_filegroup",
     build_setting_default = "//build/bazel/utils:empty_filegroup",
+)
+
+label_flag(
+    name = "release_aconfig_value_sets",
+    build_setting_default = ":default_aconfig_value_set",
+)
+
+aconfig_value_set(
+    name = "default_aconfig_value_set",
+    values = [],
+    visibility = ["//visibility:private"],
 )
