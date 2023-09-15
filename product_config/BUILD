@@ -69,6 +69,7 @@ _bool_variables = [
     "malloc_zero_contents",
     "native_coverage",
     "pdk",
+    "platform_sdk_final",
     "release_aidl_use_unfrozen",
     "safestack",
     "treble_linker_namespaces",

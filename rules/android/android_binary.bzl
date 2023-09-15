@@ -41,8 +41,13 @@ def _android_binary_helper(**attrs):
         )
     )
 
+    # The following attributes are unknown the native android_binary rule and must be removed
+    # prior to instantiating it.
     attrs.pop("$enable_manifest_merging", None)
     attrs["proguard_specs"] = []
+    attrs.pop("sdk_version")
+    if "updatable" in attrs:
+        attrs.pop("updatable")
 
     native.android_binary(
         application_resources = android_binary_aosp_internal_name,
@@ -105,6 +110,7 @@ def android_binary(
         target_compatible_with = target_compatible_with,
         tags = tags + ["manual"],
         visibility = ["//visibility:private"],
+        sdk_version = sdk_version,
         **kwargs
     )
 
