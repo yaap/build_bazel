@@ -61,7 +61,7 @@ TEST_TARGETS=(
 
 HOST_ONLY_TEST_TARGETS=(
   //tools/trebuchet:AnalyzerKt
-  //tools/metalava:metalava
+  //tools/metalava/metalava:metalava
   # This is explicitly listed to prevent b/294514745
   //packages/modules/adb:adb_test
   # TODO (b/282953338): these tests depend on adb which is unconverted
