@@ -59,6 +59,12 @@ products = {
         _soong_variables_arm64,
         {"ApexGlobalMinSdkVersionOverride": "Tiramisu"},
     ),
+    "aosp_arm64_for_testing_aconfig_release": dicts.add(
+        _soong_variables_arm64,
+        {"ReleaseAconfigFlagDefaultPermission": "READ_WRITE"},
+        {"ReleaseAconfigValueSets": "//build/bazel/rules/aconfig:aconfig.test.value_set"},
+        {"ReleaseVersion": "34"},
+    ),
 }
 
 product_labels = [
