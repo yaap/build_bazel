@@ -74,7 +74,7 @@ merged_txts = rule(
             providers = [JavaSdkLibraryInfo],
         ),
         "_metalava": attr.label(
-            default = "//tools/metalava:metalava",
+            default = "//tools/metalava/metalava:metalava",
             executable = True,
             cfg = "exec",
         ),
