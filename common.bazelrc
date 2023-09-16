@@ -162,3 +162,5 @@ common --noincompatible_use_host_features
 # a. The GOROOT in our checked in go binary is relative to android build top
 # b. GoToolchainBinaryBuild uses GOCACHE=$(mktemp -d)
 build --strategy GoToolchainBinaryBuild=sandboxed
+
+startup --connect_timeout_secs=45
