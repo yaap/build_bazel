@@ -164,3 +164,31 @@ common --noincompatible_use_host_features
 build --strategy GoToolchainBinaryBuild=sandboxed
 
 startup --connect_timeout_secs=45
+
+# TODO(b/300376073): Reuse the RBE instance of BES for remote test.
+###### Remote Virtual Device Test Execution Configuration.
+
+test:remote_avd  --config=remote
+test:remote_avd  --test_timeout=3600
+test:remote_avd  --//build/bazel_common_rules/rules/remote_device:target_device=//build/bazel_common_rules/rules/remote_device:cf_x86_64_phone
+test:remote_avd  --//build/bazel_common_rules/rules/remote_device:exec_mode=remote
+test:remote_avd --experimental_credential_helper_timeout=60s
+test:remote_avd --google_default_credentials=true
+
+build:remote_avd --spawn_strategy=sandboxed # force disable remote cache, some actions don't work with it
+build:remote_avd --strategy=AbiDump=local # force disable sandbox
+build:remote_avd --strategy=AbiLink=local # force disable sandbox
+build:remote_avd --strategy=AbiDiff=local # force disable sandbox
+test:remote_avd --strategy=DownloadCvd=remote
+test:remote_avd --strategy=TestRunner=remote
+test:remote_avd --test_env=PATH="/bin:/usr/bin/"
+
+# Depending on how many machines are in the remote execution instance, setting
+# this higher can make builds faster by allowing more jobs to run in parallel.
+# Setting it too high can result in jobs that timeout, however, while waiting
+# for a remote machine to execute them.
+test:remote --jobs=200
+test:remote --remote_cache=grpcs://remotebuildexecution.googleapis.com
+test:remote --remote_executor=grpcs://remotebuildexecution.googleapis.com
+test:remote --remote_timeout=3600
+
