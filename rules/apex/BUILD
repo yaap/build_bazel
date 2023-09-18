@@ -69,6 +69,17 @@ config_setting(
 )
 
 config_setting(
+    name = "unbundled_app.arm",
+    constraint_values = [
+        arch_variant_to_constraints["android"],
+        arch_variant_to_constraints["arm"],
+    ],
+    flag_values = {
+        ":api_domain": "unbundled_app",
+    },
+)
+
+config_setting(
     name = "in_apex",
     flag_values = {
         ":within_apex": "True",
