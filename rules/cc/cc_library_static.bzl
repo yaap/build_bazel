@@ -104,7 +104,8 @@ def cc_library_static(
         tidy_timeout_srcs = None,
         tidy_gen_header_filter = None,
         native_coverage = True,
-        additional_compiler_inputs = []):
+        additional_compiler_inputs = [],
+        applicable_licenses = []):
     "Bazel macro to correspond with the cc_library_static Soong module."
 
     exports_name = "%s_exports" % name
@@ -163,6 +164,7 @@ def cc_library_static(
         # whole archive deps always re-export their includes, etc
         deps = deps + whole_archive_deps + dynamic_deps,
         target_compatible_with = target_compatible_with,
+        applicable_licenses = applicable_licenses,
         tags = ["manual"],
     )
 
@@ -183,6 +185,7 @@ def cc_library_static(
             implementation_whole_archive_deps
         ),
         target_compatible_with = target_compatible_with,
+        applicable_licenses = applicable_licenses,
         tags = ["manual"],
     )
 
@@ -201,6 +204,7 @@ def cc_library_static(
             ("toolchains", ["//build/bazel/product_config:product_variables_for_attributes"]),
             ("target_compatible_with", target_compatible_with),
             ("linkopts", linkopts),
+            ("applicable_licenses", applicable_licenses),
         ],
     )
 
@@ -276,6 +280,7 @@ def cc_library_static(
         androidmk_whole_archive_deps = whole_archive_deps + implementation_whole_archive_deps,
         androidmk_dynamic_deps = dynamic_deps + implementation_dynamic_deps + system_dynamic_deps + stl_info.shared_deps,
         exports = exports_name,
+        applicable_licenses = applicable_licenses,
         tags = tags,
         features = toolchain_features,
 
