@@ -20,6 +20,7 @@ load(
     "variant_constraints",
     "variant_name",
 )
+load("@env//:env.bzl", "env")
 
 # This dict denotes the suffixes for host platforms (keys) and the constraints
 # associated with them (values). Used in transitions and tests, in addition to
@@ -299,7 +300,18 @@ def android_product(*, name, soong_variables, extra_constraints = []):
     # the host platforms still use the product variables.
     # TODO(b/262753134): Investigate making the host platforms product-independant
     for suffix, constraints in host_platforms.items():
+        # Add RBE properties if the host platform support it.
+        exec_properties = {}
+        if "linux" in suffix and env.get("DEVICE_TEST_RBE_DOCKER_IMAGE_LINK"):
+            exec_properties = {
+                "container-image": env.get("DEVICE_TEST_RBE_DOCKER_IMAGE_LINK").replace("_atChar_", "@").replace("_colonChar_", ":"),
+                "dockerNetwork": "standard",
+                "dockerPrivileged": "true",
+                "dockerRunAsRoot": "true",
+                "OSFamily": "Linux",
+            }
         native.platform(
             name = name + "_" + suffix,
             constraint_values = common_constraints + constraints,
+            exec_properties = exec_properties,
         )
