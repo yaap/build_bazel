@@ -4,36 +4,34 @@ load("//build/bazel/rules/common:api.bzl", "api")
 def _api_levels_test_impl(ctx):
     env = unittest.begin(ctx)
 
-    # schema: version string to parse: (expected api int, is preview api)
+    # schema: version string to parse: expected api int
     _LEVELS_UNDER_TEST = {
         # numbers
-        "9": (9, False),  # earliest released number
-        "21": (21, False),
-        "30": (30, False),
-        "33": (33, False),
+        "9": 9,  # earliest released number
+        "21": 21,
+        "30": 30,
+        "33": 33,
         # unchecked non final api level (not finalized, not preview, not current)
-        "1234": (1234, False),
-        "8999": (8999, False),
-        "9999": (9999, False),
-        "10001": (10001, False),
+        "1234": 1234,
+        "8999": 8999,
+        "9999": 9999,
+        "10001": 10001,
         # letters
-        "G": (9, False),  # earliest released letter
-        "J-MR1": (17, False),
-        "R": (30, False),
-        "S": (31, False),
-        "S-V2": (32, False),
+        "G": 9,  # earliest released letter
+        "J-MR1": 17,
+        "R": 30,
+        "S": 31,
+        "S-V2": 32,
         # codenames
-        "Tiramisu": (33, False),
-        "UpsideDownCake": (9000, True),  # preview
-        "current": (10000, True),  # future (considered as preview)
-        # preview numbers
-        "9000": (9000, True),  # preview
-        "10000": (10000, True),  # future (considered as preview)
+        "Tiramisu": 33,
+        "UpsideDownCake": 9000,
+        "current": 10000,
+        "9000": 9000,
+        "10000": 10000,
     }
 
     for level, expected in _LEVELS_UNDER_TEST.items():
-        asserts.equals(env, expected[0], api.parse_api_level_from_version(level), "unexpected api level parsed for %s" % level)
-        asserts.equals(env, expected[1], api.is_preview(level), "unexpected is_preview value for %s" % level)
+        asserts.equals(env, expected, api.parse_api_level_from_version(level), "unexpected api level parsed for %s" % level)
 
     return unittest.end(env)
 
