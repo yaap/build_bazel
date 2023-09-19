@@ -47,6 +47,7 @@ FILTER_GENERATOR_SUFFIX = "__filter_generator"
 
 LANGUAGE_CC = "cc"
 LANGUAGE_JAVA = "java"
+LANGUAGE_ANDROID = "android"
 
 # A transition to force the target device platforms configuration. This is
 # used in the tradefed -> cc_test edge (for example).
@@ -85,8 +86,31 @@ _TRADEFED_TEST_ATTRIBUTES = {
     # TODO(b/285949958): Use source-built adb for device tests.
     "_adb": attr.label(
         default = "//prebuilts/runtime:prebuilt-runtime-adb",
+        executable = True,
         allow_single_file = True,
         cfg = "exec",
+    ),
+    "_aapt": attr.label(
+        default = "//frameworks/base/tools/aapt:aapt",
+        executable = True,
+        cfg = "exec",
+        doc = "aapt (v1). Used by Tradefed.",
+    ),
+    "_aapt2": attr.label(
+        default = "//frameworks/base/tools/aapt2:aapt2",
+        executable = True,
+        cfg = "exec",
+        doc = "aapt (v2). Used by Tradefed.",
+    ),
+    "_auto_gen_test_config": attr.label(
+        default = "//build/make/tools:auto_gen_test_config",
+        executable = True,
+        cfg = "exec",
+        doc = "Python script for automatically generating the Tradefed test config for android tests.",
+    ),
+    "_empty_test_config": attr.label(
+        default = "//build/make/core:empty_test_config.xml",
+        allow_single_file = True,
     ),
     "_tradefed_dependencies": attr.label_list(
         default = [
@@ -127,7 +151,7 @@ _TRADEFED_TEST_ATTRIBUTES = {
     ),
     "test_language": attr.string(
         default = "",
-        values = ["", LANGUAGE_CC, LANGUAGE_JAVA],
+        values = ["", LANGUAGE_CC, LANGUAGE_JAVA, LANGUAGE_ANDROID],
         doc = "the programming language the test uses",
     ),
     "suffix": attr.string(
@@ -156,7 +180,7 @@ def _copy_file(ctx, input, output):
     )
 
 # Get test config if specified or generate test config from template.
-def _get_or_generate_test_config(ctx, tf_test_dir, test_executable, test_language):
+def _get_or_generate_test_config(ctx, module_name, tf_test_dir, test_entry_point, test_language):
     # Validate input
     total = 0
     if ctx.file.test_config:
@@ -167,13 +191,11 @@ def _get_or_generate_test_config(ctx, tf_test_dir, test_executable, test_languag
         fail("Exactly one of test_config or test_config_template should be provided, but got: " +
              "%s %s" % (ctx.file.test_config, ctx.file.template_test_config))
 
-    basename = _normalize_test_name(test_executable.basename)
-
     # If dynamic_config is specified copy it with a new name.
     dynamic_config = None
     if ctx.file.dynamic_config:
         # Dynamic config file is specified in test config file and doesn't have the 32/64 suffix.
-        dynamic_config = ctx.actions.declare_file(paths.join(tf_test_dir, basename.removesuffix(ctx.attr.suffix) + ".dynamic"))
+        dynamic_config = ctx.actions.declare_file(paths.join(tf_test_dir, module_name + ".dynamic"))
         _copy_file(ctx, ctx.file.dynamic_config, dynamic_config)
 
     # If existing tradefed config is specified, copy to it and return early.
@@ -186,21 +208,61 @@ def _get_or_generate_test_config(ctx, tf_test_dir, test_executable, test_languag
     # bazel-bin/packages/modules/adb/adb_test__tf_deviceless_test/testcases/
     # ├── adb_test
     # └── adb_test.config
-    test_config = ctx.actions.declare_file(paths.join(tf_test_dir, basename + ".config"))
+    test_config = ctx.actions.declare_file(paths.join(tf_test_dir, module_name + ".config"))
     if ctx.file.test_config:
         _copy_file(ctx, ctx.file.test_config, test_config)
         return test_config, dynamic_config
 
-    # No test config specified, generate config from template. Join extra
-    # configs together and add xml spacing indent.
-    if test_language == LANGUAGE_JAVA:
-        # rm ".jar" extension since it's "{MODULE}.jar" in Java config template
-        basename = basename.removesuffix(".jar")
+    # No test config specified, generate config from template.
+
+    if test_language == LANGUAGE_ANDROID:
+        # android tests require a tool to parse the final AndroidManifest.xml
+        # for label, package and runner class.
+        #
+        # First, dump the xmltree with aapt2. android_binary doesn't have a
+        # provider to access the AndroidManifest.xml directly, and we can't use
+        # the compiled XML from the APK directly.
+        xmltree = ctx.actions.declare_file(module_name + ".xmltree", sibling = test_config)
+        extra_configs = ""
+        if ctx.attr.template_configs:
+            extra_configs = "--extra-configs %s" % ("\\n    ".join(ctx.attr.template_configs))
+        ctx.actions.run_shell(
+            inputs = [test_entry_point, ctx.executable._aapt2],
+            outputs = [xmltree],
+            command = "%s dump xmltree %s --file AndroidManifest.xml %s > %s" % (
+                ctx.executable._aapt2.path,
+                test_entry_point.path,
+                extra_configs,
+                xmltree.path,
+            ),
+            mnemonic = "DumpManifestXmlTree",
+            progress_message = "Extracting test information from AndroidManifest.xml for %s" % module_name,
+        )
+
+        # Then, run auto_gen_test_config.py which has a small xmltree parser.
+        args = ctx.actions.args()
+        args.add_all([test_config, xmltree, ctx.file._empty_test_config, ctx.file.template_test_config])
+        ctx.actions.run(
+            executable = ctx.executable._auto_gen_test_config,
+            arguments = [args],
+            inputs = [
+                xmltree,
+                ctx.file._empty_test_config,
+                ctx.file.template_test_config,
+            ],
+            outputs = [test_config],
+            mnemonic = "AutoGenTestConfig",
+            progress_message = "Generating Tradefed test config for %s" % module_name,
+        )
+
+        return test_config, dynamic_config
+
+    # Non-android tests.
     ctx.actions.expand_template(
         template = ctx.file.template_test_config,
         output = test_config,
         substitutions = {
-            "{MODULE}": basename,
+            "{MODULE}": module_name,
             "{EXTRA_CONFIGS}": "\n    ".join(ctx.attr.template_configs),
             "{TEST_INSTALL_BASE}": ctx.attr.template_install_base,
         },
@@ -246,18 +308,29 @@ def _tradefed_test_impl(ctx, tradefed_options = []):
     tf_test_dir = paths.join(ctx.label.name, "testcases")
     test_target = _get_test_target(ctx)
     test_language = ctx.attr.test_language
+    if test_language == LANGUAGE_ANDROID:
+        test_entry_point = test_target[ApkInfo].signed_apk
+    else:
+        # cc, java, py
+        test_entry_point = test_target.files_to_run.executable
 
     # For Java, a library may make more sense here than the executable. When
     # expanding tradefed_test_impl to accept more rule types, this could be
     # turned into a provider, whether set by the rule or an aspect visiting the
     # rule.
-    test_executable = test_target.files_to_run.executable
-    test_basename = _normalize_test_name(test_executable.basename)
+    test_basename_with_ext = _normalize_test_name(test_entry_point.basename)
+    module_name = paths.replace_extension(test_basename_with_ext, "")  # clean module name
 
     test_config_files = []
 
     # Get or generate test config.
-    test_config, dynamic_config = _get_or_generate_test_config(ctx, tf_test_dir, test_executable, test_language)
+    test_config, dynamic_config = _get_or_generate_test_config(
+        ctx,
+        module_name,
+        tf_test_dir,
+        test_entry_point,
+        test_language,
+    )
     test_config_files.append(test_config)
     if dynamic_config != None:
         test_config_files.append(dynamic_config)
@@ -272,10 +345,10 @@ def _tradefed_test_impl(ctx, tradefed_options = []):
         test_filter_output = ctx.file.test_filter_generator
         test_runfiles.append(test_filter_output)
 
-    out = ctx.actions.declare_file(test_basename, sibling = test_config)
+    out = ctx.actions.declare_file(test_basename_with_ext, sibling = test_config)
 
     # Copy the test executable to the test cases directory
-    _copy_file(ctx, test_executable, out)
+    _copy_file(ctx, test_entry_point, out)
 
     root_relative_tests_dir = paths.dirname(out.short_path)
     test_runfiles.append(out)
@@ -296,20 +369,27 @@ def _tradefed_test_impl(ctx, tradefed_options = []):
 
     # Prepare test-provided runfiles
     for f in test_target.files.to_list():
-        if f == test_executable:
+        if f == test_entry_point:
             continue
         test_runfiles.append(f)
 
     # Add harness dependencies into runfiles.
     test_runfiles.extend(ctx.files._tradefed_dependencies)
-    test_runfiles.append(ctx.file._adb)
+    test_runfiles.append(ctx.executable._adb)
+    test_runfiles.append(ctx.executable._aapt)
+    test_runfiles.append(ctx.executable._aapt2)
 
-    path_additions = [_abspath(ctx.file._adb.dirname)]
+    # Make the test harness tooling available in the $PATH of the test action
+    path_additions = [
+        _abspath(paths.dirname(ctx.executable._adb.short_path)),
+        _abspath(paths.dirname(ctx.executable._aapt.short_path)),
+        _abspath(paths.dirname(ctx.executable._aapt2.short_path)),
+    ]
 
     for runfile in test_target.default_runfiles.files.to_list():
-        if runfile == test_executable:
+        if runfile == test_entry_point:
             continue
-        suffix = runfile.basename.removeprefix(test_executable.basename)
+        suffix = runfile.basename.removeprefix(test_entry_point.basename)
         if suffix in ["_versioned", "_unstripped"]:
             continue
         path_without_package = runfile.short_path.removeprefix(ctx.label.package + "/")
@@ -338,7 +418,7 @@ def _tradefed_test_impl(ctx, tradefed_options = []):
         output = script,
         is_executable = True,
         substitutions = {
-            "{module_name}": test_basename,
+            "{module_name}": module_name,
             "{atest_tradefed_launcher}": _abspath(ctx.file._atest_tradefed_launcher.short_path),
             "{atest_helper}": _abspath(ctx.file._atest_helper.short_path),
             "{tradefed_classpath}": _classpath(ctx.files._tradefed_dependencies),
@@ -482,7 +562,7 @@ def tradefed_test_suite(
       template_install_base: the default install location on device for files.
       tags: additional tags for the top level test_suite target. This can be used for filtering tests.
       visibility: Bazel visibility declarations for this target.
-      test_language: language used for the test dependency. One of [LANGUAGE_CC, LANGUAGE_JAVA].
+      test_language: language used for the test dependency. One of [LANGUAGE_CC, LANGUAGE_JAVA, LANGUAGE_ANDROID].
       suffix: the suffix such as 32 or 64 of the test binary.
       deviceless_test_config: default Tradefed test config for the deviceless execution mode.
       device_driven_test_config: default Tradefed test config for the device driven execution mode.
@@ -527,7 +607,7 @@ def tradefed_test_suite(
             ("template_configs", template_configs),
             # Path to install the test executable on device.
             ("template_install_base", template_install_base),
-            # Test language helps to determine test_executable and fit test into config templates.
+            # Test language helps to determine test_entry_point and fit test into config templates.
             ("test_language", test_language),
             ("test_filter_generator", test_filter_generator),
             ("suffix", suffix),
