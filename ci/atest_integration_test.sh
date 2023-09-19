@@ -68,6 +68,7 @@ ${OUT_DIR}/host/linux-x86/bin/atest-dev \
   --bazel-arg=--project_id="${BES_PROJECT_ID}" \
   --bazel-arg=--build_metadata=ab_branch="${BRANCH_NAME}" \
   --bazel-arg=--build_metadata=ab_target="${BUILD_TARGET_NAME}" \
+  --bazel-arg=--build_metadata=ab_build_id="${BUILD_NUMBER}" \
   "$@" \
   HelloWorldHostTest \
   sysprop_test \
