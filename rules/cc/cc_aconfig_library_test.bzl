@@ -13,74 +13,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-load("@bazel_skylib//lib:paths.bzl", "paths")
-load("@bazel_skylib//lib:sets.bzl", "sets")
-load("@bazel_skylib//lib:unittest.bzl", "analysistest", "asserts")
 load("//build/bazel/rules/aconfig:aconfig_declarations.bzl", "aconfig_declarations")
 load("//build/bazel/rules/aconfig:aconfig_value_set.bzl", "aconfig_value_set")
 load("//build/bazel/rules/aconfig:aconfig_values.bzl", "aconfig_values")
 load("//build/bazel/rules/cc:cc_aconfig_library.bzl", "cc_aconfig_library")
 load(
     "//build/bazel/rules/test_common:flags.bzl",
-    "action_flags_present_only_for_mnemonic_test_with_config_settings",
-)
-
-action_flags_present_only_for_cc_aconfig_library_test = action_flags_present_only_for_mnemonic_test_with_config_settings({
-    "//command_line_option:platforms": "@//build/bazel/tests/products:aosp_arm64_for_testing_aconfig_release",
-})
-
-def _input_output_verification_test_impl(ctx):
-    env = analysistest.begin(ctx)
-    actions = [a for a in analysistest.target_actions(env) if a.mnemonic == ctx.attr.mnemonic]
-    asserts.true(
-        env,
-        len(actions) == 1,
-        "Action not found: %s" % actions,
-    )
-    package_root = ctx.label.package
-
-    input_files = [paths.join(package_root, a) for a in ctx.attr.input_files]
-    output_files = [paths.join(package_root, a) for a in ctx.attr.output_files]
-
-    action = actions[0]
-
-    if len(input_files) > 0:
-        expected = sets.make(
-            input_files,
-        )
-        actual = sets.make([
-            file.short_path
-            for file in action.inputs.to_list()
-        ])
-        asserts.true(
-            env,
-            sets.is_subset(expected, actual),
-            "Not all input files are present %s %s" % (expected, actual),
-        )
-
-    if len(output_files) > 0:
-        expected = sets.make(
-            output_files,
-        )
-        actual = sets.make([
-            file.short_path
-            for file in action.outputs.to_list()
-        ])
-        asserts.true(
-            env,
-            sets.is_equal(expected, actual),
-            "Not all output files are present %s %s" % (expected, actual),
-        )
-
-    return analysistest.end(env)
-
-input_output_verification_test = analysistest.make(
-    _input_output_verification_test_impl,
-    attrs = {
-        "mnemonic": attr.string(),
-        "input_files": attr.string_list(),
-        "output_files": attr.string_list(),
-    },
+    "action_flags_present_for_mnemonic_nonexclusive_test",
+    "input_output_verification_test",
 )
 
 def test_cc_aconfig_library_action():
@@ -119,7 +59,7 @@ def test_cc_aconfig_library_action():
     )
 
     test_name_flags = name + "_test_flags"
-    action_flags_present_only_for_cc_aconfig_library_test(
+    action_flags_present_for_mnemonic_nonexclusive_test(
         name = test_name_flags,
         target_under_test = name + "_gen",
         mnemonics = [
