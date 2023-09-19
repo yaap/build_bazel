@@ -97,3 +97,15 @@ aar_import(
     sdk_version = "32",
     target_compatible_with = ["//build/bazel/platforms/os:android"],
 )
+
+# This is a minimal app that builds against the NDK
+android_binary(
+    name = "app_with_sdk_variant_of_jni_deps",
+    manifest = "AndroidManifest.xml",
+    sdk_version = "current",
+    target_compatible_with = ["//build/bazel/platforms/os:android"],
+    deps = [
+        "//external/dexmaker:libdexmakerjvmtiagent",
+        "//external/dexmaker:libstaticjvmtiagent",
+    ],
+)
