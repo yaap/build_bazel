@@ -35,6 +35,7 @@ load(":clang_tidy_test.bzl", "clang_tidy_test_suite")
 load(":flex_test.bzl", "flex_test_suite")
 load(":lto_transitions_test.bzl", "lto_transition_test_suite")
 load(":memtag_heap_transitions_test.bzl", "memtag_heap_transitions_test_suite")
+load(":ndk_headers_test.bzl", "ndk_headers_test_suite")
 load(":rscript_to_cpp_test.bzl", "rscript_to_cpp_test_suite")
 load(":sanitizer_blocklist_test.bzl", "sanitizer_blocklist_test_suite")
 load(":stl_test.bzl", "stl_test_suite")
@@ -149,3 +150,5 @@ stl_test_suite(name = "stl_tests")
 yasm_test_suite(name = "yasm_tests")
 
 rscript_to_cpp_test_suite(name = "rscript_to_cpp_tests")
+
+ndk_headers_test_suite(name = "ndk_headers_tests")
