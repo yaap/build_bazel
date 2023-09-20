@@ -14,10 +14,15 @@
 
 load("@bazel_tools//tools/cpp:toolchain_utils.bzl", "find_cpp_toolchain")
 load(":cc_library_common.bzl", "create_cc_prebuilt_library_info")
+load(":stripped_cc_common.bzl", "common_strip_attrs", "stripped_impl")
 
 def _cc_prebuilt_library_shared_impl(ctx):
     lib = ctx.file.shared_library
-    files = ctx.attr.shared_library.files if lib != None else None
+    files = []
+    if lib:
+        lib = stripped_impl(ctx, ctx.file.shared_library, suffix = ".so", subdir = ctx.attr.name)
+        files.append(lib)
+
     cc_toolchain = find_cpp_toolchain(ctx)
     feature_configuration = cc_common.configure_features(
         ctx = ctx,
@@ -34,7 +39,10 @@ def _cc_prebuilt_library_shared_impl(ctx):
     )
 
     return [
-        DefaultInfo(files = files),
+        DefaultInfo(
+            files = depset(direct = files),
+            runfiles = ctx.runfiles(files),
+        ),
         cc_info,
         CcSharedLibraryInfo(
             dynamic_deps = depset(),
@@ -51,6 +59,7 @@ def _cc_prebuilt_library_shared_impl(ctx):
 cc_prebuilt_library_shared = rule(
     implementation = _cc_prebuilt_library_shared_impl,
     attrs = dict(
+        common_strip_attrs,
         shared_library = attr.label(
             providers = [CcInfo],
             allow_single_file = True,
