@@ -139,12 +139,6 @@ string_list_setting(
     visibility = ["//visibility:public"],
 )
 
-bool_flag(
-    name = "apexer_verbose",
-    build_setting_default = False,
-    visibility = ["//visibility:public"],
-)
-
 string_setting(
     name = "min_sdk_version",
     build_setting_default = "",
