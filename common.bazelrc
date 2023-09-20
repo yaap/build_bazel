@@ -67,8 +67,6 @@ common:ci --noshow_loading_progress
 # Show the full set of flags for observability and debuggability.
 common:ci --announce_rc
 build:ci --verbose_failures
-# Log apexer verbosely on CI (it has a noisy but useful output)
-build:ci --//build/bazel/rules/apex:apexer_verbose
 test:ci --keep_going
 
 # Support a local user-specific bazelrc file.
