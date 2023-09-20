@@ -71,6 +71,7 @@ def cc_test(
     cc_test_filter_generator(
         name = test_filter_generator_name,
         srcs = srcs,
+        module_name = name,
     )
 
     # A cc_test is essentially the same as a cc_binary. Let's reuse the
