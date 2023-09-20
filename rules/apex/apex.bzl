@@ -443,8 +443,6 @@ def _run_apexer(ctx, apex_toolchain):
 
     # start of apexer cmd
     command.append(apexer_files.executable.path)
-    if ctx.attr._apexer_verbose[BuildSettingInfo].value:
-        command.append("--verbose")
 
     command.append("--force")
     command.append("--include_build_info")
@@ -1085,10 +1083,6 @@ APEX is truly updatable. To be updatable, min_sdk_version should be set as well.
         "_apex_global_min_sdk_version_override": attr.label(
             default = "//build/bazel/product_config:apex_global_min_sdk_version_override",
             doc = "If specified, override the min_sdk_version of this apex and in the transition and checks for dependencies.",
-        ),
-        "_apexer_verbose": attr.label(
-            default = "//build/bazel/rules/apex:apexer_verbose",
-            doc = "If enabled, make apexer log verbosely.",
         ),
         "_build_id": attr.label(
             default = "//build/bazel/product_config:build_id",
