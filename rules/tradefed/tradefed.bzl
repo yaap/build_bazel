@@ -36,8 +36,8 @@ load("@bazel_skylib//lib:dicts.bzl", "dicts")
 load("@bazel_skylib//lib:paths.bzl", "paths")
 load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 load("//build/bazel/platforms:platform_utils.bzl", "platforms")
-load(":cc_aspects.bzl", "CcTestSharedLibsInfo", "collect_cc_libs_aspect")
 load("//build/bazel_common_rules/rules/remote_device/device:device_environment.bzl", "DeviceEnvironment")
+load(":cc_aspects.bzl", "CcTestSharedLibsInfo", "collect_cc_libs_aspect")
 
 # Apply this suffix to the name of the test dep target (e.g. the cc_test target)
 TEST_DEP_SUFFIX = "__tf_internal"
@@ -690,9 +690,17 @@ def _cc_test_filter_generator_impl(ctx):
     for f in ctx.files.srcs:
         args.extend(["--class-file", f.path])
 
-    for f in ctx.attr._class_method_reference[BuildSettingInfo].value.split(":"):
-        if f:
-            args.extend(["--class-method-reference", f])
+    for f in ctx.attr._test_reference[BuildSettingInfo].value:
+        if not f:
+            continue
+        if ":" not in f:
+            fail("Module name is required in the test reference %s. The format should follow: <module name>:<class name>#<method name>" % f)
+
+        module_name, class_method_reference = f.split(":", 1)
+        if module_name != ctx.attr.module_name:
+            continue
+
+        args.extend(["--class-method-reference", class_method_reference])
 
     ctx.actions.run(
         inputs = ctx.files.srcs,
@@ -713,27 +721,28 @@ cc_test_filter_generator = rule(
             allow_files = True,
             doc = "CC files containing the class and method that the test filter will match.",
         ),
+        "module_name": attr.string(
+            mandatory = True,
+            doc = "Module name that the test filters are generated on by this target.",
+        ),
         "_executable": attr.label(
             default = "//tools/asuite/atest:cc-test-filter-generator",
             doc = "Executable used to generate the cc test filter.",
         ),
-        "_class_method_reference": attr.label(
-            default = ":class-method-reference",
-            doc = "String flag used to accept the class&method reference.",
+        "_test_reference": attr.label(
+            default = ":test_reference",
+            doc = "Repeatable string flag used to accept the test reference.",
         ),
     },
     implementation = _cc_test_filter_generator_impl,
     doc = """A rule used to generate the cc test filter
 
-An executable computes the cc test filter based on the given cc files and the
-class&method reference, and writes the result into a output file that is stored
-in the DefaultInfo provider.
+An executable computes the cc test filter for a test module based on the given
+cc files and the test reference, and writes the result into a output file that
+is stored in the DefaultInfo provider.
 
-The class&method reference is a string that is a series of class&method
-references in atest format concatenated by ':'. Each class&method reference in
-ATest format can contain one class and several methods. The class and methods
-are separated by '#', and the methods are separated by ','. For example:
-    ClassA#method1,method2:ClassB#method3:ClassC
+Each test reference is a string in the test reference format of ATest:
+    <module name>:<class name>#<method name>,<method name>
 """,
 )
 
