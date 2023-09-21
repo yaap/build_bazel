@@ -50,7 +50,7 @@ common --experimental_sibling_repository_layout
 common --experimental_disable_external_package
 
 # Disable all repository_ctx.download calls.
-common --experimental_repository_disable_download
+common --repository_disable_download
 
 # Increase refresh rate of command line UI for improved perceived responsiveness.
 common --show_progress_rate_limit=0.05
@@ -67,8 +67,6 @@ common:ci --noshow_loading_progress
 # Show the full set of flags for observability and debuggability.
 common:ci --announce_rc
 build:ci --verbose_failures
-# Log apexer verbosely on CI (it has a noisy but useful output)
-build:ci --//build/bazel/rules/apex:apexer_verbose
 test:ci --keep_going
 
 # Support a local user-specific bazelrc file.
@@ -155,3 +153,40 @@ build --@io_bazel_rules_go//go/config:pure
 
 # Breaking bazel feature for the 7/25 release. b/292565910
 common --noincompatible_use_host_features
+
+# Run GoToolchainBinaryBuild in a sandbox
+# Without sandboxing, the action will run in an execution root that contains a symlink to prebuilts/go
+# This causes issues due to two separate factors combining together
+# a. The GOROOT in our checked in go binary is relative to android build top
+# b. GoToolchainBinaryBuild uses GOCACHE=$(mktemp -d)
+build --strategy GoToolchainBinaryBuild=sandboxed
+
+startup --connect_timeout_secs=45
+
+# TODO(b/300376073): Reuse the RBE instance of BES for remote test.
+###### Remote Virtual Device Test Execution Configuration.
+
+test:remote_avd  --config=remote
+test:remote_avd  --test_timeout=3600
+test:remote_avd  --//build/bazel_common_rules/rules/remote_device:target_device=//build/bazel_common_rules/rules/remote_device:cf_x86_64_phone
+test:remote_avd  --//build/bazel_common_rules/rules/remote_device:exec_mode=remote
+test:remote_avd --experimental_credential_helper_timeout=60s
+test:remote_avd --google_default_credentials=true
+
+build:remote_avd --spawn_strategy=sandboxed # force disable remote cache, some actions don't work with it
+build:remote_avd --strategy=AbiDump=local # force disable sandbox
+build:remote_avd --strategy=AbiLink=local # force disable sandbox
+build:remote_avd --strategy=AbiDiff=local # force disable sandbox
+test:remote_avd --strategy=DownloadCvd=remote
+test:remote_avd --strategy=TestRunner=remote
+test:remote_avd --test_env=PATH="/bin:/usr/bin/"
+
+# Depending on how many machines are in the remote execution instance, setting
+# this higher can make builds faster by allowing more jobs to run in parallel.
+# Setting it too high can result in jobs that timeout, however, while waiting
+# for a remote machine to execute them.
+test:remote --jobs=200
+test:remote --remote_cache=grpcs://remotebuildexecution.googleapis.com
+test:remote --remote_executor=grpcs://remotebuildexecution.googleapis.com
+test:remote --remote_timeout=3600
+

@@ -34,14 +34,20 @@ SKIPPED automatically.
 
 load("@bazel_skylib//lib:dicts.bzl", "dicts")
 load("@bazel_skylib//lib:paths.bzl", "paths")
+load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 load("//build/bazel/platforms:platform_utils.bzl", "platforms")
+load("//build/bazel_common_rules/rules/remote_device/device:device_environment.bzl", "DeviceEnvironment")
 load(":cc_aspects.bzl", "CcTestSharedLibsInfo", "collect_cc_libs_aspect")
 
 # Apply this suffix to the name of the test dep target (e.g. the cc_test target)
 TEST_DEP_SUFFIX = "__tf_internal"
 
+# Apply this suffix to the name of the test filter generator target.
+FILTER_GENERATOR_SUFFIX = "__filter_generator"
+
 LANGUAGE_CC = "cc"
 LANGUAGE_JAVA = "java"
+LANGUAGE_ANDROID = "android"
 
 # A transition to force the target device platforms configuration. This is
 # used in the tradefed -> cc_test edge (for example).
@@ -50,19 +56,14 @@ LANGUAGE_JAVA = "java"
 # "both"` by default, so this may drop the secondary arch of the test, depending
 # on the TARGET_PRODUCT.
 def _tradefed_always_device_transition_impl(settings, _):
-    old_platform = str(settings["//command_line_option:platforms"][0])
-
-    # TODO(b/290716626): This is brittle handling for distinguishing between
-    # device / not-device of the current target platform. Could use better
-    # helpers.
-    new_platform = old_platform.removesuffix("_linux_x86_64")
+    device_platform = str(settings["//build/bazel/product_config:device_platform"])
     return {
-        "//command_line_option:platforms": new_platform,
+        "//command_line_option:platforms": device_platform,
     }
 
 _tradefed_always_device_transition = transition(
     implementation = _tradefed_always_device_transition_impl,
-    inputs = ["//command_line_option:platforms"],
+    inputs = ["//build/bazel/product_config:device_platform"],
     outputs = ["//command_line_option:platforms"],
 )
 
@@ -85,8 +86,31 @@ _TRADEFED_TEST_ATTRIBUTES = {
     # TODO(b/285949958): Use source-built adb for device tests.
     "_adb": attr.label(
         default = "//prebuilts/runtime:prebuilt-runtime-adb",
+        executable = True,
         allow_single_file = True,
         cfg = "exec",
+    ),
+    "_aapt": attr.label(
+        default = "//frameworks/base/tools/aapt:aapt",
+        executable = True,
+        cfg = "exec",
+        doc = "aapt (v1). Used by Tradefed.",
+    ),
+    "_aapt2": attr.label(
+        default = "//frameworks/base/tools/aapt2:aapt2",
+        executable = True,
+        cfg = "exec",
+        doc = "aapt (v2). Used by Tradefed.",
+    ),
+    "_auto_gen_test_config": attr.label(
+        default = "//build/make/tools:auto_gen_test_config",
+        executable = True,
+        cfg = "exec",
+        doc = "Python script for automatically generating the Tradefed test config for android tests.",
+    ),
+    "_empty_test_config": attr.label(
+        default = "//build/make/core:empty_test_config.xml",
+        allow_single_file = True,
     ),
     "_tradefed_dependencies": attr.label_list(
         default = [
@@ -106,6 +130,10 @@ _TRADEFED_TEST_ATTRIBUTES = {
         allow_single_file = True,
         doc = "Test/Tradefed config.",
     ),
+    "dynamic_config": attr.label(
+        allow_single_file = True,
+        doc = "Dynamic test config.",
+    ),
     "template_test_config": attr.label(
         allow_single_file = True,
         doc = "Template to generate test config.",
@@ -117,10 +145,19 @@ _TRADEFED_TEST_ATTRIBUTES = {
         default = "/data/local/tmp",
         doc = "Directory to install tests onto the device for generated config",
     ),
+    "test_filter_generator": attr.label(
+        allow_single_file = True,
+        doc = "test filter to specify test class and method to run",
+    ),
     "test_language": attr.string(
         default = "",
-        values = ["", LANGUAGE_CC, LANGUAGE_JAVA],
+        values = ["", LANGUAGE_CC, LANGUAGE_JAVA, LANGUAGE_ANDROID],
         doc = "the programming language the test uses",
+    ),
+    "suffix": attr.string(
+        default = "",
+        values = ["", "32", "64"],
+        doc = "the suffix of the test binary",
     ),
 }
 
@@ -143,7 +180,7 @@ def _copy_file(ctx, input, output):
     )
 
 # Get test config if specified or generate test config from template.
-def _get_or_generate_test_config(ctx, tf_test_dir, test_executable, test_language):
+def _get_or_generate_test_config(ctx, module_name, tf_test_dir, test_entry_point, test_language):
     # Validate input
     total = 0
     if ctx.file.test_config:
@@ -154,7 +191,12 @@ def _get_or_generate_test_config(ctx, tf_test_dir, test_executable, test_languag
         fail("Exactly one of test_config or test_config_template should be provided, but got: " +
              "%s %s" % (ctx.file.test_config, ctx.file.template_test_config))
 
-    basename = _normalize_test_name(test_executable.basename)
+    # If dynamic_config is specified copy it with a new name.
+    dynamic_config = None
+    if ctx.file.dynamic_config:
+        # Dynamic config file is specified in test config file and doesn't have the 32/64 suffix.
+        dynamic_config = ctx.actions.declare_file(paths.join(tf_test_dir, module_name + ".dynamic"))
+        _copy_file(ctx, ctx.file.dynamic_config, dynamic_config)
 
     # If existing tradefed config is specified, copy to it and return early.
     #
@@ -166,26 +208,66 @@ def _get_or_generate_test_config(ctx, tf_test_dir, test_executable, test_languag
     # bazel-bin/packages/modules/adb/adb_test__tf_deviceless_test/testcases/
     # ├── adb_test
     # └── adb_test.config
-    out = ctx.actions.declare_file(paths.join(tf_test_dir, basename + ".config"))
+    test_config = ctx.actions.declare_file(paths.join(tf_test_dir, module_name + ".config"))
     if ctx.file.test_config:
-        _copy_file(ctx, ctx.file.test_config, out)
-        return out
+        _copy_file(ctx, ctx.file.test_config, test_config)
+        return test_config, dynamic_config
 
-    # No test config specified, generate config from template. Join extra
-    # configs together and add xml spacing indent.
-    if test_language == LANGUAGE_JAVA:
-        # rm ".jar" extension since it's "{MODULE}.jar" in Java config template
-        basename = basename.removesuffix(".jar")
+    # No test config specified, generate config from template.
+
+    if test_language == LANGUAGE_ANDROID:
+        # android tests require a tool to parse the final AndroidManifest.xml
+        # for label, package and runner class.
+        #
+        # First, dump the xmltree with aapt2. android_binary doesn't have a
+        # provider to access the AndroidManifest.xml directly, and we can't use
+        # the compiled XML from the APK directly.
+        xmltree = ctx.actions.declare_file(module_name + ".xmltree", sibling = test_config)
+        extra_configs = ""
+        if ctx.attr.template_configs:
+            extra_configs = "--extra-configs %s" % ("\\n    ".join(ctx.attr.template_configs))
+        ctx.actions.run_shell(
+            inputs = [test_entry_point, ctx.executable._aapt2],
+            outputs = [xmltree],
+            command = "%s dump xmltree %s --file AndroidManifest.xml %s > %s" % (
+                ctx.executable._aapt2.path,
+                test_entry_point.path,
+                extra_configs,
+                xmltree.path,
+            ),
+            mnemonic = "DumpManifestXmlTree",
+            progress_message = "Extracting test information from AndroidManifest.xml for %s" % module_name,
+        )
+
+        # Then, run auto_gen_test_config.py which has a small xmltree parser.
+        args = ctx.actions.args()
+        args.add_all([test_config, xmltree, ctx.file._empty_test_config, ctx.file.template_test_config])
+        ctx.actions.run(
+            executable = ctx.executable._auto_gen_test_config,
+            arguments = [args],
+            inputs = [
+                xmltree,
+                ctx.file._empty_test_config,
+                ctx.file.template_test_config,
+            ],
+            outputs = [test_config],
+            mnemonic = "AutoGenTestConfig",
+            progress_message = "Generating Tradefed test config for %s" % module_name,
+        )
+
+        return test_config, dynamic_config
+
+    # Non-android tests.
     ctx.actions.expand_template(
         template = ctx.file.template_test_config,
-        output = out,
+        output = test_config,
         substitutions = {
-            "{MODULE}": basename,
+            "{MODULE}": module_name,
             "{EXTRA_CONFIGS}": "\n    ".join(ctx.attr.template_configs),
             "{TEST_INSTALL_BASE}": ctx.attr.template_install_base,
         },
     )
-    return out
+    return test_config, dynamic_config
 
 # Generate tradefed result reporter config.
 def _create_result_reporter_config(ctx):
@@ -219,30 +301,54 @@ def _get_test_target(ctx):
 
 # Generate and run tradefed bash script entry point and associated runfiles.
 def _tradefed_test_impl(ctx, tradefed_options = []):
-    tf_test_dir = ctx.label.name + "/testcases"
+    device_script = ""
+    if _isRemoteDeviceTest(ctx):
+        device_script = _abspath(ctx.attr._run_with[DeviceEnvironment].runner.to_list()[0].short_path)
 
+    tf_test_dir = paths.join(ctx.label.name, "testcases")
     test_target = _get_test_target(ctx)
     test_language = ctx.attr.test_language
+    if test_language == LANGUAGE_ANDROID:
+        test_entry_point = test_target[ApkInfo].signed_apk
+    else:
+        # cc, java, py
+        test_entry_point = test_target.files_to_run.executable
 
     # For Java, a library may make more sense here than the executable. When
     # expanding tradefed_test_impl to accept more rule types, this could be
     # turned into a provider, whether set by the rule or an aspect visiting the
     # rule.
-    test_executable = test_target.files_to_run.executable
-    test_basename = _normalize_test_name(test_executable.basename)
+    test_basename_with_ext = _normalize_test_name(test_entry_point.basename)
+    module_name = paths.replace_extension(test_basename_with_ext, "")  # clean module name
+
+    test_config_files = []
 
     # Get or generate test config.
-    test_config = _get_or_generate_test_config(ctx, tf_test_dir, test_executable, test_language)
+    test_config, dynamic_config = _get_or_generate_test_config(
+        ctx,
+        module_name,
+        tf_test_dir,
+        test_entry_point,
+        test_language,
+    )
+    test_config_files.append(test_config)
+    if dynamic_config != None:
+        test_config_files.append(dynamic_config)
 
     # Generate result reporter config file.
     report_config = _create_result_reporter_config(ctx)
 
     test_runfiles = []
 
-    out = ctx.actions.declare_file(test_basename, sibling = test_config)
+    test_filter_output = None
+    if ctx.attr.test_filter_generator:
+        test_filter_output = ctx.file.test_filter_generator
+        test_runfiles.append(test_filter_output)
+
+    out = ctx.actions.declare_file(test_basename_with_ext, sibling = test_config)
 
     # Copy the test executable to the test cases directory
-    _copy_file(ctx, test_executable, out)
+    _copy_file(ctx, test_entry_point, out)
 
     root_relative_tests_dir = paths.dirname(out.short_path)
     test_runfiles.append(out)
@@ -263,20 +369,27 @@ def _tradefed_test_impl(ctx, tradefed_options = []):
 
     # Prepare test-provided runfiles
     for f in test_target.files.to_list():
-        if f == test_executable:
+        if f == test_entry_point:
             continue
         test_runfiles.append(f)
 
     # Add harness dependencies into runfiles.
     test_runfiles.extend(ctx.files._tradefed_dependencies)
-    test_runfiles.append(ctx.file._adb)
+    test_runfiles.append(ctx.executable._adb)
+    test_runfiles.append(ctx.executable._aapt)
+    test_runfiles.append(ctx.executable._aapt2)
 
-    path_additions = [_abspath(ctx.file._adb.dirname)]
+    # Make the test harness tooling available in the $PATH of the test action
+    path_additions = [
+        _abspath(paths.dirname(ctx.executable._adb.short_path)),
+        _abspath(paths.dirname(ctx.executable._aapt.short_path)),
+        _abspath(paths.dirname(ctx.executable._aapt2.short_path)),
+    ]
 
     for runfile in test_target.default_runfiles.files.to_list():
-        if runfile == test_executable:
+        if runfile == test_entry_point:
             continue
-        suffix = runfile.basename.removeprefix(test_executable.basename)
+        suffix = runfile.basename.removeprefix(test_entry_point.basename)
         if suffix in ["_versioned", "_unstripped"]:
             continue
         path_without_package = runfile.short_path.removeprefix(ctx.label.package + "/")
@@ -286,14 +399,17 @@ def _tradefed_test_impl(ctx, tradefed_options = []):
 
     # Gather runfiles.
     runfiles = ctx.runfiles(
-        files = test_runfiles + [
-            test_config,
+        files = test_runfiles + test_config_files + [
             report_config,
             ctx.file._atest_tradefed_launcher,
             ctx.file._atest_helper,
         ],
     )
     runfiles = runfiles.merge(test_target.default_runfiles)
+
+    # Append remote device runfiles if using remote execution.
+    if _isRemoteDeviceTest(ctx):
+        runfiles = runfiles.merge(ctx.runfiles().merge(ctx.attr._run_with[DeviceEnvironment].data))
 
     # Generate script to run tradefed.
     script = ctx.actions.declare_file("%s.sh" % ctx.label.name)
@@ -302,13 +418,15 @@ def _tradefed_test_impl(ctx, tradefed_options = []):
         output = script,
         is_executable = True,
         substitutions = {
-            "{MODULE}": test_basename,
+            "{module_name}": module_name,
             "{atest_tradefed_launcher}": _abspath(ctx.file._atest_tradefed_launcher.short_path),
             "{atest_helper}": _abspath(ctx.file._atest_helper.short_path),
             "{tradefed_classpath}": _classpath(ctx.files._tradefed_dependencies),
             "{path_additions}": ":".join(path_additions),
             "{root_relative_tests_dir}": root_relative_tests_dir,
             "{additional_tradefed_options}": " ".join(tradefed_options),
+            "{test_filter_output}": _abspath(test_filter_output.short_path) if test_filter_output else "",
+            "{device_script}": device_script,
         },
     )
 
@@ -357,6 +475,8 @@ tradefed_device_driven_test = rule(
             doc = "Test target to run in tradefed.",
             aspects = [collect_cc_libs_aspect],
         ),
+        "_exec_mode": attr.label(default = "//build/bazel_common_rules/rules/remote_device:exec_mode"),
+        "_run_with": attr.label(default = "//build/bazel_common_rules/rules/remote_device:target_device"),
         "_allowlist_function_transition": attr.label(
             default = "@bazel_tools//tools/allowlists/function_transition_allowlist",
         ),
@@ -412,14 +532,19 @@ def tradefed_test_suite(
         name,
         test_dep,
         test_config,
+        template_test_config,
         template_configs,
         template_install_base,
         tags,
         visibility,
+        dynamic_config = None,
         test_language = "",
+        suffix = "",
         deviceless_test_config = None,
         device_driven_test_config = None,
-        host_driven_device_test_config = None):
+        host_driven_device_test_config = None,
+        test_filter_generator = None,
+        runs_on = []):
     """The tradefed_test_suite macro groups all three test types under a single test_suite.o
 
     This enables users or tools to simply run 'b test //path/to:foo_test_suite' and bazel
@@ -431,20 +556,44 @@ def tradefed_test_suite(
       name: name of the test suite. This is the canonical name of the test, e.g. "hello_world_test".
       test_dep: label of the language-specific test dependency.
       test_config: label of a custom Tradefed XML config. if specified, skip auto generation with default configs.
+      template_test_config: label of a custom template of Tradefed XML config. If specified, skip using default template.
+      dynamic_config: label of a custom dynamic test config, by default it is the DynamicConfig.xml file.
       template_configs: additional lines to be added to the test config.
       template_install_base: the default install location on device for files.
       tags: additional tags for the top level test_suite target. This can be used for filtering tests.
       visibility: Bazel visibility declarations for this target.
-      test_language: language used for the test dependency. One of [LANGUAGE_CC, LANGUAGE_JAVA].
+      test_language: language used for the test dependency. One of [LANGUAGE_CC, LANGUAGE_JAVA, LANGUAGE_ANDROID].
+      suffix: the suffix such as 32 or 64 of the test binary.
       deviceless_test_config: default Tradefed test config for the deviceless execution mode.
       device_driven_test_config: default Tradefed test config for the device driven execution mode.
       host_driven_device_test_config: default Tradefed test config for the host driven execution mode.
+      test_filter_generator: label of a file containing a test filter that will be passed through to TradeFed.
+      runs_on: platform variants that this test runs on. The allowed values are 'device', 'host_with_device' and 'host_without_device'.
     """
 
     # Validate names.
     if not test_dep.endswith(TEST_DEP_SUFFIX) or test_dep.removesuffix(TEST_DEP_SUFFIX) != name:
         fail("tradefed_test_suite.test_dep must be named %s%s, " % (name, TEST_DEP_SUFFIX) +
              "but got %s" % test_dep)
+
+    if test_config and template_test_config:
+        fail("'test_config' and 'template_test_config' should not be specified at same time.")
+
+    # TODO(b/296312548): Make `runs_on` a required attribute.
+    if runs_on:
+        if [p for p in runs_on if p not in ["device", "host_with_device", "host_without_device"]]:
+            fail("Invalid value in 'runs_on' attribute: has to be within 'device', 'host_with_device' and 'host_without_device'.")
+        if "host_with_device" in runs_on and "device" in runs_on:
+            fail("'host_with_device' and 'device' should not exist in the 'runs_on' attribute at same time.")
+        if "host_with_device" in runs_on and "host_without_device" in runs_on:
+            fail("'host_with_device' and 'host_without_device' should not exist in the 'runs_on' attribute at same time.")
+
+        if "host_with_device" not in runs_on:
+            host_driven_device_test_config = None
+        if "host_without_device" not in runs_on:
+            deviceless_test_config = None
+        if "device" not in runs_on:
+            device_driven_test_config = None
 
     # Shared attributes between all three test types. The only difference between them
     # are the default template_test_config at this level.
@@ -453,29 +602,35 @@ def tradefed_test_suite(
             ("test", test_dep),
             # User-specified test config should take precedence over auto-generated ones.
             ("test_config", test_config),
+            ("dynamic_config", dynamic_config),
             # Extra lines to go into the test config.
             ("template_configs", template_configs),
             # Path to install the test executable on device.
             ("template_install_base", template_install_base),
-            # Test language helps to determine test_executable and fit test into config templates.
+            # Test language helps to determine test_entry_point and fit test into config templates.
             ("test_language", test_language),
+            ("test_filter_generator", test_filter_generator),
+            ("suffix", suffix),
             # There shouldn't be package-external dependencies on the internal tests.
             ("visibility", ["//visibility:private"]),
-            # The internal tests shouldn't run with ... or :all target patterns
-            ("tags", ["manual"] + tags),
             # Tradefed harness always builds for host.
             ("target_compatible_with", ["//build/bazel/platforms/os:linux"]),
         ],
     )
 
+    tests = []
+
     # Tradefed deviceless test. Device NOT necessary. Tradefed will be invoked with --null-device.
-    tradefed_deviceless_test_name = name + "__tf_deviceless_test"
-    tests = [tradefed_deviceless_test_name]
-    tradefed_deviceless_test(
-        name = tradefed_deviceless_test_name,
-        template_test_config = None if test_config else deviceless_test_config,
-        **common_tradefed_attrs
-    )
+    if deviceless_test_config:
+        tradefed_deviceless_test_name = name + "__tf_deviceless_test"
+        tests.append(tradefed_deviceless_test_name)
+        tradefed_deviceless_test(
+            name = tradefed_deviceless_test_name,
+            template_test_config = None if test_config else template_test_config or deviceless_test_config,
+            # The internal tests shouldn't run with ... or :all target patterns
+            tags = tags + ["manual"],
+            **common_tradefed_attrs
+        )
 
     # | type             | deviceless / unit     | device-driven | host-driven device |
     # |------------------+-----------------------+---------------+--------------------|
@@ -496,13 +651,25 @@ def tradefed_test_suite(
         if device_driven_test_config:
             tradefed_device_driven_test(
                 name = tradefed_device_test_name,
-                template_test_config = None if test_config else device_driven_test_config,
+                template_test_config = None if test_config else template_test_config or device_driven_test_config,
+                # manual: The internal tests shouldn't run with ... or :all target patterns.
+                #
+                # exclusive: Device tests should run exclusively (one at a time), since they tend
+                # to acquire resources and can often result in oddities when running in parellel.
+                # Think Activity-based or port-based tests for example.
+                tags = tags + ["manual", "exclusive-if-local"],
                 **common_tradefed_attrs
             )
         else:
             tradefed_host_driven_device_test(
                 name = tradefed_device_test_name,
-                template_test_config = None if test_config else host_driven_device_test_config,
+                template_test_config = None if test_config else template_test_config or host_driven_device_test_config,
+                # manual: The internal tests shouldn't run with ... or :all target patterns.
+                #
+                # exclusive: Device tests should run exclusively (one at a time), since they tend
+                # to acquire resources and can often result in oddities when running in parellel.
+                # Think Activity-based or port-based tests for example.
+                tags = tags + ["manual", "exclusive-if-local"],
                 **common_tradefed_attrs
             )
 
@@ -516,8 +683,74 @@ def tradefed_test_suite(
         target_compatible_with = ["//build/bazel/platforms/os:linux"],
     )
 
+def _cc_test_filter_generator_impl(ctx):
+    output = ctx.actions.declare_file(ctx.attr.name + "_cc_test_filter")
+    args = ["--out", output.path]
+
+    for f in ctx.files.srcs:
+        args.extend(["--class-file", f.path])
+
+    for f in ctx.attr._test_reference[BuildSettingInfo].value:
+        if not f:
+            continue
+        if ":" not in f:
+            fail("Module name is required in the test reference %s. The format should follow: <module name>:<class name>#<method name>" % f)
+
+        module_name, class_method_reference = f.split(":", 1)
+        if module_name != ctx.attr.module_name:
+            continue
+
+        args.extend(["--class-method-reference", class_method_reference])
+
+    ctx.actions.run(
+        inputs = ctx.files.srcs,
+        outputs = [output],
+        arguments = args,
+        executable = ctx.attr._executable.files_to_run.executable,
+        tools = [ctx.attr._executable[DefaultInfo].files_to_run],
+        progress_message = "Generating the test filters for cc tests",
+    )
+
+    return [DefaultInfo(
+        files = depset([output]),
+    )]
+
+cc_test_filter_generator = rule(
+    attrs = {
+        "srcs": attr.label_list(
+            allow_files = True,
+            doc = "CC files containing the class and method that the test filter will match.",
+        ),
+        "module_name": attr.string(
+            mandatory = True,
+            doc = "Module name that the test filters are generated on by this target.",
+        ),
+        "_executable": attr.label(
+            default = "//tools/asuite/atest:cc-test-filter-generator",
+            doc = "Executable used to generate the cc test filter.",
+        ),
+        "_test_reference": attr.label(
+            default = ":test_reference",
+            doc = "Repeatable string flag used to accept the test reference.",
+        ),
+    },
+    implementation = _cc_test_filter_generator_impl,
+    doc = """A rule used to generate the cc test filter
+
+An executable computes the cc test filter for a test module based on the given
+cc files and the test reference, and writes the result into a output file that
+is stored in the DefaultInfo provider.
+
+Each test reference is a string in the test reference format of ATest:
+    <module name>:<class name>#<method name>,<method name>
+""",
+)
+
 def _abspath(relative):
     return "${TEST_SRCDIR}/${TEST_WORKSPACE}/" + relative
 
 def _classpath(jars):
     return ":".join([_abspath(f.short_path) for f in depset(jars).to_list()])
+
+def _isRemoteDeviceTest(ctx):
+    return hasattr(ctx.attr, "_exec_mode") and ctx.attr._exec_mode[BuildSettingInfo].value == "remote"

@@ -42,7 +42,8 @@ def _generate_jar_proto_action(
         out_flags = [],
         plugin_executable = None,
         out_arg = None,
-        mnemonic = "ProtoGen"):
+        mnemonic = "ProtoGen",
+        transitive_proto_infos = []):
     jar_basename = ctx.label.name + "-proto_gen"
     jar_name = jar_basename + "-src.jar"
     jar_file = ctx.actions.declare_file(jar_name)
@@ -56,6 +57,7 @@ def _generate_jar_proto_action(
         out_arg = out_arg,
         mnemonic = mnemonic,
         output_file = jar_file,
+        transitive_proto_infos = transitive_proto_infos,
     )
 
     srcjar_name = jar_basename + ".srcjar"
@@ -76,7 +78,8 @@ def _generate_proto_action(
         plugin_executable = None,
         out_arg = None,
         mnemonic = "ProtoGen",
-        output_file = None):
+        output_file = None,
+        transitive_proto_infos = []):
     """ Utility function for creating proto_compiler action.
 
     Args:
@@ -109,6 +112,10 @@ def _generate_proto_action(
         transitive_proto_srcs_list.append(proto_info.transitive_imports)
         for p in proto_info.transitive_proto_path.to_list():
             sets.insert(transitive_proto_path_list, p)
+
+    for transitive_proto_info in transitive_proto_infos:
+        sets.insert(transitive_proto_path_list, transitive_proto_info.proto_source_root)
+        transitive_proto_srcs_list.append(depset(transitive_proto_info.direct_sources))
 
     protoc_out_name = paths.join(ctx.bin_dir.path, ctx.label.package)
 

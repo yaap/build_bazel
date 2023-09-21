@@ -80,8 +80,8 @@ class BuildType(enum.Enum):
     SOONG_ONLY = [*_soong_cmd, "BUILD_BROKEN_DISABLE_BAZEL=true"]
     MIXED_PROD = [*_soong_cmd, "--bazel-mode"]
     MIXED_STAGING = [*_soong_cmd, "--bazel-mode-staging"]
-    B = ["build/bazel/bin/b", "build"]
-    B_ANDROID = [*B, "--config=android"]
+    B_BUILD = ["build/bazel/bin/b", "build"]
+    B_ANDROID = [*B_BUILD, "--config=android"]
 
     @staticmethod
     def from_flag(s: str) -> list["BuildType"]:
@@ -227,13 +227,19 @@ def is_interactive_shell() -> bool:
 
 # see test_next_path_helper() for examples
 def _next_path_helper(basename: str) -> str:
+    def padded_suffix(i: int) -> str:
+        return f"{i:03d}"
+
+    # find the sequence digits following "-" and preceding the file extension
     name = re.sub(
-        r"(?<=-)\d+(?=(\..*)?$)", lambda d: str(int(d.group(0)) + 1), basename
+        r"(?<=-)(?P<suffix>\d+)$",
+        lambda d: padded_suffix(int(d.group("suffix")) + 1),
+        basename,
     )
+
     if name == basename:
-        name = re.sub(r"(\..*)$", r"-1\1", name, 1)
-    if name == basename:
-        name = f"{name}-1"
+        # basename didn't have any numeric suffix
+        name = f"{name}-{padded_suffix(1)}"
     return name
 
 

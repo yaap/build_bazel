@@ -74,6 +74,7 @@ def cc_library_shared(
         cpp_std = "",
         c_std = "",
         additional_linker_inputs = None,
+        additional_compiler_inputs = [],
 
         # Purely _shared arguments
         strip = {},
@@ -197,6 +198,7 @@ def cc_library_shared(
         tidy_disabled_srcs = tidy_disabled_srcs,
         tidy_timeout_srcs = tidy_timeout_srcs,
         tidy_gen_header_filter = tidy_gen_header_filter,
+        additional_compiler_inputs = additional_compiler_inputs,
     )
 
     # dynamic deps are to be linked into the shared library via
@@ -517,10 +519,7 @@ _cc_library_shared_proxy = rule(
 )
 
 def _bssl_hash_injection_impl(ctx):
-    if len(ctx.files.src) != 1:
-        fail("Expected only one shared library file")
-
-    hashed_file = ctx.files.src[0]
+    hashed_file = ctx.file.src
     if ctx.attr.inject_bssl_hash:
         hashed_file = ctx.actions.declare_file("lib" + ctx.attr.name + ".so")
         args = ctx.actions.args()
@@ -547,8 +546,7 @@ _bssl_hash_injection = rule(
     attrs = {
         "src": attr.label(
             mandatory = True,
-            # TODO(b/217908237): reenable allow_single_file
-            # allow_single_file = True,
+            allow_single_file = True,
             providers = [CcSharedLibraryInfo],
         ),
         "inject_bssl_hash": attr.bool(

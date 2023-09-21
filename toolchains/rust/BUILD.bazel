@@ -1,0 +1,74 @@
+# Copyright (C) 2023 The Android Open Source Project
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+load("@env//:env.bzl", "env")
+load("@rules_rust//proto/protobuf:toolchain.bzl", "rust_proto_toolchain")
+load("@rules_rust//rust:toolchain.bzl", "rust_toolchain")
+load("@soong_injection//rust_toolchain:constants.bzl", "constants")
+
+package(default_visibility = ["//visibility:public"])
+
+rust_version = env.get(
+    "RUST_PREBUILTS_VERSION",
+    constants.RUST_DEFAULT_VERSION,
+)
+
+package_path = "//prebuilts/rust/linux-x86/" + rust_version
+
+genrule(
+    name = "no_op_file",
+    outs = ["no_op_file.txt"],
+    cmd = "touch $(OUTS)",
+)
+
+rust_proto_toolchain(
+    name = "proto-toolchain-impl",
+    edition = "2021",
+    grpc_compile_deps = [],
+    # TODO: GRPC-providing rust_protobuf_host modules still use protobuf2
+    # so that grpc_rust_plugin still depend son deprecated protobuf modules
+    # Fix libbt_facade_proto and libbt_topshim_facade_protobuf to use protobuf3
+    # and upgrade grpc_rust_plugin to use new protobuf modules like protoc-gen-rust
+    grpc_plugin = ":no_op_file",
+    proto_compile_deps = ["//external/rust/crates/protobuf:libprotobuf"],
+    proto_plugin = "//external/rust/crates/protobuf-codegen:protoc-gen-rust",
+    protoc = "//external/protobuf:aprotoc",
+)
+
+toolchain(
+    name = "proto-toolchain",
+    toolchain = ":proto-toolchain-impl",
+    toolchain_type = "@rules_rust//proto/protobuf:toolchain_type",
+)
+
+rust_toolchain(
+    name = "toolchain_x86_64_unknown-linux-gnu_impl",
+    binary_ext = "",
+    default_edition = "2018",
+    dylib_ext = ".so",
+    exec_triple = "x86_64-unknown-linux-gnu",
+    rust_doc = package_path + ":bin/rustdoc",
+    rust_std = package_path + ":prebuilt_stdlibs",
+    rustc = package_path + ":bin/rustc",
+    staticlib_ext = ".a",
+    stdlib_linkflags = [],
+    target_triple = "x86_64-unknown-linux-gnu",
+)
+
+toolchain(
+    name = "toolchain_x86_64_unknown-linux-gnu",
+    exec_compatible_with = ["//build/bazel/platforms/os:linux"],
+    target_compatible_with = ["//build/bazel/platforms/os:linux"],
+    toolchain = ":toolchain_x86_64_unknown-linux-gnu_impl",
+    toolchain_type = "@rules_rust//rust:toolchain_type",
+)

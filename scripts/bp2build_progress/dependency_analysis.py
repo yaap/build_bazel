@@ -22,7 +22,7 @@ import os
 import os.path
 import subprocess
 import sys
-from typing import Optional, Set
+from typing import Dict, Optional, Set
 import xml.etree.ElementTree
 from bp2build_metrics_proto.bp2build_metrics_pb2 import Bp2BuildMetrics
 
@@ -92,7 +92,21 @@ _TOOLCHAIN_DEP_TYPES = frozenset([
     ),
 ])
 
-SRC_ROOT_DIR = os.path.abspath(__file__ + "/../../../../..")
+def get_src_root_dir() -> str:
+  # Search up the directory tree until we find soong_ui.bash as a regular file, not a symlink.
+  # This is so that we find the real source tree root, and not the bazel execroot which symlimks in
+  # soong_ui.bash.
+  def soong_ui(path):
+    return os.path.join(path, 'build/soong/soong_ui.bash')
+
+  path = '.'
+  while not os.path.isfile(soong_ui(path)) or os.path.islink(soong_ui(path)):
+    if os.path.abspath(path) == '/':
+      sys.exit('Could not find android source tree root.')
+    path = os.path.join(path, '..')
+  return os.path.abspath(path)
+
+SRC_ROOT_DIR = get_src_root_dir()
 
 LUNCH_ENV = {
     # Use aosp_arm as the canonical target product.
@@ -451,20 +465,21 @@ def visit_queryview_xml_module_graph_post_order(
     queryview_module_graph_post_traversal(name_with_variant)
 
 
-def get_bp2build_converted_modules(target_product) -> Set[str]:
+def get_bp2build_converted_modules(target_product) -> Dict[str, Set[str]]:
   """Returns the list of modules that bp2build can currently convert."""
   _build_with_soong("bp2build", target_product)
   # Parse the list of converted module names from bp2build
   with open(
       os.path.join(
           SRC_ROOT_DIR,
-          "out/soong/soong_injection/metrics/converted_modules.txt",
+          "out/soong/soong_injection/metrics/converted_modules.json",
       ),
       "r",
   ) as f:
-    # Read line by line, excluding comments.
-    # Each line is a module name.
-    ret = set(line.strip() for line in f if not line.strip().startswith("#"))
+    converted_mods = json.loads(f.read())
+    ret = collections.defaultdict(set)
+    for m in converted_mods:
+      ret[m["name"]].add(m["type"])
   return ret
 
 
@@ -539,13 +554,35 @@ def _is_java_auto_dep(dep):
   tag = dep["Tag"]
   if not tag:
     return False
+
+  if tag.startswith("java.dependencyTag") and (
+      "name:system modules" in tag or "name:bootclasspath" in tag
+  ):
+    name = dep["Name"]
+    # only remove automatically added bootclasspath/system modules
+    return (
+        name
+        in frozenset([
+            "core-lambda-stubs",
+            "core-module-lib-stubs-system-modules",
+            "core-public-stubs-system-modules",
+            "core-system-server-stubs-system-modules",
+            "core-system-stubs-system-modules",
+            "core-test-stubs-system-modules",
+            "core.current.stubs",
+            "legacy-core-platform-api-stubs-system-modules",
+            "legacy.core.platform.api.stubs",
+            "stable-core-platform-api-stubs-system-modules",
+            "stable.core.platform.api.stubs",
+        ])
+        or (name.startswith("android_") and name.endswith("_stubs_current"))
+        or (name.startswith("sdk_") and name.endswith("_system_modules"))
+    )
   return (
       (
           tag.startswith("java.dependencyTag")
           and (
               "name:proguard-raise" in tag
-              or "name:bootclasspath" in tag
-              or "name:system modules" in tag
               or "name:framework-res" in tag
               or "name:sdklib" in tag
               or "name:java9lib" in tag

@@ -57,6 +57,28 @@ config_setting(
     },
 )
 
+# config setting to build sdk variants
+config_setting(
+    name = "unbundled_app",
+    constraint_values = [
+        arch_variant_to_constraints["android"],
+    ],
+    flag_values = {
+        ":api_domain": "unbundled_app",
+    },
+)
+
+config_setting(
+    name = "unbundled_app.arm",
+    constraint_values = [
+        arch_variant_to_constraints["android"],
+        arch_variant_to_constraints["arm"],
+    ],
+    flag_values = {
+        ":api_domain": "unbundled_app",
+    },
+)
+
 config_setting(
     name = "in_apex",
     flag_values = {
@@ -114,12 +136,6 @@ config_setting(
 string_list_setting(
     name = "apex_direct_deps",
     build_setting_default = [],
-    visibility = ["//visibility:public"],
-)
-
-bool_flag(
-    name = "apexer_verbose",
-    build_setting_default = False,
     visibility = ["//visibility:public"],
 )
 

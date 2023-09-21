@@ -1791,6 +1791,41 @@ def _get_cfi_features(target_arch, target_os):
 
     return features
 
+def _get_memtag_features(target_arch, target_os):
+    features = []
+    if target_os != _oses.Android or target_arch != _arches.Arm64:
+        return features
+
+    features.append(
+        feature(
+            name = "memtag_heap",
+            enabled = False,
+            requires = [feature_set(features = ["cc_binary"])],
+            flag_sets = [
+                _make_flag_set(
+                    actions = _actions.compile + _actions.link,
+                    flags = ["-fsanitize=memtag-heap"],
+                ),
+                _make_flag_set(
+                    actions = _actions.link,
+                    flags = ["-fsanitize-memtag-mode=sync"],
+                    with_features = ["diag_memtag_heap"],
+                ),
+                _make_flag_set(
+                    actions = _actions.link,
+                    flags = ["-fsanitize-memtag-mode=async"],
+                    with_not_features = ["diag_memtag_heap"],
+                ),
+            ],
+            implies = ["sanitizers_enabled"],
+        ),
+    )
+
+    features.append(feature(name = "cc_binary"))
+    features.append(feature(name = "diag_memtag_heap"))
+
+    return features
+
 def _get_visibiility_hidden_feature():
     return [
         feature(
@@ -1885,56 +1920,6 @@ def _get_unsupported_integer_check_with_feature_sets(feature_check):
         )
         for integer_sanitizer in integer_sanitizers
     ]
-
-# The key of this dict is the package path to the blocklist, while the value is
-# its filename.
-# TODO: b/286872909 - When the blocking bug is complete, put these in their
-#                     respective packages
-sanitizer_blocklist_dict = {
-    "external/libavc": "libavc_blocklist.txt",
-    "external/libaom": "libaom_blocklist.txt",
-    "external/libvpx": "libvpx_blocklist.txt",
-    "frameworks/base/libs/androidfw": "libandroidfw_blocklist.txt",
-    "external/libhevc": "libhevc_blocklist.txt",
-    "external/libexif": "libexif_blocklist.txt",
-    "external/libopus": "libopus_blocklist.txt",
-    "external/libmpeg2": "libmpeg2dec_blocklist.txt",
-    "external/expat": "libexpat_blocklist.txt",
-    "external/flac/src/libFLAC": "libFLAC_blocklist.txt",
-    "system/extras/toolchain-extras": "libprofile_clang_extras_blocklist.txt",
-}
-
-def _get_sanitizer_blocklist_features():
-    features = []
-    for blocklist in sanitizer_blocklist_dict.items():
-        # Format the blocklist name to be used in a feature name
-        blocklist_feature_name_suffix = blocklist[1].lower().replace(".", "_")
-        features.append(
-            feature(
-                name = "sanitizer_blocklist_" + blocklist_feature_name_suffix,
-                enabled = False,
-                requires = [
-                    feature_set(features = ["sanitizers_enabled"]),
-                ],
-                flag_sets = [
-                    flag_set(
-                        actions = _actions.c_and_cpp_compile,
-                        flag_groups = [
-                            flag_group(
-                                flags = [
-                                    "%s%s/%s" % (
-                                        _generated_sanitizer_constants.SanitizeIgnorelistPrefix,
-                                        blocklist[0],
-                                        blocklist[1],
-                                    ),
-                                ],
-                            ),
-                        ],
-                    ),
-                ],
-            ),
-        )
-    return features
 
 def _get_ubsan_features(target_os, libclang_rt_ubsan_minimal):
     if target_os in [_oses.Windows, _oses.Darwin]:
@@ -2235,8 +2220,8 @@ def get_features(
         _get_thinlto_features(),
         # Sanitizers
         _get_cfi_features(target_arch, target_os),
+        _get_memtag_features(target_arch, target_os),
         _get_ubsan_features(target_os, libclang_rt_ubsan_minimal),
-        _get_sanitizer_blocklist_features(),
         _get_misc_sanitizer_features(),
         # Misc features
         _get_visibiility_hidden_feature(),

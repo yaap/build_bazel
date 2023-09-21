@@ -14,7 +14,14 @@
 
 """cc_test macro for building native tests with Bazel."""
 
-load("//build/bazel/rules/tradefed:tradefed.bzl", "LANGUAGE_CC", "TEST_DEP_SUFFIX", "tradefed_test_suite")
+load(
+    "//build/bazel/rules/tradefed:tradefed.bzl",
+    "FILTER_GENERATOR_SUFFIX",
+    "LANGUAGE_CC",
+    "TEST_DEP_SUFFIX",
+    "cc_test_filter_generator",
+    "tradefed_test_suite",
+)
 load(":cc_binary.bzl", "cc_binary")
 
 # TODO(b/244559183): Keep this in sync with cc/test.go#linkerFlags
@@ -33,6 +40,7 @@ _gtest_copts = select({
 
 def cc_test(
         name,
+        srcs,
         copts = [],
         deps = [],
         dynamic_deps = [],
@@ -45,9 +53,12 @@ def cc_test(
         tidy_disabled_srcs = None,
         tidy_timeout_srcs = None,
         test_config = None,
+        dynamic_config = None,
         template_test_config = None,
         template_configs = [],
         template_install_base = None,
+        runs_on = [],
+        suffix = "",
         visibility = None,
         target_compatible_with = None,
         **kwargs):
@@ -56,11 +67,19 @@ def cc_test(
         # TODO(b/244433197): handle ctx.useSdk() && ctx.Device() case to link against the ndk variants of the gtest libs.
         copts = copts + _gtest_copts
 
+    test_filter_generator_name = name + FILTER_GENERATOR_SUFFIX
+    cc_test_filter_generator(
+        name = test_filter_generator_name,
+        srcs = srcs,
+        module_name = name,
+    )
+
     # A cc_test is essentially the same as a cc_binary. Let's reuse the
     # implementation for now and factor the common bits out as necessary.
     test_dep_name = name + TEST_DEP_SUFFIX
     cc_binary(
         name = test_dep_name,
+        srcs = srcs,
         copts = copts,
         deps = deps,
         dynamic_deps = dynamic_deps,
@@ -72,6 +91,7 @@ def cc_test(
         tidy_disabled_srcs = tidy_disabled_srcs,
         tidy_timeout_srcs = tidy_timeout_srcs,
         tags = tags + ["manual"],
+        suffix = suffix,
         target_compatible_with = target_compatible_with,
         visibility = visibility,
         **kwargs
@@ -81,11 +101,17 @@ def cc_test(
         name = name,
         test_dep = test_dep_name,
         test_config = test_config,
+        template_test_config = template_test_config,
+        dynamic_config = dynamic_config,
         template_configs = template_configs,
         template_install_base = template_install_base,
         deviceless_test_config = "//build/make/core:native_host_test_config_template.xml",
         device_driven_test_config = "//build/make/core:native_test_config_template.xml",
+        host_driven_device_test_config = "//build/make/core:native_host_test_config_template.xml",
+        runs_on = runs_on,
+        test_filter_generator = test_filter_generator_name,
         tags = tags,
+        suffix = suffix,
         visibility = visibility,
         test_language = LANGUAGE_CC,
     )

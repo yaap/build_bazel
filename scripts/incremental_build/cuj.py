@@ -11,13 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import abc
 import dataclasses
 import enum
 import logging
 import os
 from pathlib import Path
-from typing import Callable
-from typing import TypeAlias
+from typing import Callable, Iterable, TypeAlias
 
 import util
 from util import BuildType
@@ -118,26 +118,22 @@ class CujStep:
   """
 
 
-@dataclasses.dataclass(frozen=True)
-class CujGroup:
+class CujGroup(abc.ABC):
     """A sequence of steps to be performed, such that at the end of all steps the
     initial state of the source tree is attained.
     NO attempt is made to achieve atomicity programmatically. It is left as the
     responsibility of the user.
     """
+    def __init__(self, description: str):
+        self._desc = description
 
-    description: str
-    steps: list[CujStep]
+    @property
+    def description(self)-> str:
+        return self._desc
 
-    def __str__(self) -> str:
-        if len(self.steps) < 2:
-            return f"{self.steps[0].verb} {self.description}".strip()
-        return " ".join(
-            [
-                f'({chr(ord("a") + i)}) {step.verb} {self.description}'.strip()
-                for i, step in enumerate(self.steps)
-            ]
-        )
+    @abc.abstractmethod
+    def get_steps(self) -> Iterable[CujStep]:
+        pass
 
 
 def sequence(*vs: Callable[[], None]) -> Callable[[], None]:

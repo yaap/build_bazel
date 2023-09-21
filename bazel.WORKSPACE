@@ -45,8 +45,7 @@ local_repository(
 
 local_repository(
     name = "rules_cc",
-    # TODO(b/200202912): Re-route this when rules_cc is pulled into AOSP.
-    path = "build/bazel/rules/cc/stub_rules_cc",
+    path = "external/bazelbuild-rules_cc",
 )
 
 register_toolchains(
@@ -76,7 +75,7 @@ bind(
 # for Android app building, whereas the d8.jar in prebuilts/sdk/tools doesn't.
 bind(
     name = "android/d8_jar_import",
-    actual = "//prebuilts/bazel/common/r8:r8_jar_import",
+    actual = "//prebuilts/r8:r8lib-prebuilt",
 )
 
 # TODO(b/201242197): Avoid downloading remote_coverage_tools (on CI) by creating
@@ -216,6 +215,22 @@ go_rules_dependencies()
 go_register_toolchains(experiments = [])
 
 local_repository(
+    name = "rules_proto",
+    path = "build/bazel/rules/proto",
+)
+
+local_repository(
     name = "rules_rust",
     path = "external/bazelbuild-rules_rust",
+)
+
+new_local_repository(
+    name = "rules_rust_tinyjson",
+    build_file = "@rules_rust//util/process_wrapper:BUILD.tinyjson.bazel",
+    path = "external/rust/crates/tinyjson",
+)
+
+register_toolchains(
+    "build/bazel/toolchains/rust:toolchain_x86_64_unknown-linux-gnu",
+    "build/bazel/toolchains/rust:proto-toolchain",
 )

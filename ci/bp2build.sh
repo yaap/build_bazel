@@ -40,6 +40,9 @@ host_targets+=( "${BUILD_TARGETS[@]}" )
 host_targets+=( "${TEST_TARGETS[@]}" )
 host_targets+=( "${HOST_ONLY_TEST_TARGETS[@]}" )
 
+# atest uses `b test` for these targets.
+host_targets+=("$(cat tools/asuite/atest/test_runners/roboleaf_launched.txt | grep --invert-match "#" | tr '\n' ' ')")
+
 build_and_test_for_host ${host_targets[@]}
 
 #########################################################################

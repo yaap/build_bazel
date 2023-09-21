@@ -29,12 +29,14 @@ TEMP_BAZEL_DIR=$(mktemp -d)
 SOONGFILE=$(mktemp)
 BAZELFILE=$(mktemp)
 
-b build //build/bazel/rules/java/errorprone:PrintSoongClasses
+cd "${BASEDIR}" || { echo "Error: directory not found ${BASEDIR}"; exit 1; }
+
+build/bazel/bin/b build //build/bazel/rules/java/errorprone:PrintSoongClasses --noshow_loading_progress --noshow_progress
 "${BASEDIR}/bazel-bin/build/bazel/rules/java/errorprone/PrintSoongClasses" > $SOONGFILE
 
-b build //build/bazel/rules/java/errorprone:PrintBazelClasses
+build/bazel/bin/b build //build/bazel/rules/java/errorprone:PrintBazelClasses --noshow_loading_progress --noshow_progress
 "${BASEDIR}/bazel-bin/build/bazel/rules/java/errorprone/PrintBazelClasses" > $BAZELFILE
 
-python "${BASEDIR}/build/bazel/rules/java/errorprone/generateErrorProneCompatibilityFlags.py" --soong_file=$SOONGFILE --bazel_file=$BAZELFILE
+prebuilts/build-tools/path/linux-x86/python3 "${BASEDIR}/build/bazel/rules/java/errorprone/generateErrorProneCompatibilityFlags.py" --soong_file=$SOONGFILE --bazel_file=$BAZELFILE
 
 

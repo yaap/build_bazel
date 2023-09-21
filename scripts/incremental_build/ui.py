@@ -56,22 +56,15 @@ def get_user_input() -> UserInput:
             raise argparse.ArgumentTypeError()
         else:
             pattern = re.compile(input_str)
-
-            def matches(cujgroup: cuj_catalog.CujGroup) -> bool:
-                for cujstep in cujgroup.steps:
-                    # because we should run all cujsteps in a group we will select
-                    # a group if any of its steps match the pattern
-                    if pattern.search(f"{cujstep.verb} {cujgroup.description}"):
-                        return True
-                return False
-
             matching_cuj_groups = [
-                i for i, cujgroup in enumerate(cujgroups) if matches(cujgroup)
+                i
+                for i, cujgroup in enumerate(cujgroups)
+                if pattern.search(cujgroup.description)
             ]
             if len(matching_cuj_groups):
                 return matching_cuj_groups
             logging.critical(
-                f'Invalid input: "{input_str}" does not many any CUJ. '
+                f'Invalid input: "{input_str}" does not match any CUJ. '
                 "Try --help to view the list of available CUJs"
             )
             raise argparse.ArgumentTypeError()
@@ -86,7 +79,9 @@ def get_user_input() -> UserInput:
         + textwrap.dedent(incremental_build.main.__doc__),
     )
 
-    cuj_list = "\n".join([f"{i:2}: {cujgroup}" for i, cujgroup in enumerate(cujgroups)])
+    cuj_list = "\n".join(
+        [f"{i:2}: {cujgroup.description}" for i, cujgroup in enumerate(cujgroups)]
+    )
     p.add_argument(
         "-c",
         "--cujs",
@@ -96,7 +91,12 @@ def get_user_input() -> UserInput:
         "Or substring matches for the CUJ description."
         f"Note the ordering will be respected:\n{cuj_list}",
     )
-    p.add_argument("--no-warmup", default=False, action="store_true")
+    p.add_argument(
+        "--no-warmup",
+        default=False,
+        action="store_true",
+        help="skip warmup builds; this can skew your results for the first CUJ you run.",
+    )
     p.add_argument(
         "-t",
         "--tag",
@@ -209,12 +209,14 @@ def get_user_input() -> UserInput:
     )
     if len(bazel_labels) > 0:
         non_b = [
-            b.name for b in build_types if b != BuildType.B and b != BuildType.B_ANDROID
+            b.name for b in build_types if b != BuildType.B_BUILD and b != BuildType.B_ANDROID
         ]
         if len(non_b):
             raise RuntimeError(f"bazel labels can not be used with {non_b}")
 
-    pretty_str = "\n".join([f"{i:2}: {cujgroups[i]}" for i in chosen_cujgroups])
+    pretty_str = "\n".join(
+        [f"{i:2}: {cujgroups[i].description}" for i in chosen_cujgroups]
+    )
     logging.info(f"%d CUJs chosen:\n%s", len(chosen_cujgroups), pretty_str)
 
     if not options.ignore_repo_diff and util.has_uncommitted_changes():

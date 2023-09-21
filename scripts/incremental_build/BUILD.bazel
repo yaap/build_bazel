@@ -18,14 +18,17 @@ py_binary(
         "clone.py",
         "cuj.py",
         "cuj_catalog.py",
+        "cuj_regex_based.py",
         "go_allowlists.py",
         "incremental_build.py",
-        "pretty.py",
         "ui.py",
     ],
     main = "incremental_build.py",
     python_version = "PY3",
-    deps = [":perf_metrics"],
+    deps = [
+        ":perf_metrics",
+        ":pretty",
+    ],
 )
 
 py_binary(
@@ -76,6 +79,7 @@ py_library(
         "finder.py",
         "util.py",
     ],
+    imports = ["."],
 )
 
 py_test(

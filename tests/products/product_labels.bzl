@@ -32,6 +32,19 @@ products = {
             "DefaultAppCertificate": "build/bazel/rules/apex/testdata/devkey",
         },
     ),
+    "aosp_arm64_for_testing_memtag_heap_exclude_path": dicts.add(
+        _soong_variables_arm64,
+        {"MemtagHeapAsyncIncludePaths": ["build/bazel/rules/cc"]},
+        {"MemtagHeapExcludePaths": ["build/bazel/rules/cc"]},
+    ),
+    "aosp_arm64_for_testing_memtag_heap_async_include_path": dicts.add(
+        _soong_variables_arm64,
+        {"MemtagHeapAsyncIncludePaths": ["build/bazel/rules/cc"]},
+    ),
+    "aosp_arm64_for_testing_memtag_heap_sync_include_path": dicts.add(
+        _soong_variables_arm64,
+        {"MemtagHeapSyncIncludePaths": ["build/bazel/rules/cc"]},
+    ),
     "aosp_x86_for_testing": _soong_variables_x86,
     "aosp_x86_for_testing_cfi_include_path": dicts.add(
         _soong_variables_x86,
@@ -45,6 +58,12 @@ products = {
     "aosp_arm64_for_testing_min_sdk_version_override_tiramisu": dicts.add(
         _soong_variables_arm64,
         {"ApexGlobalMinSdkVersionOverride": "Tiramisu"},
+    ),
+    "aosp_arm64_for_testing_aconfig_release": dicts.add(
+        _soong_variables_arm64,
+        {"ReleaseAconfigFlagDefaultPermission": "READ_WRITE"},
+        {"ReleaseAconfigValueSets": "//build/bazel/rules/aconfig:aconfig.test.value_set"},
+        {"ReleaseVersion": "34"},
     ),
 }
 

@@ -34,7 +34,10 @@ load(":cfi_transition_test.bzl", "cfi_transition_test_suite")
 load(":clang_tidy_test.bzl", "clang_tidy_test_suite")
 load(":flex_test.bzl", "flex_test_suite")
 load(":lto_transitions_test.bzl", "lto_transition_test_suite")
+load(":memtag_heap_transitions_test.bzl", "memtag_heap_transitions_test_suite")
+load(":ndk_headers_test.bzl", "ndk_headers_test_suite")
 load(":rscript_to_cpp_test.bzl", "rscript_to_cpp_test_suite")
+load(":sanitizer_blocklist_test.bzl", "sanitizer_blocklist_test_suite")
 load(":stl_test.bzl", "stl_test_suite")
 load(":yasm_test.bzl", "yasm_test_suite")
 
@@ -57,6 +60,19 @@ config_setting(
 config_setting(
     name = "coverage_cfi_disabled",
     flag_values = {":cfi_assembly": "False"},
+)
+
+# TODO: b/294868620 - This can be removed when completing the bug
+bool_setting(
+    name = "sanitizers_enabled_setting",
+    build_setting_default = False,
+    visibility = ["//visibility:public"],
+)
+
+# TODO: b/294868620 - This can be removed when completing the bug
+config_setting(
+    name = "sanitizers_enabled",
+    flag_values = {":sanitizers_enabled_setting": "True"},
 )
 
 selects.config_setting_group(
@@ -125,8 +141,14 @@ flex_test_suite(name = "flex_tests")
 
 lto_transition_test_suite(name = "lto_transition_tests")
 
+memtag_heap_transitions_test_suite(name = "memtag_heap_transitions_test")
+
+sanitizer_blocklist_test_suite(name = "sanitizer_blocklist_tests")
+
 stl_test_suite(name = "stl_tests")
 
 yasm_test_suite(name = "yasm_tests")
 
 rscript_to_cpp_test_suite(name = "rscript_to_cpp_tests")
+
+ndk_headers_test_suite(name = "ndk_headers_tests")

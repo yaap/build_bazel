@@ -22,7 +22,7 @@ import subprocess
 import sys
 import tempfile
 
-def build_staging_dir(staging_dir_path, file_mapping, command_argv, base_staging_dir=None):
+def build_staging_dir(staging_dir_path, file_mapping, command_argv, base_staging_dir=None, base_staging_dir_file_list=None):
     '''Create a staging dir with provided file mapping and apply the command in the dir.
 
     At least
@@ -38,7 +38,25 @@ def build_staging_dir(staging_dir_path, file_mapping, command_argv, base_staging
         # Resolve the symlink because we want to use copytree with symlinks=True later
         while os.path.islink(base_staging_dir):
             base_staging_dir = os.path.normpath(os.path.join(os.path.dirname(base_staging_dir), os.readlink(base_staging_dir)))
-        shutil.copytree(base_staging_dir, staging_dir_path, symlinks=True, dirs_exist_ok=True)
+        if base_staging_dir_file_list:
+            with open(base_staging_dir_file_list) as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        return
+                    if line != os.path.normpath(line):
+                        sys.exit(f"{line}: not normalized")
+                    if line.startswith("../") or line.startswith('/'):
+                        sys.exit(f"{line}: escapes staging directory by starting with ../ or /")
+                    src = os.path.join(base_staging_dir, line)
+                    dst = os.path.join(staging_dir_path, line)
+                    if os.path.isdir(src):
+                        os.makedirs(dst, exist_ok=True)
+                    else:
+                        os.makedirs(os.path.dirname(dst), exist_ok=True)
+                        os.link(src, dst, follow_symlinks=False)
+        else:
+            shutil.copytree(base_staging_dir, staging_dir_path, symlinks=True, dirs_exist_ok=True)
 
     for path_in_staging_dir, path_in_bazel in file_mapping.items():
         path_in_staging_dir = os.path.join(staging_dir_path, path_in_staging_dir)
@@ -72,11 +90,15 @@ def build_staging_dir(staging_dir_path, file_mapping, command_argv, base_staging
         # execroot/__main__/bazel-out/android_target-fastbuild/bin/system/timezone/apex/
         # apex_manifest.pb
         if os.path.islink(path_in_bazel):
-            path_in_bazel = os.readlink(path_in_bazel)
+            # Some of the symlinks are relative (start with ../). They're relative to the location
+            # of the symlink, not to the cwd. So we have to join the directory of the symlink with
+            # the symlink's target. If the symlink was absolute, os.path.join() will take it as-is
+            # and ignore the first argument.
+            path_in_bazel = os.path.abspath(os.path.join(os.path.dirname(path_in_bazel), os.readlink(path_in_bazel)))
 
             # For sandbox run these are the 2nd level symlinks and we need to resolve
             while os.path.islink(path_in_bazel) and 'execroot/__main__' in path_in_bazel:
-                path_in_bazel = os.readlink(path_in_bazel)
+                path_in_bazel = os.path.abspath(os.path.join(os.path.dirname(path_in_bazel), os.readlink(path_in_bazel)))
 
         if os.path.exists(path_in_staging_dir):
             sys.exit("error: " + path_in_staging_dir + " already exists because of the base_staging_dir")
@@ -127,7 +149,7 @@ base_staging_dir: A string path to a staging dir to copy to the output staging d
     if not isinstance(options, dict):
         sys.exit(options_path + ": expected a JSON dict[str, ?]")
     for k in options.keys():
-        if k not in ["file_mapping", "base_staging_dir", "staging_dir_path"]:
+        if k not in ["file_mapping", "base_staging_dir", "base_staging_dir_file_list", "staging_dir_path"]:
             sys.exit("Unknown option: " + str(k))
     if not isinstance(options.get("file_mapping", {}), dict):
         sys.exit(options_path + ": file_mapping: expected a JSON dict[str, str]")
@@ -144,7 +166,7 @@ base_staging_dir: A string path to a staging dir to copy to the output staging d
         file_mapping[path_in_staging_dir] = path_in_bazel
 
     if options.get("staging_dir_path"):
-        build_staging_dir(options.get("staging_dir_path"), file_mapping, command_argv, options.get("base_staging_dir"))
+        build_staging_dir(options.get("staging_dir_path"), file_mapping, command_argv, options.get("base_staging_dir"), options.get("base_staging_dir_file_list"))
     else:
         if "STAGING_DIR_PLACEHOLDER" not in command_argv:
             sys.exit('At least one argument must be "STAGING_DIR_PLACEHOLDER"')
@@ -152,7 +174,7 @@ base_staging_dir: A string path to a staging dir to copy to the output staging d
             for i in range(len(command_argv)):
                 if command_argv[i] == "STAGING_DIR_PLACEHOLDER":
                     command_argv[i] = staging_dir_path
-            build_staging_dir(staging_dir_path, file_mapping, command_argv, options.get("base_staging_dir"))
+            build_staging_dir(staging_dir_path, file_mapping, command_argv, options.get("base_staging_dir"), options.get("base_staging_dir_file_list"))
 
 if __name__ == '__main__':
     main()

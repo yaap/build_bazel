@@ -47,6 +47,12 @@ _CFI_INCLUDE_PATHS_KEY = "@//build/bazel/product_config:cfi_include_paths"
 _CFI_EXCLUDE_PATHS_KEY = "@//build/bazel/product_config:cfi_exclude_paths"
 _ENABLE_CFI_KEY = "@//build/bazel/product_config:enable_cfi"
 _CFI_ASSEMBLY_KEY = "@//build/bazel/rules/cc:cfi_assembly"
+_MEMTAG_HEAP_ASYNC_INCLUDE_PATHS_KEY = "@//build/bazel/product_config:memtag_heap_async_include_paths"
+_MEMTAG_HEAP_SYNC_INCLUDE_PATHS_KEY = "@//build/bazel/product_config:memtag_heap_sync_include_paths"
+_MEMTAG_HEAP_EXCLUDE_PATHS_KEY = "@//build/bazel/product_config:memtag_heap_exclude_paths"
+
+# TODO: b/294868620 - This can be removed when completing the bug
+_SANITIZERS_ENABLED_KEY = "@//build/bazel/rules/cc:sanitizers_enabled_setting"
 
 transition_constants = struct(
     features_attr_key = _FEATURES_ATTR_KEY,
@@ -56,4 +62,8 @@ transition_constants = struct(
     enable_cfi_key = _ENABLE_CFI_KEY,
     cli_platforms_key = _CLI_PLATFORMS_KEY,
     cfi_assembly_key = _CFI_ASSEMBLY_KEY,
+    sanitizers_enabled_key = _SANITIZERS_ENABLED_KEY,
+    memtag_heap_async_include_paths_key = _MEMTAG_HEAP_ASYNC_INCLUDE_PATHS_KEY,
+    memtag_heap_sync_include_paths_key = _MEMTAG_HEAP_SYNC_INCLUDE_PATHS_KEY,
+    memtag_heap_exclude_paths_key = _MEMTAG_HEAP_EXCLUDE_PATHS_KEY,
 )

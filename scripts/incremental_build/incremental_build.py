@@ -172,7 +172,7 @@ def _build(build_type: BuildType, run_dir: Path) -> BuildInfo:
         except FileNotFoundError:
             return -1
 
-    @skip_for(BuildType.SOONG_ONLY, BuildType.B, BuildType.B_ANDROID)
+    @skip_for(BuildType.SOONG_ONLY, BuildType.B_BUILD, BuildType.B_ANDROID)
     def get_cquery_size() -> int:
         return os.stat(cquery_out).st_size if cquery_out.exists() else None
 
@@ -292,7 +292,7 @@ def main():
 
     def run_cuj_group(cuj_group: cuj_catalog.CujGroup):
         nonlocal stop_building
-        for cujstep in cuj_group.steps:
+        for cujstep in cuj_group.get_steps():
             desc = cujstep.verb
             desc = f"{desc} {cuj_group.description}".strip()
             logging.info(
@@ -381,6 +381,8 @@ class ColoredLoggingFormatter(logging.Formatter):
 
 
 def configure_logger():
+    logging.root.setLevel(logging.INFO)
+
     eh = logging.StreamHandler(stream=sys.stderr)
     eh.setLevel(logging.WARNING)
     eh.setFormatter(ColoredLoggingFormatter())

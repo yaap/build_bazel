@@ -2,21 +2,36 @@
 set -e
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+MODULE_NAME="{module_name}"
 ATEST_TF_LAUNCHER="{atest_tradefed_launcher}"
 ATEST_HELPER="{atest_helper}"
 TRADEFED_CLASSPATH="{tradefed_classpath}"
 PATH_ADDITIONS="{path_additions}"
+TEST_FILTER_OUTPUT="{test_filter_output}"
+LAUNCH_AVD_EXECUTABLE="{device_script}"
+
 read -a ADDITIONAL_TRADEFED_OPTIONS <<< "{additional_tradefed_options}"
 
 export PATH="${PATH_ADDITIONS}:${PATH}"
 export ATEST_HELPER="${ATEST_HELPER}"
 export TF_PATH="${TRADEFED_CLASSPATH}"
 
-# Prepend the REMOTE_JAVA_HOME environment variable to the path to ensure
-# that all Java invocations throughout the test execution flow use the same
-# version.
-if [ ! -z "${REMOTE_JAVA_HOME}" ]; then
-  export PATH="${REMOTE_JAVA_HOME}/bin:${PATH}"
+if [[ ! -z "${TEST_FILTER_OUTPUT}" ]]; then
+  TEST_FILTER=$(<${TEST_FILTER_OUTPUT})
+fi
+
+if [[ ! -z "${TEST_FILTER}" ]]; then
+  ADDITIONAL_TRADEFED_OPTIONS+=("--atest-include-filter" "${MODULE_NAME}:${TEST_FILTER}")
+fi
+
+# Execute device launch script if set. This is for remote device test.
+if [ ! -z LAUNCH_AVD_EXECUTABLE ];
+then
+    # Set java path for remote environment.
+    JAVA_HOME=/jdk/jdk17/linux-x86
+    export PATH=$JAVA_HOME/bin:$PATH
+    java -version
+    $LAUNCH_AVD_EXECUTABLE
 fi
 
 exit_code_file="$(mktemp /tmp/tf-exec-XXXXXXXXXX)"
@@ -29,7 +44,7 @@ exit_code_file="$(mktemp /tmp/tf-exec-XXXXXXXXXX)"
     --no-enable-granular-attempts \
     --no-early-device-release \
     --skip-host-arch-check \
-    --include-filter "{MODULE}" \
+    --include-filter "${MODULE_NAME}" \
     --skip-loading-config-jar \
     "${ADDITIONAL_TRADEFED_OPTIONS[@]}" \
     --bazel-exit-code-result-reporter:file=${exit_code_file} \

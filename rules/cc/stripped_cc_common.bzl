@@ -59,9 +59,7 @@ def _get_strip_args(attrs):
     return strip_args
 
 # https://cs.android.com/android/platform/superproject/+/master:build/soong/cc/builder.go;l=131-146;drc=master
-def stripped_impl(ctx, prefix = "", stem = "", suffix = "", extension = "", subdir = ""):
-    check_valid_ldlibs(ctx, ctx.attr.linkopts)
-
+def stripped_impl(ctx, file, prefix = "", stem = "", suffix = "", extension = "", subdir = ""):
     filename_stem = stem or ctx.attr.name
     filename = prefix + filename_stem + suffix + extension
     out_file = ctx.actions.declare_file(
@@ -73,7 +71,7 @@ def stripped_impl(ctx, prefix = "", stem = "", suffix = "", extension = "", subd
     if not _needs_strip(ctx):
         ctx.actions.symlink(
             output = out_file,
-            target_file = ctx.files.src[0],
+            target_file = file,
         )
         return out_file
     d_file = ctx.actions.declare_file(
@@ -89,7 +87,7 @@ def stripped_impl(ctx, prefix = "", stem = "", suffix = "", extension = "", subd
             "XZ": ctx.executable._xz.path,
             "CLANG_BIN": ctx.executable._ar.dirname,
         },
-        inputs = ctx.files.src,
+        inputs = [file],
         tools = [
             ctx.executable._ar,
             ctx.executable._create_minidebuginfo,
@@ -103,7 +101,7 @@ def stripped_impl(ctx, prefix = "", stem = "", suffix = "", extension = "", subd
         executable = ctx.executable._strip_script,
         arguments = _get_strip_args(ctx.attr) + [
             "-i",
-            ctx.files.src[0].path,
+            file.path,
             "-o",
             out_file.path,
             "-d",
@@ -119,7 +117,6 @@ strip_attrs = dict(
     all = attr.bool(default = False),
     none = attr.bool(default = False),
     keep_symbols_list = attr.string_list(default = []),
-    linkopts = attr.string_list(default = []),  # Used for validation
 )
 common_strip_attrs = dict(
     strip_attrs,
@@ -184,7 +181,9 @@ common_strip_attrs = dict(
 )
 
 def _stripped_shared_library_impl(ctx):
-    out_file = stripped_impl(ctx, prefix = "lib", extension = ".so", subdir = ctx.attr.name)
+    check_valid_ldlibs(ctx, ctx.attr.linkopts)
+
+    out_file = stripped_impl(ctx, ctx.file.src, prefix = "lib", extension = ".so", subdir = ctx.attr.name)
 
     return [
         DefaultInfo(files = depset([out_file])),
@@ -198,10 +197,10 @@ stripped_shared_library = rule(
         common_strip_attrs,
         src = attr.label(
             mandatory = True,
-            # TODO(b/217908237): reenable allow_single_file
-            # allow_single_file = True,
             providers = [CcSharedLibraryInfo],
+            allow_single_file = True,
         ),
+        linkopts = attr.string_list(default = []),  # Used for validation
     ),
     toolchains = ["@bazel_tools//tools/cpp:toolchain_type"],
 )
@@ -211,6 +210,8 @@ stripped_shared_library = rule(
 StrippedCcBinaryInfo = provider()
 
 def _stripped_binary_impl(ctx):
+    check_valid_ldlibs(ctx, ctx.attr.linkopts)
+
     common_providers = [
         ctx.attr.src[0][CcInfo],
         ctx.attr.src[0][InstrumentedFilesInfo],
@@ -229,7 +230,7 @@ def _stripped_binary_impl(ctx):
     # Generate binary in a directory unique to this target to prevent possible collisions due to common `stem`
     # Generate in `bin` to prevent incrementality issues for mixed builds where <package>/<name> could be a file and not a dir
     subdir = paths.join("bin", ctx.attr.name)
-    out_file = stripped_impl(ctx, stem = ctx.attr.stem, suffix = ctx.attr.suffix, subdir = subdir)
+    out_file = stripped_impl(ctx, ctx.file.src, stem = ctx.attr.stem, suffix = ctx.attr.suffix, subdir = subdir)
 
     return [
         DefaultInfo(
@@ -247,6 +248,7 @@ _rule_attrs = dict(
         providers = [CcInfo],
         cfg = lto_and_sanitizer_deps_transition,
     ),
+    linkopts = attr.string_list(default = []),  # Used for validation
     runtime_deps = attr.label_list(
         providers = [CcInfo],
         doc = "Deps that should be installed along with this target. Read by the apex cc aspect.",

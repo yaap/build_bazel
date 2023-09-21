@@ -27,8 +27,6 @@ from typing import TextIO
 
 import cuj
 import util
-from cuj import CujGroup
-from cuj import CujStep
 from cuj import src
 from go_allowlists import GoAllowlistManipulator
 
@@ -74,23 +72,6 @@ def module_defs(src_lines: TextIO) -> Generator[tuple[ModuleType, str], None, No
                 buffer = ""
 
 
-def negate(fltr: Filter) -> Filter:
-    def f(t: ModuleType, n: ModuleName) -> bool:
-        return not fltr(t, n)
-
-    return f
-
-
-def conjunction(*fs: Filter) -> Filter:
-    def f(t: ModuleType, n: ModuleName) -> bool:
-        for fi in fs:
-            if not fi(t, n):
-                return False
-        return True
-
-    return f
-
-
 def type_in(*module_types: str) -> Filter:
     def f(t: ModuleType, _: ModuleName) -> bool:
         return t in module_types
@@ -117,7 +98,9 @@ def _modify_genrule_template(module_name: ModuleName, module_def: str) -> Option
     return f"{module_def[: index]}-${{suffix}}{module_def[index:]}"
 
 
-def _extract_templates_helper(src_lines: TextIO, f: Filter) -> dict[ModuleName, Template]:
+def _extract_templates_helper(
+    src_lines: TextIO, f: Filter
+) -> dict[ModuleName, Template]:
     """
     For `src_lines` from an Android.bp file, find modules that satisfy the
     Filter `f` and for each such mach return a "template" text that facilitates
@@ -245,8 +228,6 @@ def _make_clones(bp2templates: dict[Path, dict[ModuleName, Template]], n: int):
             mixed_build_enabled_list.prepend([name])
         mixed_build_enabled_list.prepend(clones)
 
-        # use the following to denylist instead of allowlisting
-        # go_allowlists.locate("Bp2buildModuleDoNotConvertList").prepend(clones)
         if name in alwaysconvert:
             alwaysconvert.prepend(clones)
 
@@ -315,59 +296,63 @@ def _name_cuj(count: int, module_count: int, bp_count: int) -> str:
             name = f"{count}x{module_count}"
     if bp_count > 1:
         name = f"{name}({bp_count} files)"
-    return f"{name}x"
+    return name
 
 
-def get_cuj_group(bps: dict[Path, Filter], group_name: str) -> CujGroup:
-    bp2templates = _extract_templates(bps)
-    bp_count = len(bp2templates)
-    if bp_count == 0:
-        raise RuntimeError(f"No eligible module to clone in {bps.keys()}")
-    module_count = sum(len(templates) for templates in bp2templates.values())
+class Clone(cuj.CujGroup):
+    def __init__(self, group_name: str, bps: dict[Path, Filter]):
+        super().__init__(group_name)
+        self.bps = bps
 
-    if "CLONE" in os.environ:
-        counts = [int(s) for s in os.environ["CLONE"].split(",")]
-    else:
-        counts = [1, 100, 200, 300, 400]
-        logging.info(
-            f'Will clone {",".join(str(i) for i in counts)} in cujs. '
-            f"You may specify alternative counts with CLONE env var, "
-            f"e.g. CLONE = 1,10,100,1000"
-        )
-    first_bp = next(iter(bp2templates.keys()))
+    def get_steps(self) -> Iterable[cuj.CujStep]:
+        bp2templates = _extract_templates(self.bps)
+        bp_count = len(bp2templates)
+        if bp_count == 0:
+            raise RuntimeError(f"No eligible module to clone in {self.bps.keys()}")
+        module_count = sum(len(templates) for templates in bp2templates.values())
 
-    def modify_bp():
-        with open(first_bp, mode="a") as f:
-            f.write(f"//post clone modification {uuid.uuid4()}\n")
-
-    steps: list[CujStep] = []
-    for i, count in enumerate(counts):
-        base_name = _name_cuj(count, module_count, bp_count)
-        steps.append(
-            CujStep(
-                verb=base_name,
-                apply_change=cuj.sequence(
-                    functools.partial(_backup, bp2templates.keys())
-                    if i == 0
-                    else _restore,
-                    functools.partial(_make_clones, bp2templates, count),
-                ),
-                verify=_display_sizes,
+        if "CLONE" in os.environ:
+            counts = [int(s) for s in os.environ["CLONE"].split(",")]
+        else:
+            counts = [1, 100, 200, 300, 400]
+            logging.info(
+                f'Will clone {",".join(str(i) for i in counts)} in cujs. '
+                f"You may specify alternative counts with CLONE env var, "
+                f"e.g. CLONE = 1,10,100,1000"
             )
-        )
-        steps.append(CujStep(verb=f"bp aft {base_name}", apply_change=modify_bp))
-        if i == len(counts) - 1:
+        first_bp = next(iter(bp2templates.keys()))
+
+        def modify_bp():
+            with open(first_bp, mode="a") as f:
+                f.write(f"//post clone modification {uuid.uuid4()}\n")
+
+        steps: list[cuj.CujStep] = []
+        for i, count in enumerate(counts):
+            base_name = _name_cuj(count, module_count, bp_count)
             steps.append(
-                CujStep(
-                    verb="revert",
+                cuj.CujStep(
+                    verb=base_name,
                     apply_change=cuj.sequence(
-                        _restore, lambda: shutil.rmtree(_back_up_path())
+                        functools.partial(_backup, bp2templates.keys())
+                        if i == 0
+                        else _restore,
+                        functools.partial(_make_clones, bp2templates, count),
                     ),
                     verify=_display_sizes,
                 )
             )
-
-    return CujGroup(group_name, steps)
+            steps.append(cuj.CujStep(verb=f"bp aft {base_name}", apply_change=modify_bp))
+            if i == len(counts) - 1:
+                steps.append(
+                    cuj.CujStep(
+                        verb="revert",
+                        apply_change=cuj.sequence(
+                            _restore, lambda: shutil.rmtree(_back_up_path())
+                        ),
+                        verify=_display_sizes,
+                    )
+                )
+        return steps
 
 
 def main():
