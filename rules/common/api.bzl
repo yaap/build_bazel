@@ -31,12 +31,17 @@ _PLATFORM_VERSION_ACTIVE_CODENAMES = platform_versions.platform_version_active_c
 _preview_codenames_to_ints = api_internal.preview_codenames_to_ints(_PLATFORM_VERSION_ACTIVE_CODENAMES)
 
 # Returns true if a string or int version is in preview (not finalized).
-def _is_preview(version):
-    return api_internal.is_preview(version, _preview_codenames_to_ints)
+def _is_preview(version, platform_sdk_variables):
+    return api_internal.is_preview(
+        version = version,
+        preview_codenames_to_ints = api_internal.preview_codenames_to_ints(
+            platform_sdk_variables.platform_version_active_codenames,
+        ),
+    )
 
 # Return 10000 for unfinalized versions, otherwise return unchanged.
 def _final_or_future(version):
-    if _is_preview(version):
+    if api_internal.is_preview(version, _preview_codenames_to_ints):
         return api_internal.FUTURE_API_LEVEL
     else:
         return version
@@ -66,7 +71,7 @@ def _parse_api_level_from_version(version):
     if version == "current":
         return api_internal.FUTURE_API_LEVEL
 
-    if _is_preview(version):
+    if api_internal.is_preview(version = version, preview_codenames_to_ints = _preview_codenames_to_ints):
         return _preview_codenames_to_ints.get(version) or int(version)
 
     # Not preview nor current.
@@ -84,15 +89,15 @@ def _parse_api_level_from_version(version):
 # Starlark implementation of DefaultAppTargetSDK from build/soong/android/config.go
 # https://cs.android.com/android/platform/superproject/+/master:build/soong/android/config.go;l=875-889;drc=b0dc477ef740ec959548fe5517bd92ac4ea0325c
 # check what you want returned for codename == "" case before using
-def _default_app_target_sdk():
+def _default_app_target_sdk(platform_sdk_variables):
     """default_app_target_sdk returns the API level that platform apps are targeting.
        This converts a codename to the exact ApiLevel it represents.
     """
     return _parse_api_level_from_version(
         api_internal.default_app_target_sdk_string(
-            _PLATFORM_SDK_FINAL,
-            _PLATFORM_SDK_VERSION,
-            _PLATFORM_SDK_CODENAME,
+            platform_sdk_final = platform_sdk_variables.platform_sdk_final,
+            platform_sdk_version = platform_sdk_variables.platform_sdk_version,
+            platform_sdk_codename = platform_sdk_variables.platform_sdk_codename,
         ),
     )
 
@@ -100,25 +105,40 @@ def _default_app_target_sdk():
 # EffectiveVersionString converts an api level string into the concrete version string that the module
 # should use. For modules targeting an unreleased SDK (meaning it does not yet have a number)
 # it returns the codename (P, Q, R, etc.)
-def _effective_version_string(version):
+def _effective_version_string(version, platform_sdk_variables):
     return api_internal.effective_version_string(
         version,
-        _preview_codenames_to_ints,
-        api_internal.default_app_target_sdk_string(
-            _PLATFORM_SDK_FINAL,
-            _PLATFORM_SDK_VERSION,
-            _PLATFORM_SDK_CODENAME,
+        api_internal.preview_codenames_to_ints(
+            platform_sdk_variables.platform_version_active_codenames,
         ),
-        _PLATFORM_VERSION_ACTIVE_CODENAMES,
+        api_internal.default_app_target_sdk_string(
+            platform_sdk_final = platform_sdk_variables.platform_sdk_final,
+            platform_sdk_version = platform_sdk_variables.platform_sdk_version,
+            platform_sdk_codename = platform_sdk_variables.platform_sdk_codename,
+        ),
+        platform_sdk_variables.platform_version_active_codenames,
     )
 
-api = struct(
+api_from_product = lambda platform_sdk_variables: struct(
     NONE_API_LEVEL = api_internal.NONE_API_LEVEL,
     FUTURE_API_LEVEL = api_internal.FUTURE_API_LEVEL,
-    is_preview = _is_preview,
+    is_preview = lambda version: _is_preview(
+        version = version,
+        platform_sdk_variables = platform_sdk_variables,
+    ),
     final_or_future = _final_or_future,
-    default_app_target_sdk = _default_app_target_sdk,
+    default_app_target_sdk = lambda: _default_app_target_sdk(platform_sdk_variables),
     parse_api_level_from_version = _parse_api_level_from_version,
     api_levels = _api_levels_with_previews,
-    effective_version_string = _effective_version_string,
+    effective_version_string = lambda version: _effective_version_string(
+        version = version,
+        platform_sdk_variables = platform_sdk_variables,
+    ),
 )
+
+api = api_from_product(struct(
+    platform_sdk_final = _PLATFORM_SDK_FINAL,
+    platform_sdk_version = _PLATFORM_SDK_VERSION,
+    platform_sdk_codename = _PLATFORM_SDK_CODENAME,
+    platform_version_active_codenames = _PLATFORM_VERSION_ACTIVE_CODENAMES,
+))
