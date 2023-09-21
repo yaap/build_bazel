@@ -60,7 +60,6 @@ def android_binary(
         optimize = True,
         tags = [],
         target_compatible_with = [],
-        testonly = False,
         visibility = None,
         **kwargs):
     """ android_binary macro wrapper that handles custom attrs needed in AOSP
@@ -105,7 +104,6 @@ def android_binary(
         javacopts = opts,
         target_compatible_with = target_compatible_with,
         tags = tags + ["manual"],
-        testonly = testonly,
         visibility = ["//visibility:private"],
         **kwargs
     )
@@ -117,7 +115,6 @@ def android_binary(
         exports = bin_name,
         tags = tags,
         target_compatible_with = target_compatible_with,
-        testonly = testonly,
         visibility = visibility,
     )
 
