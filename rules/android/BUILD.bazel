@@ -12,8 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 load(":android_app_certificate.bzl", "no_android_app_certificate")
+load(":manifest_fixer_test.bzl", "manifest_fixer_test_suite")
 
 no_android_app_certificate(
     name = "no_android_app_certificate",
     visibility = ["//visibility:public"],
+)
+
+manifest_fixer_test_suite(
+    name = "manifest_fixer_tests",
 )
