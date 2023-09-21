@@ -109,3 +109,11 @@ android_binary(
         "//external/dexmaker:libstaticjvmtiagent",
     ],
 )
+
+# A test to verify that ndk libs are not included in an android_app
+sh_test(
+    name = "no_ndk_libs_in_android_app",
+    srcs = ["no_ndk_libs_in_android_app.sh"],
+    # SimpleJNI has jni libs that builds against the NDK by setting sdk_version: "current"
+    data = ["//development/samples/SimpleJNI"],
+)
