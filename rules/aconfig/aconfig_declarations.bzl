@@ -60,7 +60,7 @@ def _aconfig_declarations_rule_impl(ctx):
         DefaultInfo(files = depset(direct = [output])),
         AconfigDeclarationsInfo(
             package = ctx.attr.package,
-            intermediate_path = output.path,
+            intermediate_path = output,
         ),
     ]
 
