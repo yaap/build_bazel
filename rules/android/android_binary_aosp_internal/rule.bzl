@@ -46,6 +46,31 @@ _ATTRS = _attrs.add(
             default = Label("//build/bazel/product_config:device_abi"),
             doc = "Implicit attr used to extract target device ABI information (for apk lib naming).",
         ),
+        _platform_sdk_final = attr.label(
+            default = "//build/bazel/product_config:platform_sdk_final",
+            doc = "PlatformSdkFinal product variable",
+        ),
+        _unbundled_build_apps = attr.label(
+            default = "//build/bazel/product_config:unbundled_build_apps",
+            doc = "UnbundledBuildApps product variable",
+        ),
+        _override_apex_manifest_default_version = attr.label(
+            default = "//build/bazel/rules/apex:override_apex_manifest_default_version",
+            doc = "If the app is updatable, and this attribute is specified, and higher than the value specified in manifest_values, will override minSdkVersion in manifest with this value instead of the value in manifest_values.",
+        ),
+        _manifest_fixer = attr.label(
+            cfg = "exec",
+            executable = True,
+            default = "//build/soong/scripts:manifest_fixer",
+        ),
+        sdk_version = attr.string(
+            doc = "The sdk_version this app should build against.",
+        ),
+        # TODO: b/301425155 - Handle all of the ways updatable affects this rule.
+        updatable = attr.bool(
+            default = False,
+            doc = "Whether this app is updatable.",
+        ),
     ),
 )
 
@@ -57,4 +82,4 @@ def android_binary_aosp_internal_macro(**attrs):
     Args:
       **attrs: Rule attributes
     """
-    android_binary_aosp_internal(**sanitize_attrs(attrs))
+    android_binary_aosp_internal(**sanitize_attrs(attrs, _ATTRS))

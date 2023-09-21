@@ -24,8 +24,10 @@ load(
 load("@rules_android//rules:resources.bzl", _resources = "resources")
 load("@rules_android//rules:utils.bzl", "get_android_toolchain", "utils")
 load("@rules_android//rules/android_binary_internal:impl.bzl", "finalize", _BASE_PROCESSORS = "PROCESSORS")
+load("//build/bazel/rules/android:manifest_fixer.bzl", "manifest_fixer")
 load("//build/bazel/rules/cc:cc_stub_library.bzl", "CcStubInfo")
 load("//build/bazel/rules/common:api.bzl", "api")
+load("//build/bazel/rules/common:sdk_version.bzl", "sdk_version")
 
 CollectedCcStubsInfo = provider(
     "Tracks cc stub libraries to exclude from APK packaging.",
@@ -125,17 +127,64 @@ def _process_native_deps_aosp(ctx, **_unused_ctxs):
         ]),
     )
 
-def _process_manifest_aosp(ctx, **_unused_ctxs):
-    manifest_ctx = _resources.set_default_min_sdk(
-        ctx,
-        manifest = ctx.file.manifest,
-        default = api.default_app_target_sdk(),
-        enforce_min_sdk_floor_tool = get_android_toolchain(ctx).enforce_min_sdk_floor_tool.files_to_run,
+# Starlark implementation of AndroidApp.MinSdkVersion from build/soong/java/app.go
+def _maybe_override_min_sdk_version(ctx):
+    min_sdk_version = sdk_version.api_level_string_with_fallback(
+        ctx.attr.manifest_values.get("minSdkVersion"),
+        ctx.attr.sdk_version,
     )
+    override_apex_manifest_default_version = ctx.attr._override_apex_manifest_default_version[BuildSettingInfo].value
+    if (ctx.attr.updatable and
+        override_apex_manifest_default_version and
+        (api.parse_api_level_from_version(override_apex_manifest_default_version) >
+         api.parse_api_level_from_version(min_sdk_version))):
+        return override_apex_manifest_default_version
+    return min_sdk_version
+
+def _maybe_override_manifest_values(ctx):
+    min_sdk_version = api.effective_version_string(_maybe_override_min_sdk_version(ctx))
+
+    has_unbundled_build_apps = (ctx.attr._unbundled_build_apps[BuildSettingInfo].value != None and
+                                len(ctx.attr._unbundled_build_apps[BuildSettingInfo].value) > 0)
+
+    # TODO: b/300916281 - When Api fingerprinting is used, it should be appended to the target SDK version here.
+    target_sdk_version = manifest_fixer.target_sdk_version_for_manifest_fixer(
+        target_sdk_version = sdk_version.api_level_string_with_fallback(
+            ctx.attr.manifest_values.get("targetSdkVersion"),
+            ctx.attr.sdk_version,
+        ),
+        platform_sdk_final = ctx.attr._platform_sdk_final[BuildSettingInfo].value,
+        has_unbundled_build_apps = has_unbundled_build_apps,
+    )
+    return struct(
+        min_sdk_version = min_sdk_version,
+        target_sdk_version = target_sdk_version,
+    )
+
+def _process_manifest_aosp(ctx, **_unused_ctxs):
+    maybe_overriden_values = _maybe_override_manifest_values(ctx)
+    out_manifest = ctx.actions.declare_file("fixed_manifest/" + ctx.label.name + "/" + "AndroidManifest.xml")
+    manifest_fixer.fix(
+        ctx,
+        manifest_fixer = ctx.executable._manifest_fixer,
+        in_manifest = ctx.file.manifest,
+        out_manifest = out_manifest,
+        min_sdk_version = maybe_overriden_values.min_sdk_version,
+        target_sdk_version = maybe_overriden_values.target_sdk_version,
+    )
+
+    updated_manifest_values = {
+        key: ctx.attr.manifest_values[key]
+        for key in ctx.attr.manifest_values.keys()
+        if key not in ("minSdkVersion", "targetSdkVersion")
+    }
 
     return ProviderInfo(
         name = "manifest_ctx",
-        value = manifest_ctx,
+        value = _resources.ManifestContextInfo(
+            processed_manifest = out_manifest,
+            processed_manifest_values = updated_manifest_values,
+        ),
     )
 
 # (b/274150785)  validation processor does not allow min_sdk that are a string
