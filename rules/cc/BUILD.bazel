@@ -15,6 +15,7 @@ limitations under the License.
 
 load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@bazel_skylib//rules:common_settings.bzl", "bool_setting")
+load(":cc_aconfig_library_test.bzl", "cc_aconfig_library_test_suite")
 load(":cc_aidl_library_test.bzl", "cc_aidl_library_test_suite")
 load(":cc_binary_test.bzl", "cc_binary_test_suite")
 load(":cc_hidl_library_test.bzl", "cc_hidl_library_test_suite")
@@ -102,6 +103,8 @@ platform(
     name = "darwin_for_testing",
     constraint_values = ["@//build/bazel/platforms/os:darwin"],
 )
+
+cc_aconfig_library_test_suite(name = "cc_aconfig_library_tests")
 
 cc_aidl_library_test_suite(name = "cc_aidl_library_tests")
 
