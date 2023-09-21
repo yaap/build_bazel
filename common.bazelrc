@@ -60,7 +60,7 @@ common --color=yes
 common --curses=yes
 
 # Configurations specific to CI builds, generally to improve signal-to-noise ratio in server logs.
-common:ci --color=no
+common:ci --color=yes
 common:ci --curses=no
 common:ci --show_progress_rate_limit=5
 common:ci --noshow_loading_progress
