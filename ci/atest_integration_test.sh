@@ -60,6 +60,7 @@ build/soong/soong_ui.bash --make-mode atest --skip-soong-tests
 
 ${OUT_DIR}/host/linux-x86/bin/atest-dev \
   --roboleaf-mode=dev \
+  --bazel-arg=--config=ci \
   --bazel-arg=--config=deviceless_tests \
   --bazel-arg=--remote_instance_name="${RBE_instance}" \
   --bazel-arg=--bes_keywords="${ROBOLEAF_BES_KEYWORDS}" \
