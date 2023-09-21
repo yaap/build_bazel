@@ -102,6 +102,7 @@ def _test_contains_expected_providers_and_files(name):
         ],
         srcs = ["fake.java"],
         tags = ["manual"],
+        sdk_version = "current",
     )
 
     android_binary_aosp_internal_providers_test(
