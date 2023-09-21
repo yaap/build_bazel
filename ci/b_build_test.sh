@@ -17,4 +17,4 @@
 # hasn't stopped working. This is a shortened version of bp2build.sh
 source "$(dirname $0)/target_lists.sh"
 
-build/bazel/bin/b build --config=android --  ${STABLE_BUILD_TARGETS[@]}
+build/bazel/bin/b build --config=ci --config=android --  ${STABLE_BUILD_TARGETS[@]}

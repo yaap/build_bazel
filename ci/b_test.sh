@@ -24,7 +24,7 @@ if [[ ! $(grep '"exitCode": 0' out/analyze_build_output/bazel_metrics.json) ]]; 
    exit 1
 fi
 
-build/bazel/bin/b build libcore:nonexistent_module &> /dev/null || true
+build/bazel/bin/b build --config=ci libcore:nonexistent_module &> /dev/null || true
 
 build/bazel/scripts/analyze_build
 
