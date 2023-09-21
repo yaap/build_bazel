@@ -11,7 +11,7 @@ _vars_to_labels = {
 } | {
     var: "//build/bazel/product_config:" + var.lower()
     for var, info in product_var_constant_info.items()
-    if info.selectable
+    if info.selectable and var != "Debuggable" and var != "Eng"
 }
 
 def _product_variables_for_attributes_impl(ctx):
@@ -33,6 +33,9 @@ def _product_variables_for_attributes_impl(ctx):
     for var in _vars_to_labels:
         result[var] = value_to_string(getattr(ctx.attr, "_" + var)[BuildSettingInfo].value)
 
+    result["debuggable"] = value_to_string(ctx.attr._target_build_variant[BuildSettingInfo].value in ["userdebug", "eng"])
+    result["eng"] = value_to_string(ctx.attr._target_build_variant[BuildSettingInfo].value == "eng")
+
     return [platform_common.TemplateVariableInfo(result)]
 
 # Provides product variables for templated string replacement.
@@ -41,5 +44,7 @@ product_variables_for_attributes = rule(
     attrs = {
         "_" + var: attr.label(default = label)
         for var, label in _vars_to_labels.items()
+    } | {
+        "_target_build_variant": attr.label(default = "//build/bazel/product_config:target_build_variant"),
     },
 )
