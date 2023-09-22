@@ -27,8 +27,6 @@ def _get_clang_cmd_output(ctx):
         copts.append("-g")
 
     includes = [
-        # TODO(b/296014682): Remove after the bpf_headers is moved to Connectivity
-        "frameworks/libs/net/common/native/bpf_headers/include/bpf",
         "packages/modules/Connectivity/staticlibs/native/bpf_headers/include/bpf",
         # TODO(b/149785767): only give access to specific file with AID_* constants
         "system/core/libcutils/include",
