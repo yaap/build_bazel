@@ -122,10 +122,9 @@ def _java_proto_library(
         tags = ["manual"],
     )
 
+    deps = kwargs.pop("additional_proto_deps", [])
     if proto_dep:
-        deps = [proto_dep]
-    else:
-        deps = []
+        deps.append(proto_dep)
 
     java_library(
         name = name,
