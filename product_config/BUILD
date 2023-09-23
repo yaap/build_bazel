@@ -16,6 +16,16 @@ label_flag(
     build_setting_default = "//build/bazel/utils:fail",
 )
 
+string_flag(
+    name = "target_build_variant",
+    build_setting_default = "eng",
+    values = [
+        "user",
+        "userdebug",
+        "eng",
+    ],
+)
+
 _string_list_variables = [
     # keep-sorted start
     "build_version_tags",
@@ -48,7 +58,6 @@ _string_variables = [
     "product_manufacturer",
     "release_aconfig_flag_default_permission",
     "release_version",
-    "target_build_variant",
     # keep-sorted end
 ]
 
@@ -60,15 +69,14 @@ _bool_variables = [
     "build_broken_incorrect_partition_images",
     "build_from_text_stub",
     "compressed_apex",
-    "debuggable",
     "device_page_size_agnostic",
     "enforce_vintf_manifest",
-    "eng",
     "malloc_not_svelte",
     "malloc_pattern_fill_contents",
     "malloc_zero_contents",
     "native_coverage",
     "pdk",
+    "platform_sdk_final",
     "release_aidl_use_unfrozen",
     "safestack",
     "treble_linker_namespaces",

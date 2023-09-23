@@ -24,6 +24,30 @@ package(default_visibility = ["//visibility:public"])
 # Android.bp files and not hardcoded into Soong.
 soong_config_variable_config_settings()
 
+# Add config settings for eng/debuggable. User doesn't exist because it didn't exist in soong.
+config_setting(
+    name = "eng",
+    flag_values = {
+        "//build/bazel/product_config:target_build_variant": "eng",
+    },
+)
+
+config_setting(
+    name = "userdebug",
+    flag_values = {
+        "//build/bazel/product_config:target_build_variant": "userdebug",
+    },
+    visibility = ["//visibility:private"],
+)
+
+selects.config_setting_group(
+    name = "debuggable",
+    match_any = [
+        ":eng",
+        ":userdebug",
+    ],
+)
+
 # Generate one config_setting for each product_variable.
 # The config_setting for <var> can be within a select() to specify an
 # attribute value for the same conditions product_variable.<var>, for most
@@ -49,7 +73,7 @@ soong_config_variable_config_settings()
         },
     )
     for product_variable, info in product_var_constant_info.items()
-    if info.selectable and info.soongType in [
+    if product_variable != "Debuggable" and product_variable != "Eng" and info.selectable and info.soongType in [
         "bool",
         "*bool",
     ]

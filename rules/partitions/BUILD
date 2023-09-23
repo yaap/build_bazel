@@ -9,6 +9,7 @@ partition_toolchain(
     mke2fs = "//external/e2fsprogs/misc:mke2fs",
     mkuserimg_mke2fs = "//system/extras/ext4_utils:mkuserimg_mke2fs",
     tags = ["manual"],
+    toybox = "//external/toybox",
     tune2fs = "//external/e2fsprogs/misc:tune2fs",
 )
 
