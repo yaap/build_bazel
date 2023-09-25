@@ -345,13 +345,33 @@ def _tradefed_test_impl(ctx, tradefed_options = []):
         test_filter_output = ctx.file.test_filter_generator
         test_runfiles.append(test_filter_output)
 
+    # This may contain a 32/64 suffix for multilib native test, or .jar/.apk
+    # extension for others.
     out = ctx.actions.declare_file(test_basename_with_ext, sibling = test_config)
 
     # Copy the test executable to the test cases directory
     _copy_file(ctx, test_entry_point, out)
-
     root_relative_tests_dir = paths.dirname(out.short_path)
     test_runfiles.append(out)
+
+    if ctx.attr.suffix and test_basename_with_ext.endswith(ctx.attr.suffix):
+        # Create a compat entry point symlink without the 32/64 suffix so
+        # Tradefed can find it with its local file target preparers, like
+        # PushFilePreparer.
+        #
+        # This is also so that the test will pass regardless of
+        # whether `<option name="append-bitness" value="true" />` is defined in
+        # AndroidTest.xml.
+        out_without_suffix = ctx.actions.declare_file(
+            test_basename_with_ext.removesuffix(ctx.attr.suffix),
+            sibling = out,
+        )
+        ctx.actions.symlink(
+            output = out_without_suffix,
+            target_file = out,
+        )
+
+        test_runfiles.append(out_without_suffix)
 
     if CcTestSharedLibsInfo in test_target:
         # We set the linker rpath in bazel and the binary will always look for shared libs in lib/lib64, we copy
