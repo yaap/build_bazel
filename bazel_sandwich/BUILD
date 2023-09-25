@@ -15,7 +15,7 @@
 load(":bazel_sandwich_imported_file.bzl", "bazel_sandwich_imported_file")
 
 package(default_visibility = [
-    "@//build/bazel:__subpackages__",
+    "//visibility:public",
 ])
 
 bazel_sandwich_imported_file(
