@@ -20,11 +20,13 @@ load("//build/bazel/rules/tradefed:tradefed.bzl", "LANGUAGE_ANDROID", "TEST_DEP_
 def android_test(
         name,
         tags = [],
+        optimize = False,  # android_test disables optimize by default.
         visibility = ["//visibility:private"],
         **kwargs):
     test_dep_name = name + TEST_DEP_SUFFIX
     android_binary(
         name = test_dep_name,
+        optimize = optimize,
         tags = tags,
         visibility = ["//visibility:private"],
         **kwargs
