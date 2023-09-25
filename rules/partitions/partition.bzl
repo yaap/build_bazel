@@ -89,10 +89,11 @@ def _partition_impl(ctx):
             extra_inputs.append(ctx.file.base_staging_dir_file_list)
 
     image_info = ctx.actions.declare_file(ctx.attr.name + "/image_info.txt")
-    image_info_contents = ctx.attr.image_properties
+    image_info_contents = ctx.attr.image_properties + "\n"
+    image_info_contents += "ext_mkuserimg=mkuserimg_mke2fs\n"
     if ctx.attr.root_dir:
         extra_inputs.append(ctx.file.root_dir)
-        image_info_contents += "\nroot_dir=" + ctx.file.root_dir.path + "\n"
+        image_info_contents += "root_dir=" + ctx.file.root_dir.path + "\n"
     ctx.actions.write(image_info, image_info_contents)
 
     staging_dir_builder_options_file = ctx.actions.declare_file(ctx.attr.name + "/staging_dir_builder_options.json")
@@ -106,6 +107,7 @@ def _partition_impl(ctx):
         toolchain.e2fsdroid[DefaultInfo].files_to_run,
         toolchain.mke2fs[DefaultInfo].files_to_run,
         toolchain.mkuserimg_mke2fs[DefaultInfo].files_to_run,
+        toolchain.simg2img[DefaultInfo].files_to_run,
         toolchain.tune2fs[DefaultInfo].files_to_run,
     ]
 

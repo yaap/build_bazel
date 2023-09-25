@@ -8,6 +8,7 @@ partition_toolchain(
     e2fsdroid = "//external/e2fsprogs/contrib/android:e2fsdroid",
     mke2fs = "//external/e2fsprogs/misc:mke2fs",
     mkuserimg_mke2fs = "//system/extras/ext4_utils:mkuserimg_mke2fs",
+    simg2img = "//system/core/libsparse:simg2img",
     tags = ["manual"],
     toybox = "//external/toybox",
     tune2fs = "//external/e2fsprogs/misc:tune2fs",
