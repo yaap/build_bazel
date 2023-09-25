@@ -29,6 +29,8 @@ _libcpp_stl_names = {
 # skip libm and libc because then we would have duplicates due to system_shared_library
 _libunwind = "//prebuilts/clang/host/linux-x86:libunwind"
 
+_ndk_system = "//prebuilts/ndk:ndk_system"
+
 _static_binary_deps = select({
     arch_variant_to_constraints["android"]: [_libunwind],
     arch_variant_to_constraints["linux_bionic"]: [_libunwind],
@@ -56,15 +58,16 @@ def stl_info_from_attr(stl_name, is_shared, is_binary = False):
     return struct(
         static_deps = deps.static,
         shared_deps = deps.shared,
+        deps = deps.deps,
         cppflags = flags.cppflags,
         linkopts = flags.linkopts,
     )
 
 def _stl_deps(stl_name, is_shared, is_binary = False):
     if stl_name == "none":
-        return struct(static = [], shared = [])
+        return struct(static = [], shared = [], deps = [])
 
-    shared, static = [], []
+    shared, static, deps = [], [], []
     if stl_name in ("", "system"):
         if is_shared:
             shared = select({
@@ -75,7 +78,6 @@ def _stl_deps(stl_name, is_shared, is_binary = False):
                 # sdk variant, effective STL is ndk_system
                 "//build/bazel/rules/apex:unbundled_app": [
                     "//bionic/libc:libstdc++",
-                    "//prebuilts/ndk:ndk_system",
                 ],
                 "//conditions:default": ["//external/libcxx:libc++"],  # libc++ is used by host variants
             })
@@ -87,12 +89,19 @@ def _stl_deps(stl_name, is_shared, is_binary = False):
                 "//build/bazel/rules/apex:unbundled_app": [],
                 "//conditions:default": [],
             })
+            deps = select({
+                # sdk variant, effective STL is ndk_system
+                "//build/bazel/rules/apex:unbundled_app": [
+                    _ndk_system,
+                ],
+                "//conditions:default": [],
+            })
+
         else:
             shared = select({
                 # sdk variant, effective STL is ndk_system
                 "//build/bazel/rules/apex:unbundled_app": [
                     "//bionic/libc:libstdc++",
-                    "//prebuilts/ndk:ndk_system",
                 ],
                 "//conditions:default": [],
             })
@@ -105,6 +114,13 @@ def _stl_deps(stl_name, is_shared, is_binary = False):
                 # sdk variant does not have an entry since ndk_system's deps have been added in `shared`
                 "//build/bazel/rules/apex:unbundled_app": [],
                 "//conditions:default": ["//external/libcxx:libc++_static"],  # libc++_static is used by host variants
+            })
+            deps = select({
+                # sdk variant, effective STL is ndk_system
+                "//build/bazel/rules/apex:unbundled_app": [
+                    _ndk_system,
+                ],
+                "//conditions:default": [],
             })
     elif stl_name == "libc++":
         shared = select({
@@ -146,6 +162,7 @@ def _stl_deps(stl_name, is_shared, is_binary = False):
     return struct(
         static = static,
         shared = shared,
+        deps = deps,
     )
 
 def _stl_flags(stl_name, is_shared):
