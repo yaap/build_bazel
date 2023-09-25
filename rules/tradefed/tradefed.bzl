@@ -703,8 +703,8 @@ def tradefed_test_suite(
         target_compatible_with = ["//build/bazel/platforms/os:linux"],
     )
 
-def _cc_test_filter_generator_impl(ctx):
-    output = ctx.actions.declare_file(ctx.attr.name + "_cc_test_filter")
+def _test_filter_generator_impl(ctx, name_suffix = "", progress_message = ""):
+    output = ctx.actions.declare_file(ctx.attr.name + name_suffix)
     args = ["--out", output.path]
 
     for f in ctx.files.srcs:
@@ -728,12 +728,19 @@ def _cc_test_filter_generator_impl(ctx):
         arguments = args,
         executable = ctx.attr._executable.files_to_run.executable,
         tools = [ctx.attr._executable[DefaultInfo].files_to_run],
-        progress_message = "Generating the test filters for cc tests",
+        progress_message = progress_message,
     )
 
     return [DefaultInfo(
         files = depset([output]),
     )]
+
+def _cc_test_filter_generator_impl(ctx):
+    return _test_filter_generator_impl(
+        ctx,
+        name_suffix = "_cc_test_filter",
+        progress_message = "Generating the test filters for cc tests",
+    )
 
 cc_test_filter_generator = rule(
     attrs = {
@@ -760,6 +767,44 @@ cc_test_filter_generator = rule(
 An executable computes the cc test filter for a test module based on the given
 cc files and the test reference, and writes the result into a output file that
 is stored in the DefaultInfo provider.
+
+Each test reference is a string in the test reference format of ATest:
+    <module name>:<class name>#<method name>,<method name>
+""",
+)
+
+def _java_test_filter_generator_impl(ctx):
+    return _test_filter_generator_impl(
+        ctx,
+        name_suffix = "_java_test_filter",
+        progress_message = "Generating the java test filters",
+    )
+
+java_test_filter_generator = rule(
+    attrs = {
+        "srcs": attr.label_list(
+            allow_files = True,
+            doc = "Source files containing the class and method that the test filter will match.",
+        ),
+        "module_name": attr.string(
+            mandatory = True,
+            doc = "Module name that the test filters are generated on by this target.",
+        ),
+        "_executable": attr.label(
+            default = "//tools/asuite/atest:java-test-filter-generator",
+            doc = "Executable used to generate the java test filter.",
+        ),
+        "_test_reference": attr.label(
+            default = ":test_reference",
+            doc = "Repeatable string flag used to accept the test reference.",
+        ),
+    },
+    implementation = _java_test_filter_generator_impl,
+    doc = """A rule used to generate the java test filter
+
+An executable computes the java test filter for a test module based on the given
+source files and the test reference, and writes the result into an output file
+that is stored in the DefaultInfo provider.
 
 Each test reference is a string in the test reference format of ATest:
     <module name>:<class name>#<method name>,<method name>
