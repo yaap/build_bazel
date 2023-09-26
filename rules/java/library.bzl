@@ -59,6 +59,8 @@ def java_library(
         java_import(
             name = res_import_name,
             jars = additional_resources,
+            tags = tags + ["manual"],
+            visibility = ["//visibility:private"],
         )
         deps = deps + [":" + res_import_name]
 
