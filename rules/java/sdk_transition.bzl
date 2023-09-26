@@ -12,9 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("//build/bazel/rules/java:versions.bzl", "java_versions")
-load("//build/bazel/rules/common:sdk_version.bzl", "sdk_version")
 load("//build/bazel/rules/common:api.bzl", "api")
+load("//build/bazel/rules/common:sdk_version.bzl", "sdk_version")
+load("//build/bazel/rules/java:versions.bzl", "java_versions")
+
+_DEFAULT_API_DOMAIN = "system"  # i.e. the platform variant
 
 def _sdk_transition_impl(settings, attr):
     host_platform = settings["//command_line_option:host_platform"]
@@ -29,16 +31,30 @@ def _sdk_transition_impl(settings, attr):
             "//build/bazel/rules/java:host_version": str(java_versions.get_version(attr.java_version)),
             "//build/bazel/rules/java/sdk:kind": sdk_version.KIND_NONE,
             "//build/bazel/rules/java/sdk:api_level": api.NONE_API_LEVEL,
+            "//build/bazel/rules/apex:api_domain": _DEFAULT_API_DOMAIN,
         }
     sdk_spec = sdk_version.sdk_spec_from(attr.sdk_version)
     java_version = str(java_versions.get_version(attr.java_version, sdk_spec.api_level))
 
-    return {
+    ret = {
         "//build/bazel/rules/java:host_version": default_java_version,
         "//build/bazel/rules/java:version": java_version,
         "//build/bazel/rules/java/sdk:kind": sdk_spec.kind,
         "//build/bazel/rules/java/sdk:api_level": sdk_spec.api_level,
+        "//build/bazel/rules/apex:api_domain": _DEFAULT_API_DOMAIN,
     }
+
+    # uses_sdk returns true if the app sets an sdk_version _except_ `core_platform`
+    # https://cs.android.com/android/_/android/platform/build/soong/+/main:java/app.go;l=253;bpv=1;bpt=0;drc=e12c083198403ec694af6c625aed11327eb2bf7f
+    uses_sdk = (sdk_spec != None) and (sdk_spec.kind != sdk_version.KIND_CORE_PLATFORM)
+
+    if uses_sdk:
+        # If the app is using an SDK, build it in the "unbundled_app" api domain build setting
+        # This ensures that its jni deps are building against the NDK
+        # TODO - b/299360988 - Handle jni_uses_sdk_apis, jni_uses_platform_apis
+        ret["//build/bazel/rules/apex:api_domain"] = "unbundled_app"
+
+    return ret
 
 sdk_transition = transition(
     implementation = _sdk_transition_impl,
@@ -51,6 +67,7 @@ sdk_transition = transition(
         "//build/bazel/rules/java:host_version",
         "//build/bazel/rules/java/sdk:kind",
         "//build/bazel/rules/java/sdk:api_level",
+        "//build/bazel/rules/apex:api_domain",
     ],
 )
 
