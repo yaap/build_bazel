@@ -180,6 +180,7 @@ def cc_library_static(
             implementation_deps +
             implementation_dynamic_deps +
             system_dynamic_deps +
+            stl_info.deps +
             stl_info.static_deps +
             stl_info.shared_deps +
             implementation_whole_archive_deps
@@ -269,6 +270,7 @@ def cc_library_static(
         deps = whole_archive_deps + implementation_whole_archive_deps,
         additional_sanitizer_deps = (
             deps +
+            stl_info.deps +
             stl_info.static_deps +
             implementation_deps
         ),
