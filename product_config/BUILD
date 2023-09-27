@@ -53,6 +53,8 @@ _string_variables = [
     "platform_sdk_extension_version",
     "platform_sdk_version",
     "platform_sdk_version_or_codename",
+    "platform_security_patch",
+    "platform_version_last_stable",
     "platform_version_name",
     "product_brand",
     "product_manufacturer",
