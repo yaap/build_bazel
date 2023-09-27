@@ -27,6 +27,7 @@ load("@rules_android//rules/android_binary_internal:impl.bzl", "finalize", _BASE
 load("//build/bazel/rules/android:manifest_fixer.bzl", "manifest_fixer")
 load("//build/bazel/rules/cc:cc_stub_library.bzl", "CcStubInfo")
 load("//build/bazel/rules/common:api.bzl", "api")
+load("//build/bazel/rules/common:config.bzl", "has_unbundled_build_apps")
 load("//build/bazel/rules/common:sdk_version.bzl", "sdk_version")
 
 CollectedCcStubsInfo = provider(
@@ -144,9 +145,6 @@ def _maybe_override_min_sdk_version(ctx):
 def _maybe_override_manifest_values(ctx):
     min_sdk_version = api.effective_version_string(_maybe_override_min_sdk_version(ctx))
 
-    has_unbundled_build_apps = (ctx.attr._unbundled_build_apps[BuildSettingInfo].value != None and
-                                len(ctx.attr._unbundled_build_apps[BuildSettingInfo].value) > 0)
-
     # TODO: b/300916281 - When Api fingerprinting is used, it should be appended to the target SDK version here.
     target_sdk_version = manifest_fixer.target_sdk_version_for_manifest_fixer(
         target_sdk_version = sdk_version.api_level_string_with_fallback(
@@ -154,7 +152,7 @@ def _maybe_override_manifest_values(ctx):
             ctx.attr.sdk_version,
         ),
         platform_sdk_final = ctx.attr._platform_sdk_final[BuildSettingInfo].value,
-        has_unbundled_build_apps = has_unbundled_build_apps,
+        has_unbundled_build_apps = has_unbundled_build_apps(ctx.attr._unbundled_build_apps),
     )
     return struct(
         min_sdk_version = min_sdk_version,
