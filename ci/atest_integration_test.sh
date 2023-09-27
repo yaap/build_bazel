@@ -35,7 +35,7 @@ if [ ! -n "${TARGET_PRODUCT}" ] || [ ! -n "${TARGET_BUILD_VARIANT}" ] ; then
     TARGET_BUILD_VARIANT=userdebug
 fi
 
-remote_cache="grpcs://${RBE_service%:*}"
+remote_cache="grpcs://${FLAG_service%:*}"
 
 out=$(get_build_var PRODUCT_OUT)
 
@@ -62,7 +62,7 @@ ${OUT_DIR}/host/linux-x86/bin/atest-dev \
   --roboleaf-mode=dev \
   --bazel-arg=--config=ci \
   --bazel-arg=--config=deviceless_tests \
-  --bazel-arg=--remote_instance_name="${RBE_instance}" \
+  --bazel-arg=--remote_instance_name="${FLAG_instance}" \
   --bazel-arg=--bes_keywords="${ROBOLEAF_BES_KEYWORDS}" \
   --bazel-arg=--bes_results_url="${ROBOLEAF_BES_RESULTS_URL}" \
   --bazel-arg=--remote_cache="${remote_cache}" \
