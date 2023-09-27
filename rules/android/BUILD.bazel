@@ -13,6 +13,7 @@
 # limitations under the License.
 load(":android_app_certificate.bzl", "no_android_app_certificate")
 load(":manifest_fixer_test.bzl", "manifest_fixer_test_suite")
+load(":framework_resources_test.bzl", "framework_resources_test_suite")
 
 no_android_app_certificate(
     name = "no_android_app_certificate",
@@ -21,4 +22,8 @@ no_android_app_certificate(
 
 manifest_fixer_test_suite(
     name = "manifest_fixer_tests",
+)
+
+framework_resources_test_suite(
+    name = "framework_resources_tests",
 )
