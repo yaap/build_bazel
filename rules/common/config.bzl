@@ -11,19 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-load(":android_app_certificate.bzl", "no_android_app_certificate")
-load(":manifest_fixer_test.bzl", "manifest_fixer_test_suite")
-load(":framework_resources_test.bzl", "framework_resources_test_suite")
 
-no_android_app_certificate(
-    name = "no_android_app_certificate",
-    visibility = ["//visibility:public"],
-)
+load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 
-manifest_fixer_test_suite(
-    name = "manifest_fixer_tests",
-)
-
-framework_resources_test_suite(
-    name = "framework_resources_tests",
-)
+def has_unbundled_build_apps(unbundled_build_apps_attr):
+    return (unbundled_build_apps_attr[BuildSettingInfo].value != None and
+            len(unbundled_build_apps_attr[BuildSettingInfo].value) > 0)
