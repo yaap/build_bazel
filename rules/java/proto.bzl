@@ -123,7 +123,7 @@ def _java_proto_library(
     )
 
     deps = kwargs.pop("additional_proto_deps", [])
-    if proto_dep:
+    if proto_dep and proto_dep not in deps:
         deps.append(proto_dep)
 
     java_library(
