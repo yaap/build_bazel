@@ -165,6 +165,11 @@ startup --connect_timeout_secs=45
 
 # TODO(b/300376073): Reuse the RBE instance of BES for remote test.
 ###### Remote Virtual Device Test Execution Configuration.
+######
+# --flag_alias does not work with --config, has to be defined for top level build command
+build --flag_alias=ab_build_id=//build/bazel_common_rules/rules/remote_device:build_id
+build --flag_alias=ab_target=//build/bazel_common_rules/rules/remote_device:target
+build --flag_alias=ab_branch=//build/bazel_common_rules/rules/remote_device:branch
 
 test:remote_avd  --config=remote
 test:remote_avd  --test_timeout=3600
