@@ -29,6 +29,7 @@ def android_test(
         optimize = optimize,
         tags = tags,
         visibility = ["//visibility:private"],
+        testonly = True,
         **kwargs
     )
 
