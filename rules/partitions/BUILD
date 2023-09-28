@@ -4,10 +4,13 @@ toolchain_type(name = "partition_toolchain_type")
 
 partition_toolchain(
     name = "partition_toolchain",
+    avbtool = "//external/avb:avbtool",
     build_image = "//build/make/tools/releasetools:build_image",
     e2fsdroid = "//external/e2fsprogs/contrib/android:e2fsdroid",
+    fec = "//system/extras/verity/fec",
     mke2fs = "//external/e2fsprogs/misc:mke2fs",
     mkuserimg_mke2fs = "//system/extras/ext4_utils:mkuserimg_mke2fs",
+    openssl = "//prebuilts/build-tools:linux-x86/bin/openssl",
     simg2img = "//system/core/libsparse:simg2img",
     tags = ["manual"],
     toybox = "//external/toybox",
