@@ -230,6 +230,11 @@ new_local_repository(
     path = "external/rust/crates/tinyjson",
 )
 
+local_repository(
+    name = "rules_testing",
+    path = "external/bazelbuild-rules_testing",
+)
+
 register_toolchains(
     "build/bazel/toolchains/rust:toolchain_x86_64_unknown-linux-gnu",
     "build/bazel/toolchains/rust:proto-toolchain",
