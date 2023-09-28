@@ -16,19 +16,20 @@ load("@bazel_skylib//lib:paths.bzl", "paths")
 load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 load("@soong_injection//apex_toolchain:constants.bzl", "default_manifest_version")
 load("//build/bazel/platforms:platform_utils.bzl", "platforms")
+load("//build/bazel/rules:build_fingerprint.bzl", "BuildFingerprintInfo")
 load("//build/bazel/rules:common.bzl", "get_dep_targets")
 load("//build/bazel/rules:metadata.bzl", "MetadataFileInfo")
 load("//build/bazel/rules:prebuilt_file.bzl", "PrebuiltFileInfo")
 load("//build/bazel/rules:sh_binary.bzl", "ShBinaryInfo")
 load("//build/bazel/rules:toolchain_utils.bzl", "verify_toolchain_exists")
 load("//build/bazel/rules/android:android_app_certificate.bzl", "AndroidAppCertificateInfo", "NoAndroidAppCertificateInfo", "android_app_certificate_with_default_cert")
+load("//build/bazel/rules/android:manifest_fixer.bzl", "manifest_fixer")
 load("//build/bazel/rules/apex:cc.bzl", "ApexCcInfo", "ApexCcMkInfo", "apex_cc_aspect")
 load("//build/bazel/rules/apex:sdk_versions.bzl", "maybe_override_min_sdk_version")
 load("//build/bazel/rules/apex:transition.bzl", "apex_transition", "shared_lib_transition_32", "shared_lib_transition_64")
 load("//build/bazel/rules/cc:clang_tidy.bzl", "collect_deps_clang_tidy_info")
 load("//build/bazel/rules/cc:stripped_cc_common.bzl", "CcUnstrippedInfo", "StrippedCcBinaryInfo")
 load("//build/bazel/rules/common:api.bzl", "api")
-load("//build/bazel/rules/android:manifest_fixer.bzl", "manifest_fixer")
 load(
     "//build/bazel/rules/license:license_aspect.bzl",
     "RuleLicensedDependenciesInfo",
@@ -811,17 +812,7 @@ def _generate_sbom(ctx, file_mapping, metadata_file_mapping, apex_file):
     inputs += file_mapping.values()
     inputs += metadata_files
 
-    build_version_tags = ctx.attr._build_version_tags[BuildSettingInfo].value
-    build_fingerprint = "%s/%s/%s:%s/%s/%s:%s/%s" % (
-        ctx.attr._product_brand[BuildSettingInfo].value,
-        ctx.attr._device_product[BuildSettingInfo].value,
-        ctx.attr._device_name[BuildSettingInfo].value,
-        ctx.attr._platform_version_name[BuildSettingInfo].value,
-        ctx.attr._build_id[BuildSettingInfo].value,
-        "",
-        ctx.attr._target_build_variant[BuildSettingInfo].value,
-        "_".join(build_version_tags),
-    )
+    build_fingerprint = ctx.attr._build_fingerprint[BuildFingerprintInfo].fingerprint_blank_build_number
     ctx.actions.run(
         inputs = inputs,
         outputs = [sbom_file, sbom_fragment_file],
@@ -1058,7 +1049,10 @@ APEX is truly updatable. To be updatable, min_sdk_version should be set as well.
             executable = True,
         ),
         "_platform_utils": attr.label(
-            default = Label("//build/bazel/platforms:platform_utils"),
+            default = "//build/bazel/platforms:platform_utils",
+        ),
+        "_build_fingerprint": attr.label(
+            default = "//build/bazel/rules:build_fingerprint",
         ),
         "_generate_sbom": attr.label(
             cfg = "exec",
@@ -1084,20 +1078,8 @@ APEX is truly updatable. To be updatable, min_sdk_version should be set as well.
             default = "//build/bazel/product_config:apex_global_min_sdk_version_override",
             doc = "If specified, override the min_sdk_version of this apex and in the transition and checks for dependencies.",
         ),
-        "_build_id": attr.label(
-            default = "//build/bazel/product_config:build_id",
-        ),
-        "_build_version_tags": attr.label(
-            default = "//build/bazel/product_config:build_version_tags",
-        ),
         "_compressed_apex": attr.label(
             default = "//build/bazel/product_config:compressed_apex",
-        ),
-        "_device_product": attr.label(
-            default = "//build/bazel/product_config:device_product",
-        ),
-        "_device_name": attr.label(
-            default = "//build/bazel/product_config:device_name",
         ),
         "_manifest_package_name_overrides": attr.label(
             default = "//build/bazel/product_config:manifest_package_name_overrides",
@@ -1106,17 +1088,8 @@ APEX is truly updatable. To be updatable, min_sdk_version should be set as well.
             default = "//build/bazel/rules/apex:override_apex_manifest_default_version",
             doc = "If specified, override 'version: 0' in apex_manifest.json with this value instead of the branch default. Non-zero versions will not be changed.",
         ),
-        "_platform_version_name": attr.label(
-            default = "//build/bazel/product_config:platform_version_name",
-        ),
-        "_product_brand": attr.label(
-            default = "//build/bazel/product_config:product_brand",
-        ),
         "_product_manufacturer": attr.label(
             default = "//build/bazel/product_config:product_manufacturer",
-        ),
-        "_target_build_variant": attr.label(
-            default = "//build/bazel/product_config:target_build_variant",
         ),
         "_unbundled_build_apps": attr.label(
             default = "//build/bazel/product_config:unbundled_build_apps",
