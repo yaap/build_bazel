@@ -42,6 +42,11 @@ bazel_sandwich_imported_file(
 )
 
 bazel_sandwich_imported_file(
+    name = "selinux_file_contexts",
+    target = "target/product/$(DeviceName)/obj/ETC/file_contexts.bin_intermediates/file_contexts.bin",
+)
+
+bazel_sandwich_imported_file(
     name = "make_system_image",
     target = "target/product/$(DeviceName)/system.img",
 )

@@ -20,30 +20,41 @@ selinux information and avb information.
 '''
 
 import argparse
+import difflib
+import hashlib
 import os
 import subprocess
 import sys
-import difflib
 
-def tree(debugfs, image, path='/', depth=0):
-    p = subprocess.run([debugfs, '-R', 'ls -p '+path, image], check=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+def run_debugfs(command):
+    p = subprocess.run(command, check=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if len(p.stderr.splitlines()) > 1:
-        # debugfs unforunately doesn't exit with a nonzero status code on most errors.
+        # debugfs unfortunately doesn't exit with a nonzero status code on most errors.
         # Instead, check if it had more than 1 line of stderr output.
         # It always outputs its version number as the first line.
         sys.exit(p.stderr)
+    return p.stdout
+
+def tree(debugfs, image, path='/', depth=0):
     result = ''
-    for line in p.stdout.splitlines():
+    for line in run_debugfs([debugfs, '-R', 'ls -p '+path, image]).splitlines():
         line = line.strip()
         if not line:
             continue
         _, _ino, mode, uid, gid, name, size, _ = line.split('/')
         if name == '.' or name == '..':
             continue
+        is_dir = not size
+
+        child = os.path.join(path, name)
+
+        # The selinux contexts are stored in the extended attributes
+        extended_attributes = ' '.join(run_debugfs([debugfs, '-R' 'ea_list '+child, image]).strip().split())
+
         result += '  '*depth
-        result += f'{mode} {uid} {gid} {name}{":" if not size else ""}\n'
+        result += f'{mode} {uid} {gid} {name} ({extended_attributes}){":" if is_dir else ""}\n'
         if not size:
-            result += tree(debugfs, image, os.path.join(path, name), depth+1)
+            result += tree(debugfs, image, child, depth+1)
     return result
 
 

@@ -15,10 +15,13 @@
 PartitionToolchainInfo = provider(
     doc = "Partitions toolchain",
     fields = [
+        "avbtool",
         "build_image",
         "e2fsdroid",
+        "fec",
         "mke2fs",
         "mkuserimg_mke2fs",
+        "openssl",
         "simg2img",
         "toybox",
         "tune2fs",
@@ -28,10 +31,13 @@ PartitionToolchainInfo = provider(
 def _partition_toolchain_impl(ctx):
     toolchain_info = platform_common.ToolchainInfo(
         toolchain_info = PartitionToolchainInfo(
+            avbtool = ctx.attr.avbtool,
             build_image = ctx.attr.build_image,
             e2fsdroid = ctx.attr.e2fsdroid,
+            fec = ctx.attr.fec,
             mke2fs = ctx.attr.mke2fs,
             mkuserimg_mke2fs = ctx.attr.mkuserimg_mke2fs,
+            openssl = ctx.file.openssl,
             simg2img = ctx.attr.simg2img,
             toybox = ctx.attr.toybox,
             tune2fs = ctx.attr.tune2fs,
@@ -42,10 +48,13 @@ def _partition_toolchain_impl(ctx):
 partition_toolchain = rule(
     implementation = _partition_toolchain_impl,
     attrs = {
+        "avbtool": attr.label(cfg = "exec", executable = True, mandatory = True),
         "build_image": attr.label(cfg = "exec", executable = True, mandatory = True),
         "e2fsdroid": attr.label(cfg = "exec", executable = True, mandatory = True),
+        "fec": attr.label(cfg = "exec", executable = True, mandatory = True),
         "mke2fs": attr.label(cfg = "exec", executable = True, mandatory = True),
         "mkuserimg_mke2fs": attr.label(cfg = "exec", executable = True, mandatory = True),
+        "openssl": attr.label(allow_single_file = True, cfg = "exec", mandatory = True),
         "simg2img": attr.label(cfg = "exec", executable = True, mandatory = True),
         "toybox": attr.label(cfg = "exec", executable = True, mandatory = True),
         "tune2fs": attr.label(cfg = "exec", executable = True, mandatory = True),
