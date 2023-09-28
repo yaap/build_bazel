@@ -29,6 +29,13 @@ _bionic_stub_targets = [
     "//bionic/libm:libm_stub_libs_current",
 ]
 
+# When building an android_app/android_test that set an sdk_version, NDK variant of stub libraries of libc, libdl, libm should be used in linking.
+_bionic_ndk_stub_targets = [
+    "//bionic/libc:libc.ndk_stub_libs_current",
+    "//bionic/libdl:libdl.ndk_stub_libs_current",
+    "//bionic/libm:libm.ndk_stub_libs_current",
+]
+
 # The default system_dynamic_deps value for cc libraries. This value should be
 # used if no value for system_dynamic_deps is specified.
 system_dynamic_deps_defaults = select({
@@ -36,6 +43,7 @@ system_dynamic_deps_defaults = select({
     "//build/bazel/rules/apex:android-non_apex": _bionic_stub_targets,
     "//build/bazel/rules/apex:linux_bionic-in_apex": _bionic_stub_targets,
     "//build/bazel/rules/apex:linux_bionic-non_apex": _bionic_stub_targets,
+    "//build/bazel/rules/apex:unbundled_app": _bionic_ndk_stub_targets,
     "//conditions:default": [],
 })
 
@@ -44,6 +52,7 @@ system_static_deps_defaults = select({
     "//build/bazel/rules/apex:android-non_apex": _static_bionic_targets,
     "//build/bazel/rules/apex:linux_bionic-in_apex": _bionic_stub_targets,
     "//build/bazel/rules/apex:linux_bionic-non_apex": _static_bionic_targets,
+    "//build/bazel/rules/apex:unbundled_app": _bionic_ndk_stub_targets,
     "//conditions:default": [],
 })
 
