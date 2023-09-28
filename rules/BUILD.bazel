@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+load(":build_fingerprint.bzl", "build_fingerprint")
 load(":gensrcs_test.bzl", "gensrcs_tests_suite")
 load(":linker_config_test.bzl", "linker_config_test_suite")
 load(":prebuilt_file_test.bzl", "prebuilt_file_test_suite")
@@ -27,6 +28,17 @@ py_binary(
     name = "staging_dir_builder",
     srcs = ["staging_dir_builder.py"],
     visibility = ["//visibility:public"],
+)
+
+py_binary(
+    name = "status_file_reader",
+    srcs = ["status_file_reader.py"],
+    visibility = ["//build/bazel:__subpackages__"],
+)
+
+build_fingerprint(
+    name = "build_fingerprint",
+    visibility = ["//build/bazel:__subpackages__"],
 )
 
 sh_test(
