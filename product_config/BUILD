@@ -28,6 +28,7 @@ string_flag(
 
 _string_list_variables = [
     # keep-sorted start
+    "aapt_config",
     "build_version_tags",
     "cfi_exclude_paths",
     "cfi_include_paths",
@@ -43,6 +44,11 @@ _string_list_variables = [
 
 _string_variables = [
     # keep-sorted start
+    # TODO: b/301593550 - commas can't be escaped in a string-list passed in a platform mapping,
+    # so commas are switched for ":" in soong injection, and must be back-substituted
+    # into commas wherever the AAPTCharacteristics product config variable is used.
+    "aapt_characteristics",
+    "aapt_preferred_config",
     "apex_global_min_sdk_version_override",
     "build_id",
     "default_app_certificate",
@@ -53,6 +59,8 @@ _string_variables = [
     "platform_sdk_extension_version",
     "platform_sdk_version",
     "platform_sdk_version_or_codename",
+    "platform_security_patch",
+    "platform_version_last_stable",
     "platform_version_name",
     "product_brand",
     "product_manufacturer",
