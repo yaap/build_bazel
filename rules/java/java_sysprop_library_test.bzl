@@ -174,6 +174,27 @@ def _gen_action_args_test_impl(env, target):
             matching.equals_wrapper(expected_out_tmp_dir_path),
         ])
 
+def _java_sysprop_library_sdk_setting_test(name):
+    target_name = name + "_subject"
+    _create_targets_under_test(target_name)
+
+    analysis_test(name, target = target_name, impl = _sdk_setting_test_impl)
+
+def _sdk_setting_test_impl(env, target):
+    # The argument this check searches for is part of bootclasspath, and is
+    # currently the only result of the sdk version transition visible in the
+    # java compilation action.
+    # core_10000 is the part that reflects the required sdk version,
+    # core_current
+    # TODO: b/303596698 - Find a better way to test this
+    env.expect.that_target(target).action_named(
+        "Javac",
+    ).argv().contains_at_least_predicates([
+        matching.str_endswith(
+            "core_10000_android_jar_private/prebuilts/sdk/current/core/android-ijar.jar",
+        ),
+    ])
+
 def java_sysprop_library_test_suite(name):
     test_suite(
         name = name,
@@ -181,5 +202,6 @@ def java_sysprop_library_test_suite(name):
             _java_sysprop_library_gen_action_args_test,
             _java_sysprop_library_java_action_test,
             _java_sysprop_library_target_test,
+            _java_sysprop_library_sdk_setting_test,
         ],
     )
