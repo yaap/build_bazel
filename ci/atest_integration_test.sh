@@ -60,9 +60,8 @@ build/soong/soong_ui.bash --make-mode atest --skip-soong-tests
 
 ${OUT_DIR}/host/linux-x86/bin/atest-dev \
   --roboleaf-mode=dev \
+  --bazel-arg=--config=remote_avd \
   --bazel-arg=--config=ci \
-  --bazel-arg=--config=deviceless_tests \
-  --bazel-arg=--remote_instance_name="${FLAG_instance}" \
   --bazel-arg=--bes_keywords="${ROBOLEAF_BES_KEYWORDS}" \
   --bazel-arg=--bes_results_url="${ROBOLEAF_BES_RESULTS_URL}" \
   --bazel-arg=--remote_cache="${remote_cache}" \
@@ -73,4 +72,7 @@ ${OUT_DIR}/host/linux-x86/bin/atest-dev \
   "$@" \
   HelloWorldHostTest \
   sysprop_test \
-  merge_annotation_zips_test
+  merge_annotation_zips_test \
+  adbd_test \
+  HelloWorldTests \
+  CtsGestureTestCases
