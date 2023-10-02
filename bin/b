@@ -70,20 +70,30 @@ else
     # command. (build, test, run, ect) If the --config was added at the end, it wouldn't work
     # with commands like:  b run //foo -- --args-for-foo
     config_set=0
+    bes_disabled=0
 
     # Represent the args as an array, not a string.
     bazel_args_with_config=()
     for arg in $bazel_args; do
+        if [[ $arg == "--disable_bes" ]]; then
+            bes_disabled=1
+            continue
+        fi
+
         if [[ $arg == "--" && $config_set -ne 1 ]]; # if we find --, insert config argument here
         then
-            bazel_args_with_config+=("--profile=$PROFILE_OUT/bazel_metrics-profile --config=bp2build  --invocation_id=$UUID -- ")
+            # Append the proper config
+            [[ $bes_disabled = 1 ]] && bes_flag="" || bes_flag="--config=metrics_data"
+            bazel_args_with_config+=("--profile=$PROFILE_OUT/bazel_metrics-profile --config=bp2build $bes_flag  --invocation_id=$UUID -- ")
             config_set=1
         else
             bazel_args_with_config+=("$arg ")
         fi
     done
     if [[ $config_set -ne 1 ]]; then
-        bazel_args_with_config+=("--profile=$PROFILE_OUT/bazel_metrics-profile --config=bp2build  --invocation_id=$UUID ")
+        # Append the proper config
+        [[ $bes_disabled = 1 ]] && bes_flag="" || bes_flag="--config=metrics_data"
+        bazel_args_with_config+=("--profile=$PROFILE_OUT/bazel_metrics-profile --config=bp2build  $bes_flag --invocation_id=$UUID ")
     fi
 
     # Call Bazel.
