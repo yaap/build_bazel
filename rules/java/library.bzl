@@ -74,7 +74,7 @@ def java_library(
         exports = lib_name,
         tags = tags,
         target_compatible_with = target_compatible_with,
-        visibility = ["//visibility:public"],
+        visibility = visibility,
     )
 
 # The list of providers to forward was determined using cquery on one
