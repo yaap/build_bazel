@@ -19,43 +19,60 @@
 load("@bazel_skylib//lib:dicts.bzl", "dicts")
 load("@soong_injection//api_levels:platform_versions.bzl", "platform_versions")
 load(":api_constants.bzl", "api_levels_released_versions")
-load(":api_internal.bzl", "api_internal")
 
-# TODO(b/300428335): access these variables in a transition friendly way.
-_PLATFORM_SDK_FINAL = platform_versions.platform_sdk_final
-_PLATFORM_SDK_VERSION = platform_versions.platform_sdk_version
-_PLATFORM_SDK_CODENAME = platform_versions.platform_sdk_codename
-_PLATFORM_VERSION_ACTIVE_CODENAMES = platform_versions.platform_version_active_codenames
+_NONE_API_LEVEL_INT = -1
+_PREVIEW_API_LEVEL_BASE = 9000  # Base constant for preview API levels.
+_FUTURE_API_LEVEL_INT = 10000  # API Level associated with an arbitrary future release
 
 # Dict of unfinalized codenames to a placeholder preview API int.
-_preview_codenames_to_ints = api_internal.preview_codenames_to_ints(_PLATFORM_VERSION_ACTIVE_CODENAMES)
+def _preview_codenames_to_ints(platform_sdk_variables):
+    return {
+        codename: _PREVIEW_API_LEVEL_BASE + i
+        for i, codename in enumerate(platform_sdk_variables.platform_version_active_codenames)
+    }
 
 # Returns true if a string or int version is in preview (not finalized).
 def _is_preview(version, platform_sdk_variables):
-    return api_internal.is_preview(
-        version = version,
-        preview_codenames_to_ints = api_internal.preview_codenames_to_ints(
-            platform_sdk_variables.platform_version_active_codenames,
-        ),
-    )
+    preview_codenames_to_ints = _preview_codenames_to_ints(platform_sdk_variables)
+    if type(version) == "string" and version.isdigit():
+        # normalize int types internally
+        version = int(version)
+
+    # Future / current / none is considered as a preview.
+    if version in ("current", "(no version)", _FUTURE_API_LEVEL_INT, _NONE_API_LEVEL_INT):
+        return True
+
+    # api can be either the codename or the int level (9000+)
+    return version in preview_codenames_to_ints or version in preview_codenames_to_ints.values()
 
 # Return 10000 for unfinalized versions, otherwise return unchanged.
-def _final_or_future(version):
-    if api_internal.is_preview(version, _preview_codenames_to_ints):
-        return api_internal.FUTURE_API_LEVEL
+def _final_or_future(version, platform_sdk_variables):
+    if _is_preview(version = version, platform_sdk_variables = platform_sdk_variables):
+        return _FUTURE_API_LEVEL_INT
     else:
         return version
 
-_final_codename = {
-    "current": _final_or_future(_PLATFORM_SDK_VERSION),
-} if _PLATFORM_SDK_FINAL and _PLATFORM_SDK_VERSION else {}
+def _api_levels_with_previews(platform_sdk_variables):
+    return dicts.add(
+        api_levels_released_versions,
+        _preview_codenames_to_ints(platform_sdk_variables),
+    )
 
-_api_levels_with_previews = dicts.add(api_levels_released_versions, _preview_codenames_to_ints)
-_api_levels_with_final_codenames = dicts.add(api_levels_released_versions, _final_codename)  # @unused
+# @unused
+def _api_levels_with_final_codenames(platform_sdk_variables):
+    if platform_sdk_variables.platform_sdk_final and platform_sdk_variables.platform_sdk_version:
+        return api_levels_released_versions
+    return dicts.add(
+        api_levels_released_versions,
+        {"current": _final_or_future(
+            version = platform_sdk_variables.platform_sdk_version,
+            platform_sdk_variables = platform_sdk_variables,
+        )},
+    )
 
 # parse_api_level_from_version is a Starlark implementation of ApiLevelFromUser
 # at https://cs.android.com/android/platform/superproject/+/master:build/soong/android/api_levels.go;l=221-250;drc=5095a6c4b484f34d5c4f55a855d6174e00fb7f5e
-def _parse_api_level_from_version(version):
+def _parse_api_level_from_version(version, platform_sdk_variables):
     """converts the given string `version` to an api level
 
     Args:
@@ -69,10 +86,10 @@ def _parse_api_level_from_version(version):
         fail("API level string must be non-empty")
 
     if version == "current":
-        return api_internal.FUTURE_API_LEVEL
+        return _FUTURE_API_LEVEL_INT
 
-    if api_internal.is_preview(version = version, preview_codenames_to_ints = _preview_codenames_to_ints):
-        return _preview_codenames_to_ints.get(version) or int(version)
+    if _is_preview(version = version, platform_sdk_variables = platform_sdk_variables):
+        return _preview_codenames_to_ints(platform_sdk_variables).get(version) or int(version)
 
     # Not preview nor current.
     #
@@ -86,6 +103,21 @@ def _parse_api_level_from_version(version):
         return int(version)
     return canonical_level
 
+def _default_app_target_sdk_string(platform_sdk_variables):
+    if platform_sdk_variables.platform_sdk_final:
+        return str(platform_sdk_variables.platform_sdk_version)
+
+    if not platform_sdk_variables.platform_sdk_codename:
+        # soong returns NoneApiLevel here value: "(no version)", number: -1, isPreview: true
+        #
+        # fail fast instead of returning an arbitrary value.
+        fail("Platform_sdk_codename must be set.")
+
+    if platform_sdk_variables.platform_sdk_codename == "REL":
+        fail("Platform_sdk_codename should not be REL when Platform_sdk_final is false")
+
+    return platform_sdk_variables.platform_sdk_codename
+
 # Starlark implementation of DefaultAppTargetSDK from build/soong/android/config.go
 # https://cs.android.com/android/platform/superproject/+/master:build/soong/android/config.go;l=875-889;drc=b0dc477ef740ec959548fe5517bd92ac4ea0325c
 # check what you want returned for codename == "" case before using
@@ -94,51 +126,62 @@ def _default_app_target_sdk(platform_sdk_variables):
        This converts a codename to the exact ApiLevel it represents.
     """
     return _parse_api_level_from_version(
-        api_internal.default_app_target_sdk_string(
-            platform_sdk_final = platform_sdk_variables.platform_sdk_final,
-            platform_sdk_version = platform_sdk_variables.platform_sdk_version,
-            platform_sdk_codename = platform_sdk_variables.platform_sdk_codename,
-        ),
+        version = _default_app_target_sdk_string(platform_sdk_variables),
+        platform_sdk_variables = platform_sdk_variables,
     )
 
 # Starlark implementation of EffectiveVersionString from build/soong/android/api_levels.go
 # EffectiveVersionString converts an api level string into the concrete version string that the module
 # should use. For modules targeting an unreleased SDK (meaning it does not yet have a number)
 # it returns the codename (P, Q, R, etc.)
-def _effective_version_string(version, platform_sdk_variables):
-    return api_internal.effective_version_string(
+def _effective_version_string(
         version,
-        api_internal.preview_codenames_to_ints(
-            platform_sdk_variables.platform_version_active_codenames,
+        platform_sdk_variables):
+    if not _is_preview(version, platform_sdk_variables):
+        return version
+    default_app_target_sdk_string = _default_app_target_sdk_string(platform_sdk_variables)
+    if not _is_preview(default_app_target_sdk_string, platform_sdk_variables):
+        return default_app_target_sdk_string
+    if version in platform_sdk_variables.platform_version_active_codenames:
+        return version
+    return default_app_target_sdk_string
+
+def api_from_product(platform_sdk_variables):
+    """Provides api level-related utility functions from platform variables.
+
+    Args:
+        platform_sdk_variables: a struct that must provides the 4
+          product variables: platform_sdk_final (boolean),
+          platform_sdk_version (int), platform_sdk_codename (string),
+          platform_version_active_codenames (string list)
+
+    Returns: A struct containing utility functions and constants
+        around api levels, e.g. for parsing them from user input and for
+        overriding them based on defaults and the input product variables.
+    """
+    return struct(
+        NONE_API_LEVEL = _NONE_API_LEVEL_INT,
+        FUTURE_API_LEVEL = _FUTURE_API_LEVEL_INT,
+        is_preview = lambda version: _is_preview(
+            version = version,
+            platform_sdk_variables = platform_sdk_variables,
         ),
-        api_internal.default_app_target_sdk_string(
-            platform_sdk_final = platform_sdk_variables.platform_sdk_final,
-            platform_sdk_version = platform_sdk_variables.platform_sdk_version,
-            platform_sdk_codename = platform_sdk_variables.platform_sdk_codename,
+        final_or_future = lambda version: _final_or_future(
+            version = version,
+            platform_sdk_variables = platform_sdk_variables,
         ),
-        platform_sdk_variables.platform_version_active_codenames,
+        default_app_target_sdk_string = lambda: _default_app_target_sdk_string(platform_sdk_variables),
+        default_app_target_sdk = lambda: _default_app_target_sdk(platform_sdk_variables),
+        parse_api_level_from_version = lambda version: _parse_api_level_from_version(
+            version = version,
+            platform_sdk_variables = platform_sdk_variables,
+        ),
+        api_levels = _api_levels_with_previews(platform_sdk_variables),
+        effective_version_string = lambda version: _effective_version_string(
+            version = version,
+            platform_sdk_variables = platform_sdk_variables,
+        ),
     )
 
-api_from_product = lambda platform_sdk_variables: struct(
-    NONE_API_LEVEL = api_internal.NONE_API_LEVEL,
-    FUTURE_API_LEVEL = api_internal.FUTURE_API_LEVEL,
-    is_preview = lambda version: _is_preview(
-        version = version,
-        platform_sdk_variables = platform_sdk_variables,
-    ),
-    final_or_future = _final_or_future,
-    default_app_target_sdk = lambda: _default_app_target_sdk(platform_sdk_variables),
-    parse_api_level_from_version = _parse_api_level_from_version,
-    api_levels = _api_levels_with_previews,
-    effective_version_string = lambda version: _effective_version_string(
-        version = version,
-        platform_sdk_variables = platform_sdk_variables,
-    ),
-)
-
-api = api_from_product(struct(
-    platform_sdk_final = _PLATFORM_SDK_FINAL,
-    platform_sdk_version = _PLATFORM_SDK_VERSION,
-    platform_sdk_codename = _PLATFORM_SDK_CODENAME,
-    platform_version_active_codenames = _PLATFORM_VERSION_ACTIVE_CODENAMES,
-))
+# TODO(b/300428335): access these variables in a transition friendly way.
+api = api_from_product(platform_versions)
