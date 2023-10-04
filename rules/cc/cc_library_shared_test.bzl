@@ -21,6 +21,7 @@ load(
     "ActionArgsInfo",
     "compile_action_argv_aspect_generator",
 )
+load("//build/bazel/rules/fdo:fdo_profile.bzl", "fdo_profile")
 load("//build/bazel/rules/test_common:flags.bzl", "action_flags_present_only_for_mnemonic_test")
 load("//build/bazel/rules/test_common:paths.bzl", "get_output_and_package_dir_based_path", "get_package_dir_based_path")
 load(":cc_binary_test.bzl", "cc_bad_linkopts_test")
@@ -351,6 +352,7 @@ def _cc_library_shared_propagating_fdo_profile_test_impl(ctx):
     env = analysistest.begin(ctx)
     target_under_test = analysistest.target_under_test(env)
     argv_map = target_under_test[ActionArgsInfo].argv_map
+
     for label in ctx.attr.deps_labels_to_check_fdo_profile:
         asserts.true(
             env,
@@ -360,9 +362,9 @@ def _cc_library_shared_propagating_fdo_profile_test_impl(ctx):
         argv = argv_map[label]
         asserts.true(
             env,
-            _has_fdo_profile(argv, ctx.attr.fdo_profile_path_basename),
+            _has_fdo_profile(argv, ctx.attr.fdo_profile),
             "can't find {} in compile action of {}".format(
-                ctx.attr.fdo_profile_path_basename,
+                ctx.attr.fdo_profile,
                 label,
             ),
         )
@@ -375,9 +377,9 @@ def _cc_library_shared_propagating_fdo_profile_test_impl(ctx):
         argv = argv_map[label]
         asserts.true(
             env,
-            not _has_fdo_profile(argv, ctx.attr.fdo_profile_path_basename),
+            not _has_fdo_profile(argv, ctx.attr.fdo_profile),
             "{} should not have {} in compile action".format(
-                ctx.attr.fdo_profile_path_basename,
+                ctx.attr.fdo_profile,
                 label,
             ),
         )
@@ -395,7 +397,7 @@ cc_library_shared_propagating_fdo_profile_test = analysistest.make(
     attrs = {
         # FdoProfileInfo isn't exposed to Starlark so we need to test against
         # the path basename directly
-        "fdo_profile_path_basename": attr.string(),
+        "fdo_profile": attr.string(),
         # This has to be a string_list() instead of label_list(). If the deps
         # are given as labels, the deps are analyzed because transition is attached
         "deps_labels_to_check_fdo_profile": attr.string_list(),
@@ -408,9 +410,9 @@ cc_library_shared_propagating_fdo_profile_test = analysistest.make(
 )
 
 # _has_fdo_profile checks whether afdo-specific flag is present in actions.argv
-def _has_fdo_profile(argv, fdo_profile_path_basename):
+def _has_fdo_profile(argv, fdo_profile_name):
     for arg in argv:
-        if fdo_profile_path_basename in arg and "-fprofile-sample-use" in arg:
+        if "-fprofile-sample-use=" in arg and fdo_profile_name in arg:
             return True
 
     return False
@@ -424,9 +426,15 @@ def _cc_libary_shared_propagate_fdo_profile_to_whole_archive_deps():
     transitive_unexported_dep_name = name + "_transitive_unexported_dep"
     test_name = name + "_test"
 
-    native.fdo_profile(
+    native.genrule(
+        name = "{}.afdo".format(fdo_profile_name),
+        outs = ["{}.afdo".format(fdo_profile_name)],
+        cmd = "touch $(OUTS)",
+    )
+
+    fdo_profile(
         name = fdo_profile_name,
-        profile = fdo_profile_name + ".afdo",
+        profile = ":" + fdo_profile_name + ".afdo",
     )
 
     cc_library_static(
@@ -469,7 +477,7 @@ def _cc_libary_shared_propagate_fdo_profile_to_whole_archive_deps():
             unexported_dep_name + "_cpp",
             transitive_unexported_dep_name + "_cpp",
         ],
-        fdo_profile_path_basename = fdo_profile_name + ".afdo",
+        fdo_profile = fdo_profile_name,
     )
 
     return test_name
@@ -499,7 +507,12 @@ def _cc_library_shared_does_not_propagate_fdo_profile_to_dynamic_deps():
         implementation_dynamic_deps = [unexported_transitive_shared_dep_name],
         tags = ["manual"],
     )
-    native.fdo_profile(
+    native.genrule(
+        name = "{}.afdo".format(fdo_profile_name),
+        outs = ["{}.afdo".format(fdo_profile_name)],
+        cmd = "touch $(OUTS)",
+    )
+    fdo_profile(
         name = fdo_profile_name,
         profile = fdo_profile_name + ".afdo",
     )
@@ -522,7 +535,7 @@ def _cc_library_shared_does_not_propagate_fdo_profile_to_dynamic_deps():
             transitive_shared_dep_name + "__internal_root_cpp",
             unexported_transitive_shared_dep_name + "__internal_root_cpp",
         ],
-        fdo_profile_path_basename = fdo_profile_name + ".afdo",
+        fdo_profile = fdo_profile_name,
     )
 
     return test_name
@@ -534,7 +547,12 @@ def _fdo_profile_transition_correctly_set_and_unset_fdo_profile():
     transitive_dep_without_fdo_profile = name + "_transitive_dep_without_fdo_profile"
     test_name = name + "_test"
 
-    native.fdo_profile(
+    native.genrule(
+        name = "{}.afdo".format(fdo_profile_name),
+        outs = ["{}.afdo".format(fdo_profile_name)],
+        cmd = "touch $(OUTS)",
+    )
+    fdo_profile(
         name = fdo_profile_name,
         profile = fdo_profile_name + ".afdo",
     )
@@ -571,7 +589,7 @@ def _fdo_profile_transition_correctly_set_and_unset_fdo_profile():
             name + "__internal_root_cpp",
             transitive_dep_without_fdo_profile + "__internal_root_cpp",
         ],
-        fdo_profile_path_basename = fdo_profile_name + ".afdo",
+        fdo_profile = fdo_profile_name,
     )
 
     return test_name
@@ -609,7 +627,7 @@ def _cc_library_with_fdo_profile_link_flags():
         expected_link_flags = [
             "-funique-internal-linkage-names",
             "-fprofile-sample-accurate",
-            "-fprofile-sample-use=build/bazel/rules/cc/_cc_library_with_fdo_profile_link_flags_fdo_profile.afdo",
+            "-fprofile-sample-use=build/bazel/rules/cc/_cc_library_with_fdo_profile_link_flags_fdo_profile_file",
             "-Wl,-mllvm,-no-warn-sample-unused=true",
         ],
     )
