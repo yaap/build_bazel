@@ -17,4 +17,5 @@
 # hasn't stopped working. This is a shortened version of bp2build.sh
 source "$(dirname $0)/target_lists.sh"
 
-build/bazel/bin/b build --config=ci --config=android --  ${STABLE_BUILD_TARGETS[@]}
+# Disable BES for CI
+build/bazel/bin/b build --config=ci --config=android --disable_bes --  ${STABLE_BUILD_TARGETS[@]}
