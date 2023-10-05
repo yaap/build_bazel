@@ -37,12 +37,16 @@ def java_library(
         **kwargs):
     """ java_library macro wrapper that handles custom attrs needed in AOSP
 
-        Attributes:
-            errorprone_force_enable: set this to true to always run Error Prone
+    Args:
+        errorprone_force_enable: set this to true to always run Error Prone
             on this target (overriding the value of environment variable
             RUN_ERROR_PRONE). Error Prone can be force disabled for an individual
             module by adding the "-XepDisableAllChecks" flag to javacopts
-        """
+
+       additional_resources: A list of labels to java_resources targets.
+            This list which resources that are in a different directory than the
+            one being used by the resources attr.
+    """
     lib_name = name + "_private"
 
     opts = javacopts
@@ -51,10 +55,14 @@ def java_library(
         opts = opts + ["-XepDisableAllChecks"]
 
     if additional_resources != None:
+        res_import_name = name + "__additional_resources"
         java_import(
-            name = name + "__additional_resources",
+            name = res_import_name,
             jars = additional_resources,
+            tags = tags + ["manual"],
+            visibility = ["//visibility:private"],
         )
+        deps = deps + [":" + res_import_name]
 
     _java_library(
         name = lib_name,
