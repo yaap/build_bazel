@@ -16,14 +16,9 @@
 
 # Common script utilities
 source $(cd $(dirname $BASH_SOURCE) &> /dev/null && pwd)/../../make/shell_utils.sh
-require_top
+source $(cd $(dirname $BASH_SOURCE) &> /dev/null && pwd)/../lib.sh
 
-if [[ -z ${OUT_DIR+x} ]]; then
-	PROFILE_OUT=$TOP/out
-else
-	PROFILE_OUT=$OUT_DIR
-fi
-mkdir -p $PROFILE_OUT
+require_top
 
 # Look for the --run-soong-tests flag and skip passing --skip-soong-tests to Soong if present
 bazel_args=""
@@ -48,7 +43,6 @@ trap upload_metrics EXIT
 # TODO(b/262904551) - this is Darwin incompatible and should eventually be updated.
 BUILD_STARTED_TIME=`date +%s%3N`
 B_ARGS=$*
-UUID=`uuidgen`
 set +e
 
 "$TOP/build/soong/soong_ui.bash" --build-mode --all-modules --dir="$(pwd)" $skip_tests bp2build USE_BAZEL_ANALYSIS= --build-command="b ${B_ARGS}" --skip-metrics-upload --build-started-time-unix-millis=$BUILD_STARTED_TIME
@@ -63,39 +57,9 @@ if [[ -z "$bazel_args" ]]; then
     # If there are no args, show help and exit.
     "$TOP/build/bazel/bin/bazel" help
 else
-    # Else, always run with the bp2build configuration, which sets Bazel's package path to
-    # the synthetic workspace.
-    # Add the --config=bp2build after the first argument that doesn't start with a dash. That
-    # should be the bazel
-    # command. (build, test, run, ect) If the --config was added at the end, it wouldn't work
-    # with commands like:  b run //foo -- --args-for-foo
-    config_set=0
-    bes_disabled=0
-
-    # Represent the args as an array, not a string.
-    bazel_args_with_config=()
-    for arg in $bazel_args; do
-        if [[ $arg == "--disable_bes" ]]; then
-            bes_disabled=1
-            continue
-        fi
-
-        if [[ $arg == "--" && $config_set -ne 1 ]]; # if we find --, insert config argument here
-        then
-            # Append the proper config
-            [[ $bes_disabled = 1 ]] && bes_flag="" || bes_flag="--config=metrics_data"
-            bazel_args_with_config+=("--profile=$PROFILE_OUT/bazel_metrics-profile --config=bp2build $bes_flag  --invocation_id=$UUID -- ")
-            config_set=1
-        else
-            bazel_args_with_config+=("$arg ")
-        fi
-    done
-    if [[ $config_set -ne 1 ]]; then
-        # Append the proper config
-        [[ $bes_disabled = 1 ]] && bes_flag="" || bes_flag="--config=metrics_data"
-        bazel_args_with_config+=("--profile=$PROFILE_OUT/bazel_metrics-profile --config=bp2build  $bes_flag --invocation_id=$UUID ")
-    fi
-
+    PROFILE_OUT=$(get_profile_out_dir)
+    mkdir -p $PROFILE_OUT
+    bazel_args_with_config=$(formulate_b_args $bazel_args)
     # Call Bazel.
     set +e
     "$TOP/build/bazel/bin/bazel" ${bazel_args_with_config[@]}
