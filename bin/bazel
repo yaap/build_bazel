@@ -70,7 +70,6 @@ function verify_soong_outputs_exist() {
 
     local bazel_configs=(
         "bp2build"
-        "api_bp2build"
         "queryview"
     )
     local valid_bazel_config=0
@@ -112,14 +111,6 @@ fetch:queryview --package_path=${ABSOLUTE_OUT_DIR}/soong/queryview
 mod:queryview --package_path=${ABSOLUTE_OUT_DIR}/soong/queryview
 query:queryview --package_path=${ABSOLUTE_OUT_DIR}/soong/queryview
 sync:queryview --package_path=${ABSOLUTE_OUT_DIR}/soong/queryview
-
-# Run bazel build from the workspace, without cd'ing into \$OUT_DIR/soong/api_bp2build
-common:api_bp2build --noannounce_rc
-build:api_bp2build --package_path=${ABSOLUTE_OUT_DIR}/soong/api_bp2build
-fetch:api_bp2build --package_path=${ABSOLUTE_OUT_DIR}/soong/api_bp2build
-mod:api_bp2build --package_path=${ABSOLUTE_OUT_DIR}/soong/api_bp2build
-query:api_bp2build --package_path=${ABSOLUTE_OUT_DIR}/soong/api_bp2build
-sync:api_bp2build --package_path=${ABSOLUTE_OUT_DIR}/soong/api_bp2build
 
 # Run bazel build from the workspace, without cd'ing into \$OUT_DIR/soong/workspace
 common:bp2build --noannounce_rc
