@@ -20,8 +20,19 @@ is different than the checked-in folder layout.
 
 load("@bazel_skylib//lib:paths.bzl", "paths")
 
-def _ndk_headers_impl(ctx):
-    # Copy the hdrs to a synthetic root
+_VERSIONER_DEPS_DIR = "bionic/libc/versioner-dependencies"
+
+# Creates an action to copy NDK headers to out/ after handling {strip}_import_prefix
+# Return a tuple with the following elements
+# 1. root of the synthetic dir (this will become -isystem/-I)
+# 2. list of hdr files in out
+def _assemeble_headers(ctx):
+    out_dir = paths.join(
+        ctx.bin_dir.path,
+        ctx.label.package,
+        ctx.label.name,
+    )
+
     outs = []
     for hdr in ctx.files.hdrs:
         rel_to_package = paths.relativize(
@@ -49,13 +60,56 @@ def _ndk_headers_impl(ctx):
         )
         outs.append(out)
 
+    return out_dir, outs
+
+# Creates an action to run versioner on the assembled NDK headers
+# Used for libc
+# Return a tuple with the following elements
+# 1. root of the synthetic dir (this will become -isystem/-I)
+# 2. list of hdr files in out
+def _version_headers(ctx, assembled_out_dir, assembled_hdrs):
+    out_dir = assembled_out_dir + ".versioned"
+    outs = []
+
+    for assembled_hdr in assembled_hdrs:
+        rel = paths.relativize(
+            assembled_hdr.path,
+            assembled_out_dir,
+        )
+        out = ctx.actions.declare_file(
+            paths.join(
+                ctx.label.name + ".versioned",
+                rel,
+            ),
+        )
+        outs.append(out)
+
+    args = ctx.actions.args()
+    args.add_all(["-o", out_dir, assembled_out_dir, _VERSIONER_DEPS_DIR])
+
+    ctx.actions.run(
+        executable = ctx.executable._versioner,
+        arguments = [args],
+        inputs = assembled_hdrs,
+        outputs = outs,
+        mnemonic = "VersionBionicHeaders",
+        tools = ctx.files._versioner_include_deps,
+    )
+
+    return out_dir, outs
+
+def _ndk_headers_impl(ctx):
+    # Copy the hdrs to a synthetic root
+    out_dir, outs = _assemeble_headers(ctx)
+    if ctx.attr.run_versioner:
+        # Version the copied headers
+        out_dir, outs = _version_headers(ctx, out_dir, outs)
+
     compilation_context = cc_common.create_compilation_context(
         headers = depset(outs),
         # ndk_headers are provided as -isystem and not -I
         # https://cs.android.com/android/_/android/platform/build/soong/+/main:cc/compiler.go;l=394-403;drc=e0202c4823d1b3cabf63206d3a6611868d1559e1;bpv=1;bpt=0
-        system_includes = depset([
-            paths.join(ctx.bin_dir.path, ctx.label.package, ctx.label.name),
-        ]),
+        system_includes = depset([out_dir]),
     )
     return [
         DefaultInfo(files = depset(outs)),
@@ -84,6 +138,19 @@ ndk_headers = rule(
         "hdrs": attr.label_list(
             doc = ".h files contributed by the library to the Public API surface (NDK)",
             allow_files = True,
+        ),
+        "run_versioner": attr.bool(
+            doc = "Run versioner with bionic/libc/versioner-dependencies on the include path. Used only by libc",
+            default = False,
+        ),
+        "_versioner": attr.label(
+            executable = True,
+            cfg = "exec",
+            default = Label("//prebuilts/clang-tools:versioner"),
+        ),
+        "_versioner_include_deps": attr.label(
+            doc = "Filegroup containing the .h files placed on the include path when running versioner",
+            default = Label("//bionic/libc:versioner-dependencies"),
         ),
     },
     provides = [CcInfo],
