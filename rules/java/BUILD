@@ -22,6 +22,7 @@ load(":bootclasspath.bzl", "bootclasspath")
 load(":bootclasspath_test.bzl", "bootclasspath_test_suite")
 load(":host_for_device_test.bzl", "host_for_device_test_suite")
 load(":java_aconfig_library_test.bzl", "java_aconfig_library_rt_test_suite", "java_aconfig_library_test_suite")
+load(":java_sysprop_library_test.bzl", "java_sysprop_library_test_suite")
 load(":java_system_modules_test.bzl", "java_system_modules_test_suite")
 load(":java_xsd_config_library_test.bzl", "java_xsd_config_library_test_suite")
 load(":library_test.bzl", "java_library_test_suite", "rt_java_library_test_suite")
@@ -61,6 +62,8 @@ platform_compat_config_test_suite(name = "platform_compat_config_tests")
 java_aconfig_library_test_suite(name = "java_aconfig_library_test")
 
 java_aconfig_library_rt_test_suite(name = "java_aconfig_library_rt_test")
+
+java_sysprop_library_test_suite(name = "java_sysprop_library_tests")
 
 string_setting(
     name = "version",
