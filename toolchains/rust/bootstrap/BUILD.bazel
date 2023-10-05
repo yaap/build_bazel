@@ -12,11 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@bazel_skylib//rules:common_settings.bzl", "bool_setting")
 load("@env//:env.bzl", "env")
 load("@rules_rust//rust:defs.bzl", "rust_stdlib_filegroup")
 load("@rules_rust//rust:toolchain.bzl", "rust_toolchain")
 load("@soong_injection//rust_toolchain:constants.bzl", "constants")
 load("//build/bazel/toolchains/rust:flags.bzl", "flags")
+load("//build/bazel/toolchains/rust:platforms.bzl", "platforms")
 load(":defs.bzl", "toolchain_sysroot", "with_base_transition")
 
 package(default_visibility = ["//build/bazel/toolchains/rust:__subpackages__"])
@@ -28,40 +30,57 @@ rust_version = env.get(
 
 rust_prebuilts_path = "//prebuilts/rust/linux-x86/" + rust_version
 
-rust_toolchain(
-    name = "android_arm64_base_rust_toolchain_impl",
-    binary_ext = "",
-    clippy_driver = rust_prebuilts_path + ":bin/clippy-driver",
-    default_edition = "2018",
-    dylib_ext = ".so",
-    exec_triple = "x86_64-unknown-linux-gnu",
-    extra_rustc_flags = flags.device_arm64_rustc_flags + flags.device_global_rustc_flags,
-    rust_doc = rust_prebuilts_path + ":bin/rustdoc",
-    rust_std = rust_prebuilts_path + ":prebuilt_stdlibs",
-    rustc = rust_prebuilts_path + ":bin/rustc",
-    rustfmt = rust_prebuilts_path + ":bin/rustfmt",
-    staticlib_ext = ".a",
-    stdlib_linkflags = [],
-    target_triple = "aarch64-linux-android",
+[
+    rust_toolchain(
+        name = os + "_" + arch + "_base_rust_toolchain_impl",
+        binary_ext = "",
+        clippy_driver = rust_prebuilts_path + ":bin/clippy-driver",
+        default_edition = "2018",
+        dylib_ext = ".so",
+        exec_triple = "x86_64-unknown-linux-gnu",
+        extra_rustc_flags = rustc_flags + flags.device_global_rustc_flags + flags.global_rustc_flags,
+        rust_doc = rust_prebuilts_path + ":bin/rustdoc",
+        rust_std = rust_prebuilts_path + ":prebuilt_stdlibs",
+        rustc = rust_prebuilts_path + ":bin/rustc",
+        rustfmt = rust_prebuilts_path + ":bin/rustfmt",
+        staticlib_ext = ".a",
+        stdlib_linkflags = [],
+        target_triple = target_triple,
+    )
+    for (target_triple, os, arch, rustc_flags) in platforms
+]
+
+[
+    toolchain(
+        name = os + "_" + arch + "_base_rust_toolchain",
+        exec_compatible_with = ["//build/bazel_common_rules/platforms/os:linux"],
+        target_compatible_with = [
+            "//build/bazel_common_rules/platforms/arch:" + arch,
+            "//build/bazel_common_rules/platforms/os:" + os,
+        ],
+        target_settings = [":base_toolchain_enabled"],
+        toolchain = ":" + os + "_" + arch + "_base_rust_toolchain_impl",
+        toolchain_type = "@rules_rust//rust:toolchain_type",
+    )
+    for (_, os, arch, __) in platforms
+]
+
+bool_setting(
+    name = "enable_base_toolchain",
+    build_setting_default = False,
+    visibility = ["//visibility:private"],
 )
 
-toolchain(
-    name = "android_arm64_base_rust_toolchain",
-    exec_compatible_with = ["//build/bazel_common_rules/platforms/os:linux"],
-    target_compatible_with = ["//build/bazel_common_rules/platforms/os:android"],
-    toolchain = ":android_arm64_base_rust_toolchain_impl",
-    toolchain_type = "@rules_rust//rust:toolchain_type",
+config_setting(
+    name = "base_toolchain_enabled",
+    flag_values = {
+        ":enable_base_toolchain": "True",
+    },
 )
 
-# Setting --extra_toolchains=:base_rust_toolchain to start building stdlibs from source
 with_base_transition(
     name = "stdlibs",
     srcs = [rust_prebuilts_path + ":stdlib_sources"],
-)
-
-rust_stdlib_filegroup(
-    name = "rust_stdlib_for_aarch64-linux-android",
-    srcs = [":sysroot_with_stdlibs"],
 )
 
 # TODO: b/295918553 - See whether this is actually needed given that
@@ -72,4 +91,9 @@ toolchain_sysroot(
     srcs = [":stdlibs"],
     dirname = "sysroot_with_stdlibs",
     target_triple = "aarch64-linux-android",
+)
+
+rust_stdlib_filegroup(
+    name = "rust_stdlibs",
+    srcs = [":sysroot_with_stdlibs"],
 )

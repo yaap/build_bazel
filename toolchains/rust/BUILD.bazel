@@ -17,6 +17,7 @@ load("@rules_rust//proto/protobuf:toolchain.bzl", "rust_proto_toolchain")
 load("@rules_rust//rust:toolchain.bzl", "rust_toolchain")
 load("@soong_injection//rust_toolchain:constants.bzl", "constants")
 load("//build/bazel/toolchains/rust:flags.bzl", "flags")
+load("//build/bazel/toolchains/rust:platforms.bzl", "platforms")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -76,43 +77,51 @@ toolchain(
     toolchain_type = "@rules_rust//rust:toolchain_type",
 )
 
-# TODO: b/295918553 - Add rust toolchain for x86_64-linux-android triple.
-rust_toolchain(
-    name = "rust_toolchain_aarch64-linux-android_impl",
-    binary_ext = "",
-    clippy_driver = rust_prebuilts_path + ":bin/clippy-driver",
-    default_edition = "2018",
-    dylib_ext = ".so",
-    exec_triple = "x86_64-unknown-linux-gnu",
-    # The system sysroot for the prebuilt compiler is prebuilts/rust/linux-x86/<rust_version>
-    # At runtime, rust rules set `-L <path-to-sysroot_with_stdlibs>/lib/rustlib/<target-triple>/lib`
-    # which is the directory of standard library built from source.
-    # We set --sysroot to /dev/null so that rustc does not error due
-    # to there being multiple candidates for stdlibs.
-    #
-    # error[E0464]: multiple candidates for `rlib` dependency `std` found
-    #   |
-    #   = note: candidate #1: bazel-built <OUR_DIR>/bin/prebuilts/rust/linux-x86/1.69.0/lib/rustlib/src/rust/libstd-1674459207.rlib
-    #   = note: candidate #2: prebuilt /prebuilts/rust/linux-x86/1.69.0/lib/rustlib/aarch64-linux-android/lib/libstd-33356ea78c96f310.so
-    #
-    # See https://doc.rust-lang.org/rustc/command-line-arguments.html#--sysroot-override-the-system-root
-    extra_rustc_flags = [
-        "--sysroot=/dev/null",
-    ] + flags.device_arm64_rustc_flags + flags.device_global_rustc_flags,
-    rust_doc = rust_prebuilts_path + ":bin/rustdoc",
-    rust_std = "//build/bazel/toolchains/rust/bootstrap:rust_stdlib_for_aarch64-linux-android",
-    rustc = rust_prebuilts_path + ":bin/rustc",
-    rustc_lib = "//build/bazel/toolchains/rust/bootstrap:sysroot_with_stdlibs",
-    rustfmt = rust_prebuilts_path + ":bin/rustfmt",
-    staticlib_ext = ".a",
-    stdlib_linkflags = [],
-    target_triple = "aarch64-linux-android",
-)
+[
+    rust_toolchain(
+        name = os + "_" + arch + "_rust_toolchain_impl",
+        binary_ext = "",
+        clippy_driver = rust_prebuilts_path + ":bin/clippy-driver",
+        default_edition = "2018",
+        dylib_ext = ".so",
+        exec_triple = "x86_64-unknown-linux-gnu",
+        # The system sysroot for the prebuilt compiler is prebuilts/rust/linux-x86/<rust_version>
+        # At runtime, rust rules set `-L <path-to-sysroot_with_stdlibs>/lib/rustlib/<target-triple>/lib`
+        # which is the directory of standard library built from source.
+        # We set --sysroot to /dev/null so that rustc does not error due
+        # to there being multiple candidates for stdlibs.
+        #
+        # error[E0464]: multiple candidates for `rlib` dependency `std` found
+        #   |
+        #   = note: candidate #1: bazel-built <OUR_DIR>/bin/prebuilts/rust/linux-x86/1.69.0/lib/rustlib/src/rust/libstd-1674459207.rlib
+        #   = note: candidate #2: prebuilt /prebuilts/rust/linux-x86/1.69.0/lib/rustlib/aarch64-linux-android/lib/libstd-33356ea78c96f310.so
+        #
+        # See https://doc.rust-lang.org/rustc/command-line-arguments.html#--sysroot-override-the-system-root
+        extra_rustc_flags = [
+            "--sysroot=/dev/null",
+        ] + rustc_flags + flags.device_global_rustc_flags + flags.global_rustc_flags,
+        rust_doc = rust_prebuilts_path + ":bin/rustdoc",
+        rust_std = "//build/bazel/toolchains/rust/bootstrap:rust_stdlibs",
+        rustc = rust_prebuilts_path + ":bin/rustc",
+        rustc_lib = "//build/bazel/toolchains/rust/bootstrap:sysroot_with_stdlibs",
+        rustfmt = rust_prebuilts_path + ":bin/rustfmt",
+        staticlib_ext = ".a",
+        stdlib_linkflags = [],
+        target_triple = target_triple,
+    )
+    for (target_triple, os, arch, rustc_flags) in platforms
+]
 
-toolchain(
-    name = "rust_toolchain_aarch64-linux-android",
-    exec_compatible_with = ["//build/bazel_common_rules/platforms/os:linux"],
-    target_compatible_with = ["//build/bazel_common_rules/platforms/os:android"],
-    toolchain = ":rust_toolchain_aarch64-linux-android_impl",
-    toolchain_type = "@rules_rust//rust:toolchain_type",
-)
+[
+    toolchain(
+        name = os + "_" + arch + "_rust_toolchain",
+        exec_compatible_with = ["//build/bazel_common_rules/platforms/os:linux"],
+        target_compatible_with = [
+            "//build/bazel_common_rules/platforms/arch:" + arch,
+            "//build/bazel_common_rules/platforms/os:" + os,
+        ],
+        toolchain = ":" + os + "_" + arch + "_rust_toolchain_impl",
+        toolchain_type = "@rules_rust//rust:toolchain_type",
+    )
+    for (target_triple, os, arch, _) in platforms
+]

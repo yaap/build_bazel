@@ -25,7 +25,7 @@ _EXTRA_FLAGS_FOR_STDLIB_BUILDS = [
 
 _TRANSITION_OUTPUTS = [
     "//command_line_option:compilation_mode",
-    "//command_line_option:extra_toolchains",
+    "//build/bazel/toolchains/rust/bootstrap:enable_base_toolchain",
     "@rules_rust//:extra_rustc_flags",
     "@rules_rust//:extra_exec_rustc_flags",
     "@rules_rust//rust/settings:use_real_import_macro",
@@ -35,9 +35,9 @@ _TRANSITION_OUTPUTS = [
 
 def _base_transition_impl(_, __):
     return {
+        "//build/bazel/toolchains/rust/bootstrap:enable_base_toolchain": True,
         "//command_line_option:compilation_mode": "opt",
         "//command_line_option:cpu": "k8",
-        "//command_line_option:extra_toolchains": ["//build/bazel/toolchains/rust/bootstrap:android_arm64_base_rust_toolchain"],
         "@rules_rust//:extra_rustc_flags": _EXTRA_FLAGS_FOR_STDLIB_BUILDS,
         "@rules_rust//:extra_exec_rustc_flags": _EXTRA_FLAGS_FOR_STDLIB_BUILDS,
         "@rules_rust//rust/settings:use_real_import_macro": False,
@@ -45,7 +45,7 @@ def _base_transition_impl(_, __):
     }
 
 _base_transition = transition(
-    inputs = ["//command_line_option:extra_toolchains"],
+    inputs = [],
     outputs = _TRANSITION_OUTPUTS,
     implementation = _base_transition_impl,
 )
@@ -55,6 +55,22 @@ _base_transition = transition(
 def _with_base_transition_impl(ctx):
     return [DefaultInfo(files = depset(ctx.files.srcs))]
 
+# For each os + arch configuration, there is a pair of
+# 1. `<os_arch>_base_rust_toolchain`
+# 2. `<os_arch>_rust_toolchain`
+# registered in WORKSPACE. The base toolchains are only enabled when
+# `base_toolchain_enabled` `config_setting` is enabled.
+# Because `base_toolchain_enabled` is False by default, only <os_arch>_rust_toolchain
+# is enabled for a particular os + arch configuration and hence is resolved to build
+# a normal downstream rust target.
+#
+# with_base_transition attachs an incoming transition to `enable_base_toolchain`
+# which enable the base toolchains. When building for a particular configuration,
+# 1. `<os_arch>_base_rust_toolchain`
+# 2. `<os_arch>_rust_toolchain`
+# are enabled.
+# Because the base toolchain is registered before the non-base one, Bazel resolves
+# to the base toolchain. This mechanism allows building rust stdlibs using the base toolchain
 with_base_transition = rule(
     implementation = _with_base_transition_impl,
     attrs = {
