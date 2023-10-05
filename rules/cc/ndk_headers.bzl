@@ -98,6 +98,21 @@ def _version_headers(ctx, assembled_out_dir, assembled_hdrs):
 
     return out_dir, outs
 
+# Keep in sync with
+# https://cs.android.com/android/_/android/platform/build/soong/+/main:cc/config/toolchain.go;l=120-127;drc=1717b3bb7a49c52b26c90469f331b55f7b681690;bpv=1;bpt=0
+def _ndk_triple(ctx):
+    if ctx.target_platform_has_constraint(ctx.attr._arm_constraint[platform_common.ConstraintValueInfo]):
+        return "arm-linux-androideabi"
+    if ctx.target_platform_has_constraint(ctx.attr._arm64_constraint[platform_common.ConstraintValueInfo]):
+        return "aarch64-linux-android"
+    if ctx.target_platform_has_constraint(ctx.attr._riscv64_constraint[platform_common.ConstraintValueInfo]):
+        return "riscv64-linux-android"
+    if ctx.target_platform_has_constraint(ctx.attr._x86_constraint[platform_common.ConstraintValueInfo]):
+        return "i686-linux-android"
+    if ctx.target_platform_has_constraint(ctx.attr._x86_64_constraint[platform_common.ConstraintValueInfo]):
+        return "x86_64-linux-android"
+    fail("Could not determine NDK triple: unrecognized arch")
+
 def _ndk_headers_impl(ctx):
     # Copy the hdrs to a synthetic root
     out_dir, outs = _assemeble_headers(ctx)
@@ -109,7 +124,10 @@ def _ndk_headers_impl(ctx):
         headers = depset(outs),
         # ndk_headers are provided as -isystem and not -I
         # https://cs.android.com/android/_/android/platform/build/soong/+/main:cc/compiler.go;l=394-403;drc=e0202c4823d1b3cabf63206d3a6611868d1559e1;bpv=1;bpt=0
-        system_includes = depset([out_dir]),
+        system_includes = depset([
+            out_dir,
+            paths.join(out_dir, _ndk_triple(ctx)),
+        ]),
     )
     return [
         DefaultInfo(files = depset(outs)),
@@ -151,6 +169,21 @@ ndk_headers = rule(
         "_versioner_include_deps": attr.label(
             doc = "Filegroup containing the .h files placed on the include path when running versioner",
             default = Label("//bionic/libc:versioner-dependencies"),
+        ),
+        "_arm_constraint": attr.label(
+            default = Label("//build/bazel/platforms/arch:arm"),
+        ),
+        "_arm64_constraint": attr.label(
+            default = Label("//build/bazel/platforms/arch:arm64"),
+        ),
+        "_riscv64_constraint": attr.label(
+            default = Label("//build/bazel/platforms/arch:riscv64"),
+        ),
+        "_x86_constraint": attr.label(
+            default = Label("//build/bazel/platforms/arch:x86"),
+        ),
+        "_x86_64_constraint": attr.label(
+            default = Label("//build/bazel/platforms/arch:x86_64"),
         ),
     },
     provides = [CcInfo],
