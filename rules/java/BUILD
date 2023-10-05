@@ -24,7 +24,7 @@ load(":host_for_device_test.bzl", "host_for_device_test_suite")
 load(":java_aconfig_library_test.bzl", "java_aconfig_library_rt_test_suite", "java_aconfig_library_test_suite")
 load(":java_system_modules_test.bzl", "java_system_modules_test_suite")
 load(":java_xsd_config_library_test.bzl", "java_xsd_config_library_test_suite")
-load(":library_test.bzl", "java_library_test_suite")
+load(":library_test.bzl", "java_library_test_suite", "rt_java_library_test_suite")
 load(":merged_txts_test.bzl", "merged_txts_test_suite")
 load(":platform_compat_config_test.bzl", "platform_compat_config_test_suite")
 load(":sdk_library_test.bzl", "java_sdk_library_test_suite")
@@ -43,6 +43,8 @@ merged_txts_test_suite(name = "merged_txts_tests")
 java_system_modules_test_suite(name = "java_system_modules_tests")
 
 java_library_test_suite(name = "java_library_tests")
+
+rt_java_library_test_suite(name = "rt_java_library_tests")
 
 bootclasspath_test_suite(name = "bootclasspath_tests")
 
