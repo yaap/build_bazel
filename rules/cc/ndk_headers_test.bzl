@@ -21,6 +21,7 @@ load(":ndk_headers.bzl", "ndk_headers")
 def _ndk_headers_test_impl(ctx):
     env = analysistest.begin(ctx)
     target_under_test = analysistest.target_under_test(env)
+    target_bin_dir_path = analysistest.target_bin_dir_path(env)
 
     # check that versioner was run for versioned NDK headers
     if ctx.attr.expected_run_versioner:
@@ -59,8 +60,14 @@ def _ndk_headers_test_impl(ctx):
         env,
         [
             paths.join(
-                ctx.bin_dir.path,
+                target_bin_dir_path,
                 ctx.attr.expected_isystem,
+            ),
+            # check for the NDK triple
+            paths.join(
+                target_bin_dir_path,
+                ctx.attr.expected_isystem,
+                "arm-linux-androideabi",
             ),
         ],
         compilation_context.system_includes.to_list(),
@@ -75,6 +82,10 @@ ndk_headers_test = analysistest.make(
         "expected_hdrs": attr.string_list(),
         "expected_isystem": attr.string(doc = "expected dir relative to bin dir that will be provided as -isystem to rdeps"),
         "expected_run_versioner": attr.bool(default = False),
+    },
+    # Pin the test to a consistent arch
+    config_settings = {
+        "//command_line_option:platforms": "@//build/bazel/tests/products:aosp_arm_for_testing",
     },
 )
 
