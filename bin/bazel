@@ -70,7 +70,6 @@ function verify_soong_outputs_exist() {
 
     local bazel_configs=(
         "bp2build"
-        "api_bp2build"
         "queryview"
     )
     local valid_bazel_config=0
@@ -113,14 +112,6 @@ mod:queryview --package_path=${ABSOLUTE_OUT_DIR}/soong/queryview
 query:queryview --package_path=${ABSOLUTE_OUT_DIR}/soong/queryview
 sync:queryview --package_path=${ABSOLUTE_OUT_DIR}/soong/queryview
 
-# Run bazel build from the workspace, without cd'ing into \$OUT_DIR/soong/api_bp2build
-common:api_bp2build --noannounce_rc
-build:api_bp2build --package_path=${ABSOLUTE_OUT_DIR}/soong/api_bp2build
-fetch:api_bp2build --package_path=${ABSOLUTE_OUT_DIR}/soong/api_bp2build
-mod:api_bp2build --package_path=${ABSOLUTE_OUT_DIR}/soong/api_bp2build
-query:api_bp2build --package_path=${ABSOLUTE_OUT_DIR}/soong/api_bp2build
-sync:api_bp2build --package_path=${ABSOLUTE_OUT_DIR}/soong/api_bp2build
-
 # Run bazel build from the workspace, without cd'ing into \$OUT_DIR/soong/workspace
 common:bp2build --noannounce_rc
 build:bp2build --package_path=${ABSOLUTE_OUT_DIR}/soong/workspace
@@ -128,6 +119,11 @@ fetch:bp2build --package_path=${ABSOLUTE_OUT_DIR}/soong/workspace
 mod:bp2build --package_path=${ABSOLUTE_OUT_DIR}/soong/workspace
 query:bp2build --package_path=${ABSOLUTE_OUT_DIR}/soong/workspace
 sync:bp2build --package_path=${ABSOLUTE_OUT_DIR}/soong/workspace
+
+# This flag is intentionally duplicated with bp2build. This is because
+# --config=metrics_data must have a valid definition, even invocations
+# for which no metrics are collected. This is thus an intentional no-op.
+common:metrics_data --noannounce_rc
 
 EOF
 }

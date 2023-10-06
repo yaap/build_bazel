@@ -21,11 +21,22 @@ load(":ndk_headers.bzl", "ndk_headers")
 def _ndk_headers_test_impl(ctx):
     env = analysistest.begin(ctx)
     target_under_test = analysistest.target_under_test(env)
+    target_bin_dir_path = analysistest.target_bin_dir_path(env)
+
+    # check that versioner was run for versioned NDK headers
+    if ctx.attr.expected_run_versioner:
+        version_action = [a for a in analysistest.target_actions(env) if a.mnemonic == "VersionBionicHeaders"]
+        asserts.equals(
+            env,
+            len(version_action),
+            1,
+            "Expected versioner to run once",
+        )
 
     asserts.set_equals(
         env,
         expected = sets.make([
-            paths.join(target_under_test.label.package, target_under_test.label.name, file)
+            paths.join(ctx.attr.expected_isystem, file)
             for file in ctx.attr.expected_hdrs
         ]),
         actual = sets.make([
@@ -49,8 +60,14 @@ def _ndk_headers_test_impl(ctx):
         env,
         [
             paths.join(
-                ctx.bin_dir.path,
+                target_bin_dir_path,
                 ctx.attr.expected_isystem,
+            ),
+            # check for the NDK triple
+            paths.join(
+                target_bin_dir_path,
+                ctx.attr.expected_isystem,
+                "arm-linux-androideabi",
             ),
         ],
         compilation_context.system_includes.to_list(),
@@ -64,6 +81,11 @@ ndk_headers_test = analysistest.make(
     attrs = {
         "expected_hdrs": attr.string_list(),
         "expected_isystem": attr.string(doc = "expected dir relative to bin dir that will be provided as -isystem to rdeps"),
+        "expected_run_versioner": attr.bool(default = False),
+    },
+    # Pin the test to a consistent arch
+    config_settings = {
+        "//command_line_option:platforms": "@//build/bazel/tests/products:aosp_arm_for_testing",
     },
 )
 
@@ -147,6 +169,29 @@ def _test_ndk_headers_non_empty_strip_import_and_import():
 
     return test_name
 
+def _test_versioned_ndk_headers_non_empty_strip_import_and_import():
+    test_name = "versioned_ndk_headers_non_empty_strip_import_and_import"
+    target_under_test_name = test_name + "_target"
+
+    ndk_headers(
+        name = target_under_test_name,
+        strip_import_prefix = "a",
+        import_prefix = "b",
+        hdrs = ["a/aa.h", "a/ab.h"],
+        run_versioner = True,
+        tags = ["manual"],
+    )
+
+    ndk_headers_test(
+        name = test_name,
+        target_under_test = target_under_test_name,
+        expected_hdrs = ["b/aa.h", "b/ab.h"],
+        expected_isystem = "build/bazel/rules/cc/" + target_under_test_name + ".versioned",
+        expected_run_versioner = True,
+    )
+
+    return test_name
+
 def ndk_headers_test_suite(name):
     native.test_suite(
         name = name,
@@ -155,5 +200,6 @@ def ndk_headers_test_suite(name):
             _test_ndk_headers_non_empty_strip_import(),
             _test_ndk_headers_non_empty_import(),
             _test_ndk_headers_non_empty_strip_import_and_import(),
+            _test_versioned_ndk_headers_non_empty_strip_import_and_import(),
         ],
     )
