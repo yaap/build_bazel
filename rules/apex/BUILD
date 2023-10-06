@@ -65,6 +65,7 @@ config_setting(
     ],
     flag_values = {
         ":api_domain": "unbundled_app",
+        ":within_apex": "False",
     },
 )
 
@@ -76,6 +77,7 @@ config_setting(
     ],
     flag_values = {
         ":api_domain": "unbundled_app",
+        ":within_apex": "False",
     },
 )
 
