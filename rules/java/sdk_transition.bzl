@@ -12,13 +12,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Contains logic for a transition that is applied to java-based rules which
+takes the sdk_version and java_version attributes and populates build settings
+based on their values.
+"""
+
 load("//build/bazel/rules/common:api.bzl", "api")
 load("//build/bazel/rules/common:sdk_version.bzl", "sdk_version")
 load("//build/bazel/rules/java:versions.bzl", "java_versions")
 
 _DEFAULT_API_DOMAIN = "system"  # i.e. the platform variant
 
+def _validate_attrs(attr):
+    if hasattr(attr, "sdk_version") and hasattr(attr, "_sdk_version"):
+        fail("don't have both _sdk_version and sdk_version in attrs, it's confusing.")
+    if not hasattr(attr, "sdk_version") and not hasattr(attr, "_sdk_version"):
+        fail("must have one of _sdk_version or sdk_version attr.")
+
 def _sdk_transition_impl(settings, attr):
+    _validate_attrs(attr)
+    sdk_version_attr = (
+        attr.sdk_version if hasattr(attr, "sdk_version") else attr._sdk_version
+    )
+    java_version = attr.java_version if hasattr(attr, "java_version") else None
     host_platform = settings["//command_line_option:host_platform"]
     default_java_version = str(java_versions.get_version())
 
@@ -28,17 +45,22 @@ def _sdk_transition_impl(settings, attr):
     if all([host_platform == platform for platform in settings["//command_line_option:platforms"]]):
         return {
             "//build/bazel/rules/java:version": default_java_version,
-            "//build/bazel/rules/java:host_version": str(java_versions.get_version(attr.java_version)),
+            "//build/bazel/rules/java:host_version": str(
+                java_versions.get_version(java_version),
+            ),
             "//build/bazel/rules/java/sdk:kind": sdk_version.KIND_NONE,
             "//build/bazel/rules/java/sdk:api_level": api.NONE_API_LEVEL,
             "//build/bazel/rules/apex:api_domain": _DEFAULT_API_DOMAIN,
         }
-    sdk_spec = sdk_version.sdk_spec_from(attr.sdk_version)
-    java_version = str(java_versions.get_version(attr.java_version, sdk_spec.api_level))
+    sdk_spec = sdk_version.sdk_spec_from(sdk_version_attr)
+    final_java_version = str(java_versions.get_version(
+        java_version,
+        sdk_spec.api_level,
+    ))
 
     ret = {
         "//build/bazel/rules/java:host_version": default_java_version,
-        "//build/bazel/rules/java:version": java_version,
+        "//build/bazel/rules/java:version": final_java_version,
         "//build/bazel/rules/java/sdk:kind": sdk_spec.kind,
         "//build/bazel/rules/java/sdk:api_level": sdk_spec.api_level,
         "//build/bazel/rules/apex:api_domain": _DEFAULT_API_DOMAIN,
