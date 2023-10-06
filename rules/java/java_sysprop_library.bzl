@@ -17,12 +17,13 @@ Rules for generating java code from sysprop_library modules
 """
 
 load("//build/bazel/rules/sysprop:sysprop_library.bzl", "SyspropGenInfo")
+load(":sdk_transition.bzl", "sdk_transition")
 
 # TODO: b/301122615 - Implement stubs rule and macro for both
 
-# TODO - Add sdk_version and java_version in next CL
 _java_sysprop_library_attrs = {
     "dep": attr.label(mandatory = True),
+    "_sdk_version": attr.string(default = "core_current"),
     # TODO: TBD - Add other possible stub libs
     "_platform_stubs": attr.label(
         default = "//system/tools/sysprop:sysprop-library-stub-platform",
@@ -36,6 +37,9 @@ _java_sysprop_library_attrs = {
         default = "//build/soong/zip/cmd:soong_zip",
         executable = True,
         cfg = "exec",
+    ),
+    "_allowlist_function_transition": attr.label(
+        default = "@bazel_tools//tools/allowlists/function_transition_allowlist",
     ),
 }
 
@@ -128,9 +132,9 @@ def _java_sysprop_library_impl(ctx):
         OutputGroupInfo(default = depset()),
     ]
 
-# TODO - Apply sdk_transition in next CL
 java_sysprop_library = rule(
     implementation = _java_sysprop_library_impl,
+    cfg = sdk_transition,
     doc = """
     Generates java sources from the sources in the supplied sysprop_library
     target and compiles them into a jar.
