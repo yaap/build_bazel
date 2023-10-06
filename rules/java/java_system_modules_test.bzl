@@ -24,6 +24,11 @@ def _java_system_modules_test_impl(ctx):
         java_system_modules_target[SystemInfo].system.is_directory,
         "java_system_modules output should be a directory.",
     )
+    asserts.true(
+        env,
+        len(java_system_modules_target[SystemInfo].java_info.compile_jars.to_list()) > 0,
+        "java_system_modules should contain compile jars.",
+    )
     return analysistest.end(env)
 
 java_system_modules_test = analysistest.make(
@@ -32,7 +37,8 @@ java_system_modules_test = analysistest.make(
 
 def test_java_system_modules_provider():
     name = "test_java_system_modules_provider"
-    import_target = ":" + name + "_import"
+    import_name = name + "_import"
+    import_target = ":" + import_name
     java_system_modules(
         name = name + "_target",
         deps = [import_target],
@@ -44,7 +50,7 @@ def test_java_system_modules_provider():
     )
 
     java_import(
-        name = import_target[1:],
+        name = import_name,
         jars = ["some_jar.jar"],
         tags = ["manual"],
     )
