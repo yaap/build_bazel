@@ -53,7 +53,7 @@ def modify_private_method(file: Path) -> CujGroup:
 
     def replacement():
         return r'\1 Log.d("Placeholder", "Placeholder{}");'.format(
-            random.randint(0, 1000)
+            random.randint(0, 10000000)
         )
 
     modify_type = "modify_private_method"
@@ -65,7 +65,7 @@ def add_private_field(file: Path) -> CujGroup:
 
     def replacement():
         return (
-            r"private static final int FOO = " + str(random.randint(0, 1000)) + ";\n}"
+            r"private static final int FOO = " + str(random.randint(0, 10000000)) + ";\n}"
         )
 
     modify_type = "add_private_field"
@@ -76,7 +76,7 @@ def add_public_api(file: Path) -> CujGroup:
     pattern = r"\}$"
 
     def replacement():
-        return r"public static final int BAZ = " + str(random.randint(0, 1000)) + ";\n}"
+        return r"public static final int BAZ = " + str(random.randint(0, 10000000)) + ";\n}"
 
     modify_type = "add_public_api"
     return RegexModify(file, pattern, replacement, modify_type)
@@ -86,7 +86,7 @@ def modify_resource(file: Path) -> CujGroup:
     pattern = r">0<"
 
     def replacement():
-        return r">" + str(random.randint(0, 1000)) + r"<"
+        return r">" + str(random.randint(0, 10000000)) + r"<"
 
     modify_type = "modify_resource"
     return RegexModify(file, pattern, replacement, modify_type)
@@ -98,7 +98,7 @@ def add_resource(file: Path) -> CujGroup:
     def replacement():
         return (
             r'    <integer name="foo">'
-            + str(random.randint(0, 1000))
+            + str(random.randint(0, 10000000))
             + r"</integer>\n</resources>"
         )
 
