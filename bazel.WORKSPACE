@@ -163,7 +163,7 @@ new_local_repository(
     path = "external/kotlinc",
 )
 
-register_toolchains("@rules_kotlin//toolchains/kotlin_jvm:kt_jvm_toolchain_linux")
+register_toolchains("//build/bazel/rules/kotlin:kt_jvm_toolchain_linux")
 
 load("//build/bazel/toolchains/clang/host/linux-x86:cc_toolchain_config.bzl", "cc_register_toolchains")
 
@@ -238,4 +238,5 @@ local_repository(
 register_toolchains(
     "build/bazel/toolchains/rust:toolchain_x86_64_unknown-linux-gnu",
     "build/bazel/toolchains/rust:proto-toolchain",
+    "build/bazel/toolchains/rust:rust_toolchain_aarch64-linux-android",
 )
