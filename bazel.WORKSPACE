@@ -238,4 +238,5 @@ local_repository(
 register_toolchains(
     "build/bazel/toolchains/rust:toolchain_x86_64_unknown-linux-gnu",
     "build/bazel/toolchains/rust:proto-toolchain",
+    "build/bazel/toolchains/rust:rust_toolchain_aarch64-linux-android",
 )
