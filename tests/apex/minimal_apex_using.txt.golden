@@ -43,9 +43,6 @@ freelocale@LIBC
 fwrite@LIBC
 getauxval@LIBC
 getc@LIBC
-isdigit_l@LIBC
-islower_l@LIBC
-isupper_l@LIBC
 iswalpha_l@LIBC
 iswblank_l@LIBC
 iswcntrl_l@LIBC
@@ -56,7 +53,6 @@ iswpunct_l@LIBC
 iswspace_l@LIBC
 iswupper_l@LIBC
 iswxdigit_l@LIBC
-isxdigit_l@LIBC
 localeconv@LIBC
 malloc@LIBC
 mbrlen@LIBC
@@ -127,8 +123,6 @@ strxfrm_l@LIBC
 swprintf@LIBC
 sysconf@LIBC
 syslog@LIBC
-tolower_l@LIBC
-toupper_l@LIBC
 towlower_l@LIBC
 towupper_l@LIBC
 ungetc@LIBC
