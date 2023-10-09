@@ -183,7 +183,8 @@ build:remote_avd --strategy=AbiDump=local # force disable sandbox
 build:remote_avd --strategy=AbiLink=local # force disable sandbox
 build:remote_avd --strategy=AbiDiff=local # force disable sandbox
 test:remote_avd --strategy=DownloadCvd=remote
-test:remote_avd --strategy=TestRunner=remote
+# Certain tests are tagged "no-remote", so allow sandboxed fallback to avoid forcing all tests to run remotely.
+test:remote_avd --strategy=TestRunner=remote,sandboxed
 test:remote_avd --test_env=PATH="/bin:/usr/bin/"
 
 # Depending on how many machines are in the remote execution instance, setting
