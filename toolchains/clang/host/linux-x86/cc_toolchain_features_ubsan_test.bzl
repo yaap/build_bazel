@@ -610,7 +610,6 @@ def _test_host_only_features():
 
 device_only_flags = [
     "-fsanitize-trap=all",
-    "-ftrap-function=abort",
 ]
 
 def _test_device_only_features():
