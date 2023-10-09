@@ -32,7 +32,20 @@ def _java_resources_impl(ctx):
         ),
     )
 
-    return [DefaultInfo(files = depset([output_file]))]
+    compile_jar = ctx.actions.declare_file(ctx.attr.name + "_java_resources-ijar.jar")
+    java_common.run_ijar(
+        actions = ctx.actions,
+        jar = output_file,
+        java_toolchain = ctx.toolchains["@bazel_tools//tools/jdk:toolchain_type"].java,
+    )
+
+    return [
+        JavaInfo(
+            output_jar = output_file,
+            compile_jar = compile_jar,
+        ),
+        DefaultInfo(files = depset([output_file])),
+    ]
 
 java_resources = rule(
     doc = """
@@ -57,4 +70,6 @@ java_resources = rule(
             providers = [java_common.JavaRuntimeInfo],
         ),
     },
+    toolchains = ["@bazel_tools//tools/jdk:toolchain_type"],
+    provides = [JavaInfo],
 )
