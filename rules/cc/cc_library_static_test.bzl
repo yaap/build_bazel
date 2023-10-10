@@ -26,7 +26,7 @@ load(
 )
 load("//build/bazel/rules/test_common:paths.bzl", "get_output_and_package_dir_based_path", "get_package_dir_based_path")
 load("//build/bazel/rules/test_common:rules.bzl", "expect_failure_test")
-load(":cc_library_common_test.bzl", "target_provides_androidmk_info_test")
+load(":cc_library_common_test.bzl", "target_provides_androidmk_info_test", "target_sdk_variant_provides_androidmk_info_test")
 
 def _cc_library_static_propagating_compilation_context_test_impl(ctx):
     env = analysistest.begin(ctx)
@@ -499,6 +499,7 @@ def _cc_library_static_provides_androidmk_info():
         tags = ["manual"],
     )
     android_test_name = test_name + "_android"
+    android_sdk_variant_test_name = test_name + "_android_sdk_variant"
     linux_test_name = test_name + "_linux"
     target_provides_androidmk_info_test(
         name = android_test_name,
@@ -506,6 +507,23 @@ def _cc_library_static_provides_androidmk_info():
         expected_static_libs = [dep_name, "libc++_static", "libc++demangle"],
         expected_whole_static_libs = [whole_archive_dep_name],
         expected_shared_libs = [dynamic_dep_name, "libc_stub_libs-current", "libdl_stub_libs-current", "libm_stub_libs-current"],
+        target_compatible_with = ["//build/bazel/platforms/os:android"],
+    )
+    target_sdk_variant_provides_androidmk_info_test(
+        name = android_sdk_variant_test_name,
+        target_under_test = name,
+        expected_static_libs = [dep_name],
+        expected_whole_static_libs = [whole_archive_dep_name],
+        expected_shared_libs = [
+            dynamic_dep_name,
+            # bionic NDK stubs from system_dynamic_dep_defaults
+            "libc.ndk_stub_libs-current",
+            "libdl.ndk_stub_libs-current",
+            "libm.ndk_stub_libs-current",
+            # from STL: "ndk_system".
+            # sdk variants default to system STL.
+            "libstdc++",
+        ],
         target_compatible_with = ["//build/bazel/platforms/os:android"],
     )
     target_provides_androidmk_info_test(
@@ -518,6 +536,7 @@ def _cc_library_static_provides_androidmk_info():
     )
     return [
         android_test_name,
+        android_sdk_variant_test_name,
         linux_test_name,
     ]
 
