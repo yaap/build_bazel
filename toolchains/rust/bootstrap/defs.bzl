@@ -18,11 +18,9 @@ This file contains rule and transition for building rust toolchain for device
 
 # Flags common to builds of the standard library.
 _EXTRA_FLAGS_FOR_STDLIB_BUILDS = [
-    "-Ccodegen-units=2",
-    # Use v0 symbol mangling, see b/261148332.
-    "-Csymbol-mangling-version=v0",
-    # Always keep frame pointers, see b/258819642.
-    "-Cforce-frame-pointers=yes",
+    # Even though --cap-lints=allow is set at the toolchain level (b/301466790),
+    # setting it again here is needed to disble linting in all upstream deps
+    "--cap-lints=allow",
 ]
 
 _TRANSITION_OUTPUTS = [
