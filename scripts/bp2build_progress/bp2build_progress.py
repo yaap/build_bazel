@@ -471,9 +471,12 @@ def generate_report(report_data):
   )
 
   report_lines.append("\n")
-  report_lines.append(
+  if report_data.show_converted:
+    report_lines.append(
       "# Converted modules:\n\n%s" % "\n".join(sorted(report_data.converted))
-  )
+    )
+  else:
+    report_lines.append("# Converted modules not shown")
 
   report_lines.append("\n")
   report_lines.append(
