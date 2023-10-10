@@ -15,10 +15,10 @@
 load("@bazel_skylib//lib:unittest.bzl", "analysistest", "unittest", skylib_asserts = "asserts")
 load("//build/bazel/rules/test_common:asserts.bzl", roboleaf_asserts = "asserts")
 load("//build/bazel/rules/test_common:rules.bzl", "target_under_test_exist_test")
-load(":cc_library_common.bzl", "CcAndroidMkInfo", "is_external_directory")
-load(":cc_library_static.bzl", "cc_library_static")
-load(":cc_library_shared.bzl", "cc_library_shared")
 load(":cc_binary.bzl", "cc_binary")
+load(":cc_library_common.bzl", "CcAndroidMkInfo", "is_external_directory")
+load(":cc_library_shared.bzl", "cc_library_shared")
+load(":cc_library_static.bzl", "cc_library_static")
 load(":cc_prebuilt_library_shared.bzl", "cc_prebuilt_library_shared")
 
 asserts = skylib_asserts + roboleaf_asserts
@@ -155,9 +155,21 @@ target_provides_androidmk_info_test = analysistest.make(
     },
 )
 
+# Same as target_provides_androidmk_info_test, but builds sdk variant of cc_libraries
+target_sdk_variant_provides_androidmk_info_test = analysistest.make(
+    _target_provides_androidmk_info_test_impl,
+    attrs = {
+        "expected_static_libs": attr.string_list(),
+        "expected_whole_static_libs": attr.string_list(),
+        "expected_shared_libs": attr.string_list(),
+    },
+    config_settings = {
+        "@//build/bazel/rules/apex:api_domain": "unbundled_app",
+    },
+)
+
 def _test_cc_prebuilt_library_shared_is_valid_dynamic_dep():
     name = "cc_prebuilt_library_shared_is_valid_dynamic_dep"
-    test_name = name + "_test"
     prebuilt_name = name + "_prebuilt"
     static_name = name + "_static"
     shared_name = name + "_shared"
