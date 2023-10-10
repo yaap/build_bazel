@@ -53,6 +53,7 @@ export \
   OUT=${out} \
   ANDROID_HOST_OUT=$(get_build_var HOST_OUT) \
   ANDROID_TARGET_OUT_TESTCASES=$(get_build_var TARGET_OUT_TESTCASES) \
+  REMOTE_AVD=true \
 
 build/soong/soong_ui.bash --make-mode bp2build --skip-soong-tests
 
