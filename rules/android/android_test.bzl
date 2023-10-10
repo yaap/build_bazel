@@ -15,22 +15,49 @@
 """android_test macro for building and running Android device tests with Bazel."""
 
 load("//build/bazel/rules/android:android_binary.bzl", "android_binary")
-load("//build/bazel/rules/tradefed:tradefed.bzl", "LANGUAGE_ANDROID", "TEST_DEP_SUFFIX", "tradefed_test_suite")
+load(
+    "//build/bazel/rules/tradefed:tradefed.bzl",
+    "FILTER_GENERATOR_SUFFIX",
+    "LANGUAGE_ANDROID",
+    "TEST_DEP_SUFFIX",
+    "java_test_filter_generator",
+    "tradefed_test_suite",
+)
 
 def android_test(
         name,
+        srcs,
         tags = [],
-        optimize = False,  # android_test disables optimize by default.
+        optimize = False,
         visibility = ["//visibility:private"],
         **kwargs):
+    """android_test macro for building and running Android device tests with Bazel.
+
+    Args:
+      name: The name of this target.
+      srcs: The list of source files that are processed to create the target.
+      tags: Tags for the test binary target and test suite target.
+      optimize: Boolean, whether optimize the build process.
+        android_test disables optimize by default.
+      visibility: Bazel visibility declarations for this target.
+      **kwargs: map, additional args to pass to android_binary.
+    """
     test_dep_name = name + TEST_DEP_SUFFIX
     android_binary(
         name = test_dep_name,
+        srcs = srcs,
         optimize = optimize,
         tags = tags,
         visibility = ["//visibility:private"],
         testonly = True,
         **kwargs
+    )
+
+    test_filter_generator_name = name + FILTER_GENERATOR_SUFFIX
+    java_test_filter_generator(
+        name = test_filter_generator_name,
+        srcs = srcs,
+        module_name = name,
     )
 
     tradefed_test_suite(
@@ -42,6 +69,7 @@ def android_test(
         template_install_base = None,
         device_driven_test_config = "//build/make/core:instrumentation_test_config_template.xml",
         runs_on = ["device"],
+        test_filter_generator = test_filter_generator_name,
         tags = tags,
         visibility = visibility,
         test_language = LANGUAGE_ANDROID,
