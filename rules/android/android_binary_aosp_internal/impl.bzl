@@ -22,7 +22,7 @@ load(
     "processing_pipeline",
 )
 load("@rules_android//rules:resources.bzl", _resources = "resources")
-load("@rules_android//rules:utils.bzl", "get_android_toolchain", "utils")
+load("@rules_android//rules:utils.bzl", "utils")
 load("@rules_android//rules/android_binary_internal:impl.bzl", "finalize", _BASE_PROCESSORS = "PROCESSORS")
 load("//build/bazel/rules/android:manifest_fixer.bzl", "manifest_fixer")
 load("//build/bazel/rules/cc:cc_stub_library.bzl", "CcStubInfo")
@@ -185,10 +185,17 @@ def _process_manifest_aosp(ctx, **_unused_ctxs):
         ),
     )
 
+# TODO: b/303862657 - Populate with any needed validation
+def _validate_manifest_aosp(
+        ctx,  # @unused
+        **_unused_ctxs):
+    return
+
 # (b/274150785)  validation processor does not allow min_sdk that are a string
 PROCESSORS = processing_pipeline.replace(
     _BASE_PROCESSORS,
     ManifestProcessor = _process_manifest_aosp,
+    ValidateManifestProcessor = _validate_manifest_aosp,
     NativeLibsProcessor = _process_native_deps_aosp,
 )
 
