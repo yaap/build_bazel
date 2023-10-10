@@ -12,8 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""java_test macro for building and running Java tests with Bazel."""
+
 load("@rules_java//java:defs.bzl", "java_binary")
-load("//build/bazel/rules/tradefed:tradefed.bzl", "LANGUAGE_JAVA", "TEST_DEP_SUFFIX", "tradefed_test_suite")
+load(
+    "//build/bazel/rules/tradefed:tradefed.bzl",
+    "FILTER_GENERATOR_SUFFIX",
+    "LANGUAGE_JAVA",
+    "TEST_DEP_SUFFIX",
+    "java_test_filter_generator",
+    "tradefed_test_suite",
+)
 
 HOST_TEST_TEMPLATE = "//build/make/core:java_host_unit_test_config_template.xml"
 
@@ -25,6 +34,18 @@ def java_test(
         visibility = None,
         target_compatible_with = [],
         **kwargs):
+    """java_test macro for building and running Java tests with Bazel.
+
+    Args:
+      name: The name of this target.
+      srcs: The list of source files that are processed to create the target.
+      deps: The list of other libraries to be linked in to the target.
+      tags: Tags for the test binary target and test suite target.
+      visibility: Bazel visibility declarations for this target.
+      target_compatible_with: A list of constraint_values that must be present
+        in the target platform for this target to be considered compatible.
+      **kwargs: map, additional args to pass to android_binary.
+    """
     test_dep_name = name + TEST_DEP_SUFFIX
     java_binary_name = name + "_jb"
 
@@ -45,6 +66,13 @@ def java_test(
         srcs = [java_binary_name + "_deploy.jar"],
     )
 
+    test_filter_generator_name = name + FILTER_GENERATOR_SUFFIX
+    java_test_filter_generator(
+        name = test_filter_generator_name,
+        srcs = srcs,
+        module_name = name,
+    )
+
     tradefed_test_suite(
         name = name,
         test_dep = test_dep_name,
@@ -52,6 +80,7 @@ def java_test(
         template_test_config = None,
         template_configs = None,
         template_install_base = None,
+        test_filter_generator = test_filter_generator_name,
         tags = tags,
         test_language = LANGUAGE_JAVA,
         visibility = visibility,
