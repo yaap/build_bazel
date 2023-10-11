@@ -12,19 +12,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("//build/bazel/rules/tradefed:tradefed.bzl", "TEST_DEP_SUFFIX", "tradefed_test_suite")
+"""sh_test macro for building shell tests with Bazel."""
+
+load(
+    "//build/bazel/rules/tradefed:tradefed.bzl",
+    "LANGUAGE_SHELL",
+    "TEST_DEP_SUFFIX",
+    "tradefed_test_suite",
+)
 
 def sh_test(
         name,
         srcs,
         data = [],
+        data_bins = [],
         tags = [],
         test_config = None,
-        test_config_template = None,
-        auto_gen_config = True,
+        template_test_config = None,
         template_install_base = None,
         template_configs = [],
         visibility = None,
+        runs_on = [],
+        suffix = "",
         **kwargs):
     "Bazel macro to correspond with the sh_test Soong module."
 
@@ -40,12 +49,18 @@ def sh_test(
     tradefed_test_suite(
         name = name,
         test_dep = test_dep_name,
-        # TODO(b/296964806): Handle auto_gen_config in tradefed Bazel rules.
+        # TODO(b/296964806): Handle auto_generate_test_config in tradefed Bazel rules.
+        data_bins = data_bins,
         test_config = test_config,
         template_configs = template_configs,
-        template_test_config = test_config_template,
+        template_test_config = template_test_config,
         template_install_base = template_install_base,
-        device_driven_test_config = "//build/make/core:native_test_config_template.xml",
+        deviceless_test_config = "//build/make/core:shell_test_config_template.xml",
+        device_driven_test_config = "//build/make/core:shell_test_config_template.xml",
+        host_driven_device_test_config = "//build/make/core:shell_test_config_template.xml",
+        runs_on = runs_on,
         tags = tags,
+        suffix = suffix,
+        test_language = LANGUAGE_SHELL,
         visibility = visibility,
     )
