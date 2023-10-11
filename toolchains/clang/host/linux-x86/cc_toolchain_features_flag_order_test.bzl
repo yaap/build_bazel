@@ -93,7 +93,7 @@ def _test_compile_flag_order_arm():
             generated_config_constants.CommonGlobalCflags
         ),
         mnemonic = "CppCompile",
-        target_compatible_with = ["//build/bazel/platforms/arch:arm"],
+        target_compatible_with = ["//build/bazel_common_rules/platforms/arch:arm"],
     )
     return test_name
 
@@ -117,7 +117,7 @@ def _test_external_compile_flag_order():
             generated_config_constants.ExternalCflags
         ),
         mnemonic = "CppCompile",
-        target_compatible_with = ["//build/bazel/platforms/os:android"],
+        target_compatible_with = ["//build/bazel_common_rules/platforms/os:android"],
     )
     return test_name
 

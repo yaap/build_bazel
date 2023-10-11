@@ -82,7 +82,7 @@ selects.config_setting_group(
     match_all = [
         ":coverage_cfi_enabled",
         ":coverage_lib_flag",
-        "//build/bazel/platforms/os:android_config_setting",
+        "//build/bazel_common_rules/platforms/os:android_config_setting",
     ],
 )
 
@@ -91,18 +91,18 @@ selects.config_setting_group(
     match_all = [
         ":coverage_cfi_disabled",
         ":coverage_lib_flag",
-        "//build/bazel/platforms/os:android_config_setting",
+        "//build/bazel_common_rules/platforms/os:android_config_setting",
     ],
 )
 
 platform(
     name = "windows_for_testing",
-    constraint_values = ["@//build/bazel/platforms/os:windows"],
+    constraint_values = ["@//build/bazel_common_rules/platforms/os:windows"],
 )
 
 platform(
     name = "darwin_for_testing",
-    constraint_values = ["@//build/bazel/platforms/os:darwin"],
+    constraint_values = ["@//build/bazel_common_rules/platforms/os:darwin"],
 )
 
 cc_aconfig_library_test_suite(name = "cc_aconfig_library_tests")

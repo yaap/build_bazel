@@ -144,7 +144,7 @@ def test_cross_dso_not_added_when_static_binary():
         target_under_test = name,
         mnemonics = [compile_action_mnemonic, link_action_mnemonic],
         expected_absent_flags = [generated_sanitizer_constants.CfiCrossDsoFlag],
-        target_compatible_with = ["//build/bazel/platforms/os:android"],
+        target_compatible_with = ["//build/bazel_common_rules/platforms/os:android"],
     )
 
     linux_test_name = name + "_linux_test"
@@ -153,7 +153,7 @@ def test_cross_dso_not_added_when_static_binary():
         target_under_test = name,
         mnemonics = [compile_action_mnemonic, link_action_mnemonic],
         expected_absent_flags = [generated_sanitizer_constants.CfiCrossDsoFlag],
-        target_compatible_with = ["//build/bazel/platforms/os:linux_glibc"],
+        target_compatible_with = ["//build/bazel_common_rules/platforms/os:linux_glibc"],
     )
 
     return [
@@ -352,7 +352,7 @@ def test_cfi_and_arm_uses_thumb():
         mnemonics = [compile_action_mnemonic],
         expected_flags = generated_config_constants.ArmThumbCflags,
         target_compatible_with = [
-            "//build/bazel/platforms/arch:arm",
+            "//build/bazel_common_rules/platforms/arch:arm",
         ],
     )
 
@@ -375,9 +375,9 @@ def test_cfi_and_arm_uses_thumb():
 #        mnemonics = [compile_action_mnemonic],
 #        expected_absent_flags = generated_sanitizer_constants.CfiCFlags,
 #        target_compatible_with = [
-#            "//build/bazel/platforms/os:linux_musl",
-#            "//build/bazel/platforms/os:darwin",
-#            "//build/bazel/platforms/os:windows",
+#            "//build/bazel_common_rules/platforms/os:linux_musl",
+#            "//build/bazel_common_rules/platforms/os:darwin",
+#            "//build/bazel_common_rules/platforms/os:windows",
 #        ]
 #    )
 #

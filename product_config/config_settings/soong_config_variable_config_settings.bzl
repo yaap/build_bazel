@@ -152,7 +152,7 @@ def soong_config_variable_config_settings():
             # We emit something like:
             #
             # cflags = select({
-            #     "//build/bazel/platforms/os:android": ["-DFOO"],
+            #     "//build/bazel_common_rules/platforms/os:android": ["-DFOO"],
             #     "//conditions:default": [],
             # }) + select({
             #     "//build/bazel/product_variables:my_namespace__my_string_variable__value1": ["-DVALUE1_NOT_ANDROID"],
