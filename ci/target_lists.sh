@@ -42,7 +42,6 @@ BUILD_TARGETS=(
   -//frameworks/native/opengl/libs:libEGL
   -//frameworks/native/opengl/libs:libGLESv2
   -//system/core/libutils:all
-  -//system/media/audio_utils/tests:mel_processor_tests__tf_deviceless_test
   -//system/unwinding/libunwindstack:all
 )
 
