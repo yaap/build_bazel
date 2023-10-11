@@ -97,7 +97,7 @@ def verify_symlink_forest_has_only_symlink_leaves():
 
     for root, _, files in os.walk(top_in_ws, topdown=True, followlinks=False):
         for file in files:
-            if file in "soong_build_mtime" and top_in_ws.samefile(root):
+            if file == "soong_build_mtime" and top_in_ws.samefile(root):
                 continue
             f = Path(root).joinpath(file)
             if file != "BUILD.bazel" and not f.is_symlink():
