@@ -233,7 +233,17 @@ def process_bp2build_mode(args):
   for module in bp2build_metrics.convertedModules:
     converted_modules[module] = True
 
-  for name in args.module_names:
+  if len(args.module_names) > 0:
+    modules_to_report = args.module_names
+  else:
+    all_modules = {}
+    for m in converted_modules:
+      all_modules[m] = True
+    for m in bp2build_metrics.unconvertedModules:
+      all_modules[m] = True
+    modules_to_report = sorted(all_modules)
+
+  for name in modules_to_report:
     if name in converted_modules:
       print(name, "converted successfully.")
     elif name in bp2build_metrics.unconvertedModules:
@@ -317,7 +327,8 @@ def main():
   _define_global_flags(bp2build_parser, True)
   bp2build_parser.add_argument(
       "module_names",
-      nargs="+",
+      metavar="module_name",
+      nargs="*",
       help="print conversion info about these modules",
   )
 
