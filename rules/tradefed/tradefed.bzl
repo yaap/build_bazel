@@ -50,6 +50,7 @@ FILTER_GENERATOR_SUFFIX = "__filter_generator"
 LANGUAGE_CC = "cc"
 LANGUAGE_JAVA = "java"
 LANGUAGE_ANDROID = "android"
+LANGUAGE_SHELL = "shell"
 
 # A transition to force the target device platforms configuration. This is
 # used in the tradefed -> cc_test edge (for example).
@@ -125,6 +126,10 @@ _TRADEFED_TEST_ATTRIBUTES = {
         doc = "Files needed on the classpath to run tradefed",
         cfg = "exec",
     ),
+    "data_bins": attr.label_list(
+        doc = "Executables that need to be installed alongside the test entry point.",
+        cfg = "exec",
+    ),
     "_platform_utils": attr.label(
         default = Label("//build/bazel/platforms:platform_utils"),
     ),
@@ -153,7 +158,7 @@ _TRADEFED_TEST_ATTRIBUTES = {
     ),
     "test_language": attr.string(
         default = "",
-        values = ["", LANGUAGE_CC, LANGUAGE_JAVA, LANGUAGE_ANDROID],
+        values = ["", LANGUAGE_CC, LANGUAGE_JAVA, LANGUAGE_ANDROID, LANGUAGE_SHELL],
         doc = "the programming language the test uses",
     ),
     "suffix": attr.string(
@@ -260,14 +265,17 @@ def _get_or_generate_test_config(ctx, module_name, tf_test_dir, test_entry_point
         return test_config, dynamic_config
 
     # Non-android tests.
+    expand_template_substitutions = {
+        "{MODULE}": module_name,
+        "{EXTRA_CONFIGS}": "\n    ".join(ctx.attr.template_configs),
+        "{TEST_INSTALL_BASE}": ctx.attr.template_install_base,
+    }
+    if test_language == LANGUAGE_SHELL:
+        expand_template_substitutions["{OUTPUT_FILENAME}"] = module_name + ".sh"
     ctx.actions.expand_template(
         template = ctx.file.template_test_config,
         output = test_config,
-        substitutions = {
-            "{MODULE}": module_name,
-            "{EXTRA_CONFIGS}": "\n    ".join(ctx.attr.template_configs),
-            "{TEST_INSTALL_BASE}": ctx.attr.template_install_base,
-        },
+        substitutions = expand_template_substitutions,
     )
     return test_config, dynamic_config
 
@@ -313,7 +321,7 @@ def _tradefed_test_impl(ctx, tradefed_options = []):
     if test_language == LANGUAGE_ANDROID:
         test_entry_point = test_target[ApkInfo].signed_apk
     else:
-        # cc, java, py
+        # cc, java, py, sh
         test_entry_point = test_target.files_to_run.executable
 
     # For Java, a library may make more sense here than the executable. When
@@ -418,6 +426,14 @@ def _tradefed_test_impl(ctx, tradefed_options = []):
         out = ctx.actions.declare_file("%s/%s" % (tf_test_dir, path_without_package))
         _copy_file(ctx, runfile, out)
         test_runfiles.append(out)
+
+    # Data_bins are special dependencies added to the working directory of the test entry point (as siblings), which are different from regular runfiles above.
+    for data_bin_file in ctx.files.data_bins:
+        data_bin_out = ctx.actions.declare_file("%s/%s" % (tf_test_dir, data_bin_file.basename))
+        if data_bin_out in test_runfiles:
+            continue
+        _copy_file(ctx, data_bin_file, data_bin_out)
+        test_runfiles.append(data_bin_out)
 
     # Gather runfiles.
     runfiles = ctx.runfiles(
@@ -566,7 +582,8 @@ def tradefed_test_suite(
         device_driven_test_config = None,
         host_driven_device_test_config = None,
         test_filter_generator = None,
-        runs_on = []):
+        runs_on = [],
+        data_bins = []):
     """The tradefed_test_suite macro groups all three test types under a single test_suite.o
 
     This enables users or tools to simply run 'b test //path/to:foo_test_suite' and bazel
@@ -591,6 +608,7 @@ def tradefed_test_suite(
       host_driven_device_test_config: default Tradefed test config for the host driven execution mode.
       test_filter_generator: label of a file containing a test filter that will be passed through to TradeFed.
       runs_on: platform variants that this test runs on. The allowed values are 'device', 'host_with_device' and 'host_without_device'.
+      data_bins: executables that need to be installed alongside the test entry point to be used for the test itself.
     """
 
     # Validate names.
@@ -637,6 +655,8 @@ def tradefed_test_suite(
             ("visibility", ["//visibility:private"]),
             # Tradefed harness always builds for host.
             ("target_compatible_with", ["//build/bazel/platforms/os:linux"]),
+            # List of binary modules that should be installed alongside the test
+            ("data_bins", data_bins),
         ],
     )
 
