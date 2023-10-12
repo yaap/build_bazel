@@ -20,12 +20,12 @@ partition_toolchain(
 toolchain(
     name = "partition_toolchain_def",
     exec_compatible_with = [
-        "//build/bazel/platforms/arch:x86_64",
-        "//build/bazel/platforms/os:linux",
+        "//build/bazel_common_rules/platforms/arch:x86_64",
+        "//build/bazel_common_rules/platforms/os:linux",
     ],
     tags = ["manual"],
     target_compatible_with = [
-        "//build/bazel/platforms/os:android",
+        "//build/bazel_common_rules/platforms/os:android",
     ],
     toolchain = ":partition_toolchain",
     toolchain_type = ":partition_toolchain_type",

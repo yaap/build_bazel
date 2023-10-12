@@ -501,16 +501,16 @@ _cc_library_shared_proxy = rule(
         ),
         "linkopts": attr.string_list(default = []),  # Used for validation
         "_android_constraint": attr.label(
-            default = Label("//build/bazel/platforms/os:android"),
+            default = Label("//build/bazel_common_rules/platforms/os:android"),
         ),
         "_darwin_constraint": attr.label(
-            default = Label("//build/bazel/platforms/os:darwin"),
+            default = Label("//build/bazel_common_rules/platforms/os:darwin"),
         ),
         "_linux_constraint": attr.label(
-            default = Label("//build/bazel/platforms/os:linux"),
+            default = Label("//build/bazel_common_rules/platforms/os:linux"),
         ),
         "_windows_constraint": attr.label(
-            default = Label("//build/bazel/platforms/os:windows"),
+            default = Label("//build/bazel_common_rules/platforms/os:windows"),
         ),
     },
     provides = [CcAndroidMkInfo, CcInfo, CcTocInfo],

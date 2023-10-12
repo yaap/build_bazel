@@ -56,7 +56,7 @@ def _test_relocation_feature_flags(*, name, sdk_version, flags):
         mnemonics = ["CppLink"],
         expected_flags = flags,
         target_compatible_with = [
-            "//build/bazel/platforms/os:android",
+            "//build/bazel_common_rules/platforms/os:android",
         ],
     )
     action_flags_absent_for_mnemonic_test(
@@ -65,7 +65,7 @@ def _test_relocation_feature_flags(*, name, sdk_version, flags):
         mnemonics = ["CppLink"],
         expected_absent_flags = flags,
         target_compatible_with = [
-            "//build/bazel/platforms/os:linux",
+            "//build/bazel_common_rules/platforms/os:linux",
         ],
     )
     return [
@@ -84,7 +84,7 @@ def _test_no_relocation_features(*, name, sdk_version, extra_target_features = [
         mnemonics = ["CppLink"],
         expected_absent_flags = _SHT_RELR_ARGS + _ANDROID_RELR_ARGS + _RELR_PACKER_ARGS,
         target_compatible_with = [
-            "//build/bazel/platforms/os:android",
+            "//build/bazel_common_rules/platforms/os:android",
         ],
     )
     action_flags_absent_for_mnemonic_test(
@@ -93,7 +93,7 @@ def _test_no_relocation_features(*, name, sdk_version, extra_target_features = [
         mnemonics = ["CppLink"],
         expected_absent_flags = _SHT_RELR_ARGS + _ANDROID_RELR_ARGS + _RELR_PACKER_ARGS,
         target_compatible_with = [
-            "//build/bazel/platforms/os:linux",
+            "//build/bazel_common_rules/platforms/os:linux",
         ],
     )
     return [
@@ -112,7 +112,7 @@ def _test_disable_relocation_features(*, name, sdk_version, extra_target_feature
         mnemonics = ["CppLink"],
         expected_flags = _DISABLE_RELOC_ARGS,
         target_compatible_with = [
-            "//build/bazel/platforms/os:android",
+            "//build/bazel_common_rules/platforms/os:android",
         ],
     )
     action_flags_present_only_for_mnemonic_test(
@@ -121,7 +121,7 @@ def _test_disable_relocation_features(*, name, sdk_version, extra_target_feature
         mnemonics = ["CppLink"],
         expected_flags = _DISABLE_RELOC_ARGS,
         target_compatible_with = [
-            "//build/bazel/platforms/os:linux",
+            "//build/bazel_common_rules/platforms/os:linux",
         ],
     )
     return [

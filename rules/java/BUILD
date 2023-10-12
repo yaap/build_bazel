@@ -151,8 +151,8 @@ default_java_toolchain(
 
 toolchain(
     name = "jdk17_host_toolchain_java_definition",
-    exec_compatible_with = ["//build/bazel/platforms/os:linux"],
-    target_compatible_with = ["//build/bazel/platforms/os:linux"],
+    exec_compatible_with = ["//build/bazel_common_rules/platforms/os:linux"],
+    target_compatible_with = ["//build/bazel_common_rules/platforms/os:linux"],
     target_settings = [],
     toolchain = ":jdk17_host_toolchain_java",
     toolchain_type = "@bazel_tools//tools/jdk:toolchain_type",

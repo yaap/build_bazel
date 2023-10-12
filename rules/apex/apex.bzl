@@ -1170,7 +1170,7 @@ def apex(
         certificate_label = ":" + app_cert_name
 
     target_compatible_with = select({
-        "//build/bazel/platforms/os:android": [],
+        "//build/bazel_common_rules/platforms/os:android": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }) + target_compatible_with
 

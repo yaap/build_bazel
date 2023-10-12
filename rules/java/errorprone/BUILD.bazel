@@ -16,7 +16,7 @@ java_binary(
     name = "PrintSoongClasses",
     srcs = ["PrintClasses.java"],
     main_class = "PrintClasses",
-    target_compatible_with = ["//build/bazel/platforms/os:linux"],
+    target_compatible_with = ["//build/bazel_common_rules/platforms/os:linux"],
     deps = ["//external/error_prone:error_prone_core_jars"],
 )
 
@@ -24,7 +24,7 @@ java_binary(
     name = "PrintBazelClasses",
     srcs = ["PrintClasses.java"],
     main_class = "PrintClasses",
-    target_compatible_with = ["//build/bazel/platforms/os:linux"],
+    target_compatible_with = ["//build/bazel_common_rules/platforms/os:linux"],
     deps = [":BazelJavaBuilder"],
 )
 
