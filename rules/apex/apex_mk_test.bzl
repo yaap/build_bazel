@@ -114,7 +114,7 @@ def _test_apex_files_info_complex():
     apex_files_info_test(
         name = test_name,
         target_under_test = name,
-        target_compatible_with = ["//build/bazel/platforms/os:android", "//build/bazel/platforms/arch:arm64"],
+        target_compatible_with = ["//build/bazel_common_rules/platforms/os:android", "//build/bazel_common_rules/platforms/arch:arm64"],
         expected_files_info = [json.encode(i) for i in [
             {
                 "built_file": "bazel-out/bin/build/bazel/rules/apex/bin/apex_files_info_complex_bin_cc/apex_files_info_complex_bin_cc",

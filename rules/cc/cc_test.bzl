@@ -26,12 +26,12 @@ load(":cc_binary.bzl", "cc_binary")
 
 # TODO(b/244559183): Keep this in sync with cc/test.go#linkerFlags
 _gtest_copts = select({
-    "//build/bazel/platforms/os:linux_glibc": ["-DGTEST_OS_LINUX"],
-    "//build/bazel/platforms/os:darwin": ["-DGTEST_OS_MAC"],
-    "//build/bazel/platforms/os:windows": ["-DGTEST_OS_WINDOWS"],
+    "//build/bazel_common_rules/platforms/os:linux_glibc": ["-DGTEST_OS_LINUX"],
+    "//build/bazel_common_rules/platforms/os:darwin": ["-DGTEST_OS_MAC"],
+    "//build/bazel_common_rules/platforms/os:windows": ["-DGTEST_OS_WINDOWS"],
     "//conditions:default": ["-DGTEST_OS_LINUX_ANDROID"],
 }) + select({
-    "//build/bazel/platforms/os:android": [],
+    "//build/bazel_common_rules/platforms/os:android": [],
     "//conditions:default": ["-O0", "-g"],  # here, default == host platform
 }) + [
     "-DGTEST_HAS_STD_STRING",

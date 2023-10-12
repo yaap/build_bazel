@@ -275,7 +275,7 @@ __stl_flags_android_test = analysistest.make(
 
 def _stl_flags_android_test(**kwargs):
     __stl_flags_android_test(
-        target_compatible_with = ["//build/bazel/platforms/os:android"],
+        target_compatible_with = ["//build/bazel_common_rules/platforms/os:android"],
         **kwargs
     )
 
@@ -289,7 +289,7 @@ __stl_flags_linux_test = analysistest.make(
 
 def _stl_flags_linux_test(**kwargs):
     __stl_flags_linux_test(
-        target_compatible_with = ["//build/bazel/platforms/os:linux"],
+        target_compatible_with = ["//build/bazel_common_rules/platforms/os:linux"],
         **kwargs
     )
 
@@ -303,7 +303,7 @@ __stl_flags_linux_bionic_test = analysistest.make(
 
 def _stl_flags_linux_bionic_test(**kwargs):
     __stl_flags_linux_bionic_test(
-        target_compatible_with = ["//build/bazel/platforms/os:linux_bionic"],
+        target_compatible_with = ["//build/bazel_common_rules/platforms/os:linux_bionic"],
         **kwargs
     )
 
@@ -340,7 +340,7 @@ __stl_deps_android_test = analysistest.make(
 
 def _stl_deps_android_test(**kwargs):
     __stl_deps_android_test(
-        target_compatible_with = ["//build/bazel/platforms/os:android"],
+        target_compatible_with = ["//build/bazel_common_rules/platforms/os:android"],
         **kwargs
     )
 
@@ -355,7 +355,7 @@ __stl_deps_non_android_test = analysistest.make(
 
 def _stl_deps_non_android_test(**kwargs):
     __stl_deps_non_android_test(
-        target_compatible_with = ["//build/bazel/platforms/os:linux"],
+        target_compatible_with = ["//build/bazel_common_rules/platforms/os:linux"],
         **kwargs
     )
 
@@ -373,7 +373,7 @@ __stl_deps_sdk_test = analysistest.make(
 
 def _stl_deps_sdk_test(**kwargs):
     __stl_deps_sdk_test(
-        target_compatible_with = ["//build/bazel/platforms/os:android"],
+        target_compatible_with = ["//build/bazel_common_rules/platforms/os:android"],
         **kwargs
     )
 

@@ -62,7 +62,7 @@ def test_cc_binary_with_memtag_sync():
         name = name,
         srcs = test_srcs,
         features = select({
-            "//build/bazel/platforms/os_arch:android_arm64": [
+            "//build/bazel_common_rules/platforms/os_arch:android_arm64": [
                 "memtag_heap",
                 "diag_memtag_heap",
             ],
@@ -97,7 +97,7 @@ def test_cc_binary_with_memtag_async():
         name = name,
         srcs = test_srcs,
         features = select({
-            "//build/bazel/platforms/os_arch:android_arm64": [
+            "//build/bazel_common_rules/platforms/os_arch:android_arm64": [
                 "memtag_heap",
             ],
             "//conditions:default": [],
@@ -132,7 +132,7 @@ def test_cc_library_memtag_not_supported():
         name = name,
         srcs = test_srcs,
         features = select({
-            "//build/bazel/platforms/os_arch:android_arm64": [
+            "//build/bazel_common_rules/platforms/os_arch:android_arm64": [
                 "memtag_heap",
                 "diag_memtag_heap",
             ],
