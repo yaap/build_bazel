@@ -69,7 +69,7 @@ def tradefed_cc_outputs():
         test = target,
         test_config = "//build/bazel/rules/tradefed/test:example_config.xml",
         dynamic_config = "//build/bazel/rules/tradefed/test:dynamic_config.xml",
-        target_compatible_with = ["//build/bazel/platforms/os:linux"],
+        target_compatible_with = ["//build/bazel_common_rules/platforms/os:linux"],
     )
 
     # check for expected output files (.config file  and .sh script)
@@ -82,7 +82,7 @@ def tradefed_cc_outputs():
             paths.join(name, "testcases", target + ".config"),
             paths.join(name, "testcases", target + ".dynamic"),
         ],
-        target_compatible_with = ["//build/bazel/platforms/os:linux"],
+        target_compatible_with = ["//build/bazel_common_rules/platforms/os:linux"],
     )
     return name + "_test"
 
@@ -106,7 +106,7 @@ def tradefed_cc_host_outputs():
         test = target,
         test_config = "//build/bazel/rules/tradefed/test:example_config.xml",
         dynamic_config = "//build/bazel/rules/tradefed/test:dynamic_config.xml",
-        target_compatible_with = ["//build/bazel/platforms/os:linux"],
+        target_compatible_with = ["//build/bazel_common_rules/platforms/os:linux"],
     )
 
     # check for expected output files (.config file  and .sh script)
@@ -119,7 +119,7 @@ def tradefed_cc_host_outputs():
             paths.join(name, "testcases", target + ".config"),
             paths.join(name, "testcases", target + ".dynamic"),
         ],
-        target_compatible_with = ["//build/bazel/platforms/os:linux"],
+        target_compatible_with = ["//build/bazel_common_rules/platforms/os:linux"],
     )
     return name + "_test"
 
@@ -147,7 +147,7 @@ def tradefed_cc_host_outputs_generate_test_config():
             "<option name=\"config-descriptor:metadata\" key=\"parameter\" value=\"secondary_user\" />",
         ],
         dynamic_config = "//build/bazel/rules/tradefed/test:dynamic_config.xml",
-        target_compatible_with = ["//build/bazel/platforms/os:linux"],
+        target_compatible_with = ["//build/bazel_common_rules/platforms/os:linux"],
     )
 
     # check for expected output files (.config file  and .sh script)
@@ -160,7 +160,7 @@ def tradefed_cc_host_outputs_generate_test_config():
             paths.join(name, "testcases", target + ".config"),
             paths.join(name, "testcases", target + ".dynamic"),
         ],
-        target_compatible_with = ["//build/bazel/platforms/os:linux"],
+        target_compatible_with = ["//build/bazel_common_rules/platforms/os:linux"],
     )
     return name + "_test"
 

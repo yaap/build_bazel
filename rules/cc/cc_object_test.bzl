@@ -93,25 +93,25 @@ def _crt_cc_object_min_sdk_version_overriden_by_apex_min_sdk_version():
         name = crt_apex_test_name,
         target_under_test = crt_obj_name,
         expected_min_sdk_version = _apex_min_sdk_version,
-        target_compatible_with = ["@//build/bazel/platforms/os:android"],
+        target_compatible_with = ["@//build/bazel_common_rules/platforms/os:android"],
     )
     _min_sdk_version_target_flag_with_apex_test(
         name = not_crt_apex_test_name,
         target_under_test = not_crt_obj_name,
         expected_min_sdk_version = obj_min_sdk_version,
-        target_compatible_with = ["@//build/bazel/platforms/os:android"],
+        target_compatible_with = ["@//build/bazel_common_rules/platforms/os:android"],
     )
     _min_sdk_version_target_flag_test(
         name = crt_not_apex_test_name,
         target_under_test = crt_obj_name,
         expected_min_sdk_version = obj_min_sdk_version,
-        target_compatible_with = ["@//build/bazel/platforms/os:android"],
+        target_compatible_with = ["@//build/bazel_common_rules/platforms/os:android"],
     )
     _min_sdk_version_target_flag_test(
         name = not_crt_not_apex_test_name,
         target_under_test = not_crt_obj_name,
         expected_min_sdk_version = obj_min_sdk_version,
-        target_compatible_with = ["@//build/bazel/platforms/os:android"],
+        target_compatible_with = ["@//build/bazel_common_rules/platforms/os:android"],
     )
 
     return [
@@ -186,7 +186,7 @@ def _cc_object_partial_linking():
     _cc_object_partial_linking_test(
         name = test_name,
         target_under_test = name,
-        target_compatible_with = ["@//build/bazel/platforms/os:android"],
+        target_compatible_with = ["@//build/bazel_common_rules/platforms/os:android"],
     )
 
     return test_name

@@ -24,7 +24,7 @@ android_binary(
     name = "app",
     manifest = "AndroidManifest.xml",
     sdk_version = "current",
-    target_compatible_with = ["//build/bazel/platforms/os:android"],
+    target_compatible_with = ["//build/bazel_common_rules/platforms/os:android"],
     deps = [
         ":applib",
         ":jni",
@@ -36,7 +36,7 @@ android_binary(
     certificate_name = "platform",
     manifest = "AndroidManifest.xml",
     sdk_version = "current",
-    target_compatible_with = ["//build/bazel/platforms/os:android"],
+    target_compatible_with = ["//build/bazel_common_rules/platforms/os:android"],
     deps = [
         ":applib",
     ],
@@ -47,7 +47,7 @@ android_binary(
     certificate = "//build/make/target/product/security:aosp-testkey",
     manifest = "AndroidManifest.xml",
     sdk_version = "current",
-    target_compatible_with = ["//build/bazel/platforms/os:android"],
+    target_compatible_with = ["//build/bazel_common_rules/platforms/os:android"],
     deps = [
         ":applib",
     ],
@@ -63,7 +63,7 @@ android_library(
     manifest = "AndroidManifest.xml",
     resource_files = glob(["res/**"]),
     sdk_version = "current",
-    target_compatible_with = ["//build/bazel/platforms/os:android"],
+    target_compatible_with = ["//build/bazel_common_rules/platforms/os:android"],
     deps = [
         ":lib",
     ],
@@ -73,7 +73,7 @@ android_library(
     name = "lib",
     srcs = ["Lib.java"],
     sdk_version = "current",
-    target_compatible_with = ["//build/bazel/platforms/os:android"],
+    target_compatible_with = ["//build/bazel_common_rules/platforms/os:android"],
 )
 
 cc_library_shared(
@@ -95,7 +95,7 @@ aar_import(
     name = "import",
     aar = "example_lib.aar",
     sdk_version = "32",
-    target_compatible_with = ["//build/bazel/platforms/os:android"],
+    target_compatible_with = ["//build/bazel_common_rules/platforms/os:android"],
 )
 
 # This is a minimal app that builds against the NDK
@@ -103,7 +103,7 @@ android_binary(
     name = "app_with_sdk_variant_of_jni_deps",
     manifest = "AndroidManifest.xml",
     sdk_version = "current",
-    target_compatible_with = ["//build/bazel/platforms/os:android"],
+    target_compatible_with = ["//build/bazel_common_rules/platforms/os:android"],
     deps = [
         "//external/dexmaker:libdexmakerjvmtiagent",
         "//external/dexmaker:libstaticjvmtiagent",

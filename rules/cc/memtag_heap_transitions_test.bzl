@@ -173,7 +173,7 @@ def _test_memtag_heap_passed_in_features_override_include_paths():
         name = name,
         srcs = ["foo.cpp"],
         features = select({
-            "//build/bazel/platforms/os_arch:android_arm64": ["-memtag_heap"],
+            "//build/bazel_common_rules/platforms/os_arch:android_arm64": ["-memtag_heap"],
             "//conditions:default": [],
         }),
         tags = ["manual"],
