@@ -16,7 +16,6 @@ limitations under the License.
 
 load("@rules_kotlin//kotlin:compiler_opt.bzl", "kt_compiler_opt")
 load("@rules_kotlin//kotlin:jvm_library.bzl", _kt_jvm_library = "kt_jvm_library")
-load("//build/bazel/rules/java:import.bzl", "java_import")
 load("//build/bazel/rules/java:java_resources.bzl", "java_resources")
 load("//build/bazel/rules/java:sdk_transition.bzl", "sdk_transition_attrs")
 
@@ -58,13 +57,7 @@ def kt_jvm_library(
             module by adding the "-XepDisableAllChecks" flag to javacopts
         """
     if resource_strip_prefix != None:
-        java_import_name = name + "__kt_res"
         kt_res_jar_name = name + "__kt_res_jar"
-
-        java_import(
-            name = java_import_name,
-            jars = [":" + kt_res_jar_name],
-        )
 
         java_resources(
             name = kt_res_jar_name,
@@ -72,7 +65,7 @@ def kt_jvm_library(
             resource_strip_prefix = resource_strip_prefix,
         )
 
-        deps = deps + [":" + java_import_name]
+        deps = deps + [":" + kt_res_jar_name]
 
     custom_kotlincopts = make_kt_compiler_opt(name, kotlincflags)
 
