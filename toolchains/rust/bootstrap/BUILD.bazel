@@ -47,8 +47,8 @@ rust_toolchain(
 
 toolchain(
     name = "android_arm64_base_rust_toolchain",
-    exec_compatible_with = ["//build/bazel/platforms/os:linux"],
-    target_compatible_with = ["//build/bazel/platforms/os:android"],
+    exec_compatible_with = ["//build/bazel_common_rules/platforms/os:linux"],
+    target_compatible_with = ["//build/bazel_common_rules/platforms/os:android"],
     toolchain = ":android_arm64_base_rust_toolchain_impl",
     toolchain_type = "@rules_rust//rust:toolchain_type",
 )

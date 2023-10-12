@@ -640,12 +640,12 @@ def toolchain_definition(arch, variant, nocrt = False):
     native.toolchain(
         name = name,
         exec_compatible_with = [
-            "//build/bazel/platforms/arch:x86_64",
-            "//build/bazel/platforms/os:linux",
+            "//build/bazel_common_rules/platforms/arch:x86_64",
+            "//build/bazel_common_rules/platforms/os:linux",
         ],
         target_compatible_with = [
-            "//build/bazel/platforms/arch:%s" % arch,
-            "//build/bazel/platforms/os:android",
+            "//build/bazel_common_rules/platforms/arch:%s" % arch,
+            "//build/bazel_common_rules/platforms/os:android",
         ] + variant_constraints(
             variant,
             _arch_constants.AndroidArchToVariantToFeatures[arch],

@@ -60,7 +60,7 @@ common_attrs = {
         allow_single_file = True,
     ),
     "_android_constraint": attr.label(
-        default = Label("//build/bazel/platforms/os:android"),
+        default = Label("//build/bazel_common_rules/platforms/os:android"),
     ),
 }
 

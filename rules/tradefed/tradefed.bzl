@@ -654,7 +654,7 @@ def tradefed_test_suite(
             # There shouldn't be package-external dependencies on the internal tests.
             ("visibility", ["//visibility:private"]),
             # Tradefed harness always builds for host.
-            ("target_compatible_with", ["//build/bazel/platforms/os:linux"]),
+            ("target_compatible_with", ["//build/bazel_common_rules/platforms/os:linux"]),
             # List of binary modules that should be installed alongside the test
             ("data_bins", data_bins),
         ],
@@ -725,7 +725,7 @@ def tradefed_test_suite(
         # Warning: be careful when specifying tags here, as tags have special
         # meaning in test suites for filtering tests.
         tags = tags,
-        target_compatible_with = ["//build/bazel/platforms/os:linux"],
+        target_compatible_with = ["//build/bazel_common_rules/platforms/os:linux"],
     )
 
 def _test_filter_generator_impl(ctx, name_suffix = "", progress_message = ""):

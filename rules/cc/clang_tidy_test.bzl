@@ -545,7 +545,7 @@ def _create_cc_library_static_generates_clang_tidy_actions_for_srcs(
         srcs = srcs,
         disabled_srcs = disabled_srcs,
         expected_headers = expected_headers + select({
-            "//build/bazel/platforms/os:android": ["@//bionic/libc:generated_android_ids"],
+            "//build/bazel_common_rules/platforms/os:android": ["@//bionic/libc:generated_android_ids"],
             "//conditions:default": [],
         }),
     )
