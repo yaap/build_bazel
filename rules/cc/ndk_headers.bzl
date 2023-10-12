@@ -171,19 +171,19 @@ ndk_headers = rule(
             default = Label("//bionic/libc:versioner-dependencies"),
         ),
         "_arm_constraint": attr.label(
-            default = Label("//build/bazel/platforms/arch:arm"),
+            default = Label("//build/bazel_common_rules/platforms/arch:arm"),
         ),
         "_arm64_constraint": attr.label(
-            default = Label("//build/bazel/platforms/arch:arm64"),
+            default = Label("//build/bazel_common_rules/platforms/arch:arm64"),
         ),
         "_riscv64_constraint": attr.label(
-            default = Label("//build/bazel/platforms/arch:riscv64"),
+            default = Label("//build/bazel_common_rules/platforms/arch:riscv64"),
         ),
         "_x86_constraint": attr.label(
-            default = Label("//build/bazel/platforms/arch:x86"),
+            default = Label("//build/bazel_common_rules/platforms/arch:x86"),
         ),
         "_x86_64_constraint": attr.label(
-            default = Label("//build/bazel/platforms/arch:x86_64"),
+            default = Label("//build/bazel_common_rules/platforms/arch:x86_64"),
         ),
     },
     provides = [CcInfo],

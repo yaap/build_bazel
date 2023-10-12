@@ -128,8 +128,8 @@ def _test_clang_version_paths(
         expected_clang_path = expected_clang_path,
         expected_libclang_rt_path = expected_libclang_rt_builtins_path,
         target_compatible_with = [
-            "//build/bazel/platforms/os:" + os,
-            "//build/bazel/platforms/arch:" + arch,
+            "//build/bazel_common_rules/platforms/os:" + os,
+            "//build/bazel_common_rules/platforms/arch:" + arch,
         ],
     )
     return test_name

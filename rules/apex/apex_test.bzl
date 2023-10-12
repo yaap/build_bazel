@@ -192,7 +192,7 @@ def _test_canned_fs_config_binaries():
             "/lib{64_OR_BLANK} 0 2000 0755",
             "",  # ends with a newline
         ],
-        target_compatible_with = ["//build/bazel/platforms/os:android"],
+        target_compatible_with = ["//build/bazel_common_rules/platforms/os:android"],
     )
 
     return test_name
@@ -231,7 +231,7 @@ def _test_canned_fs_config_native_shared_libs_arm():
             "/lib 0 2000 0755",
             "",  # ends with a newline
         ],
-        target_compatible_with = ["//build/bazel/platforms/arch:arm"],
+        target_compatible_with = ["//build/bazel_common_rules/platforms/arch:arm"],
     )
 
     return test_name
@@ -273,7 +273,7 @@ def _test_canned_fs_config_native_shared_libs_arm64():
             "/lib64 0 2000 0755",
             "",  # ends with a newline
         ],
-        target_compatible_with = ["//build/bazel/platforms/arch:arm64"],
+        target_compatible_with = ["//build/bazel_common_rules/platforms/arch:arm64"],
     )
 
     return test_name
@@ -443,7 +443,7 @@ def _test_canned_fs_config_runtime_deps():
             "/lib{64_OR_BLANK} 0 2000 0755",
             "",  # ends with a newline
         ],
-        target_compatible_with = ["//build/bazel/platforms/os:android"],
+        target_compatible_with = ["//build/bazel_common_rules/platforms/os:android"],
     )
 
     return test_name
@@ -782,7 +782,7 @@ def _test_apex_manifest_dependencies_requires():
         requires_native_libs = [name + "_libfoo"],
         provides_native_libs = [name + "_lib_with_dep"],
         make_modules_to_install = [name + "_libfoo"],
-        target_compatible_with = ["//build/bazel/platforms/os:android"],
+        target_compatible_with = ["//build/bazel_common_rules/platforms/os:android"],
     )
 
     return test_name
@@ -905,7 +905,7 @@ def _test_apex_manifest_dependencies_selfcontained():
             name + "_libfoo",
         ],
         make_modules_to_install = [],
-        target_compatible_with = ["//build/bazel/platforms/os:android"],
+        target_compatible_with = ["//build/bazel_common_rules/platforms/os:android"],
     )
 
     return test_name
@@ -1000,7 +1000,7 @@ def _test_apex_manifest_dependencies_cc_binary():
             name + "_librequires",
             name + "_librequires2",
         ],
-        target_compatible_with = ["//build/bazel/platforms/os:android"],
+        target_compatible_with = ["//build/bazel_common_rules/platforms/os:android"],
     )
 
     return test_name
@@ -2275,14 +2275,14 @@ def _test_apex_transition():
     apex_transition_test(
         name = test_name + "_32",
         target_under_test = name,
-        target_compatible_with = ["//build/bazel/platforms/os:android", "//build/bazel/platforms/arch:arm"],
+        target_compatible_with = ["//build/bazel_common_rules/platforms/os:android", "//build/bazel_common_rules/platforms/arch:arm"],
         expected = ["-march=armv7-a"],
     )
 
     apex_transition_test(
         name = test_name + "_64",
         target_under_test = name,
-        target_compatible_with = ["//build/bazel/platforms/os:android", "//build/bazel/platforms/arch:arm64"],
+        target_compatible_with = ["//build/bazel_common_rules/platforms/os:android", "//build/bazel_common_rules/platforms/arch:arm64"],
         expected = ["-march=armv8-a"],
     )
 

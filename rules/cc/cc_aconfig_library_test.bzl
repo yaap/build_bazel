@@ -54,7 +54,7 @@ def test_cc_aconfig_library_action():
         name = name,
         aconfig_declarations = ":" + aconfig_declarations_name,
         dynamic_deps = ["//system/server_configurable_flags/libflags:server_configurable_flags"],
-        target_compatible_with = ["//build/bazel/platforms/os:android"],
+        target_compatible_with = ["//build/bazel_common_rules/platforms/os:android"],
         tags = ["manual"],
     )
 
