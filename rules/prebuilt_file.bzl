@@ -12,6 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Contains prebuilt_file rule that handles prebuilt artifacts installation.
+"""
+
 PrebuiltFileInfo = provider(
     "Info needed for prebuilt_file modules",
     fields = {
@@ -21,7 +25,7 @@ PrebuiltFileInfo = provider(
         "installable": "Whether this is directly installable into one of the partitions",
     },
 )
-_handled_dirs = ["etc", "usr/share"]
+_handled_dirs = ["etc", "usr/share", "."]
 
 def _prebuilt_file_rule_impl(ctx):
     src = ctx.file.src
@@ -44,6 +48,9 @@ def _prebuilt_file_rule_impl(ctx):
         filename = src.basename
     else:
         filename = ctx.attr.name
+
+    if "/" in filename:
+        fail("filename cannot contain separator '/'")
 
     return [
         PrebuiltFileInfo(
@@ -77,9 +84,9 @@ def prebuilt_file(
         dir,
         filename = None,
         installable = True,
+        filename_from_src = False,
         # TODO(b/207489266): Fully support;
         # data is currently dropped to prevent breakages from e.g. prebuilt_etc
-        filename_from_src = False,
         data = [],  # @unused
         **kwargs):
     "Bazel macro to correspond with the e.g. prebuilt_etc and prebuilt_usr_share Soong modules."
