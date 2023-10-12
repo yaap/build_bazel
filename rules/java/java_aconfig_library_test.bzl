@@ -57,7 +57,7 @@ def test_java_aconfig_library_action():
     java_aconfig_library(
         name = name,
         aconfig_declarations = ":" + aconfig_declarations_name,
-        target_compatible_with = ["//build/bazel/platforms/os:android"],
+        target_compatible_with = ["//build/bazel_common_rules/platforms/os:android"],
         tags = ["manual"],
     )
 
@@ -142,7 +142,7 @@ def _test_java_aconfig_library_rule_rt(name):
         java_aconfig_library,
         name = target,
         aconfig_declarations = ":" + aconfig_declarations_name,
-        target_compatible_with = ["//build/bazel/platforms/os:android"],
+        target_compatible_with = ["//build/bazel_common_rules/platforms/os:android"],
         tags = ["manual"],
     )
     analysis_test(

@@ -64,7 +64,7 @@ sh_test(
     ],
     # This is a host test.
     target_compatible_with = select({
-        "//build/bazel/platforms/os:linux": [],
+        "//build/bazel_common_rules/platforms/os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = ["@bazel_tools//tools/bash/runfiles"],

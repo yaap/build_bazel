@@ -211,18 +211,18 @@ def _stl_flags(stl_name, is_shared):
 
     return struct(
         cppflags = select({
-            "//build/bazel/platforms/os:bionic": [],
+            "//build/bazel_common_rules/platforms/os:bionic": [],
             "//build/bazel/rules/apex:unbundled_app": [],
             "//conditions:default": cppflags_not_bionic,
         }) + select({
-            "//build/bazel/platforms/os:darwin": cppflags_darwin,
-            "//build/bazel/platforms/os:windows": (
+            "//build/bazel_common_rules/platforms/os:darwin": cppflags_darwin,
+            "//build/bazel_common_rules/platforms/os:windows": (
                 cppflags_windows_not_bionic
             ),
             "//conditions:default": [],
         }),
         linkopts = select({
-            "//build/bazel/platforms/os:bionic": [],
+            "//build/bazel_common_rules/platforms/os:bionic": [],
             "//build/bazel/rules/apex:unbundled_app": [],
             "//build/bazel/rules/apex:unbundled_app.arm": ["-Wl,--exclude-libs,libunwind.a"],
             "//conditions:default": linkopts_not_bionic,

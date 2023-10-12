@@ -27,46 +27,46 @@ load("@env//:env.bzl", "env")
 # here.
 host_platforms = {
     "linux_x86": [
-        "@//build/bazel/platforms/arch:x86",
-        "@//build/bazel/platforms/os:linux",
+        "@//build/bazel_common_rules/platforms/arch:x86",
+        "@//build/bazel_common_rules/platforms/os:linux",
     ],
     "linux_x86_64": [
-        "@//build/bazel/platforms/arch:x86_64",
-        "@//build/bazel/platforms/os:linux",
+        "@//build/bazel_common_rules/platforms/arch:x86_64",
+        "@//build/bazel_common_rules/platforms/os:linux",
     ],
     "linux_musl_x86": [
-        "@//build/bazel/platforms/arch:x86",
-        "@//build/bazel/platforms/os:linux_musl",
+        "@//build/bazel_common_rules/platforms/arch:x86",
+        "@//build/bazel_common_rules/platforms/os:linux_musl",
     ],
     "linux_musl_x86_64": [
-        "@//build/bazel/platforms/arch:x86_64",
-        "@//build/bazel/platforms/os:linux_musl",
+        "@//build/bazel_common_rules/platforms/arch:x86_64",
+        "@//build/bazel_common_rules/platforms/os:linux_musl",
     ],
     # linux_bionic is the OS for the Linux kernel plus the Bionic libc runtime,
     # but without the rest of Android.
     "linux_bionic_arm64": [
-        "@//build/bazel/platforms/arch:arm64",
-        "@//build/bazel/platforms/os:linux_bionic",
+        "@//build/bazel_common_rules/platforms/arch:arm64",
+        "@//build/bazel_common_rules/platforms/os:linux_bionic",
     ],
     "linux_bionic_x86_64": [
-        "@//build/bazel/platforms/arch:x86_64",
-        "@//build/bazel/platforms/os:linux_bionic",
+        "@//build/bazel_common_rules/platforms/arch:x86_64",
+        "@//build/bazel_common_rules/platforms/os:linux_bionic",
     ],
     "darwin_arm64": [
-        "@//build/bazel/platforms/arch:arm64",
-        "@//build/bazel/platforms/os:darwin",
+        "@//build/bazel_common_rules/platforms/arch:arm64",
+        "@//build/bazel_common_rules/platforms/os:darwin",
     ],
     "darwin_x86_64": [
-        "@//build/bazel/platforms/arch:x86_64",
-        "@//build/bazel/platforms/os:darwin",
+        "@//build/bazel_common_rules/platforms/arch:x86_64",
+        "@//build/bazel_common_rules/platforms/os:darwin",
     ],
     "windows_x86": [
-        "@//build/bazel/platforms/arch:x86",
-        "@//build/bazel/platforms/os:windows",
+        "@//build/bazel_common_rules/platforms/arch:x86",
+        "@//build/bazel_common_rules/platforms/os:windows",
     ],
     "windows_x86_64": [
-        "@//build/bazel/platforms/arch:x86_64",
-        "@//build/bazel/platforms/os:windows",
+        "@//build/bazel_common_rules/platforms/arch:x86_64",
+        "@//build/bazel_common_rules/platforms/os:windows",
     ],
 }
 
@@ -141,9 +141,9 @@ def _define_platform_for_arch(name, common_constraints, arch, secondary_arch = N
     native.platform(
         name = name,
         constraint_values = common_constraints + [
-            "@//build/bazel/platforms/arch:" + arch.arch,
-            "@//build/bazel/platforms/arch:secondary_" + secondary_arch.arch,
-            "@//build/bazel/platforms/os:android",
+            "@//build/bazel_common_rules/platforms/arch:" + arch.arch,
+            "@//build/bazel_common_rules/platforms/arch:secondary_" + secondary_arch.arch,
+            "@//build/bazel_common_rules/platforms/os:android",
         ] + ["@" + v for v in variant_constraints(
             arch,
             _arch_constants.AndroidArchToVariantToFeatures[arch.arch],
@@ -189,7 +189,7 @@ def android_product(*, name, soong_variables, extra_constraints = []):
     during the product config step.
 
     Some constraints used here are handcrafted in
-    //build/bazel/platforms/{arch,os}. The rest are dynamically generated.
+    //build/bazel_common_rules/platforms/{arch,os}. The rest are dynamically generated.
 
     If you're looking for what --config=android, --config=linux_x86_64 or most
     select statements in the BUILD files (ultimately) refer to, they're all
@@ -217,9 +217,9 @@ def android_product(*, name, soong_variables, extra_constraints = []):
                 native.platform(
                     name = name + "_android_" + arch + variant_name(variant),
                     constraint_values = common_constraints + [
-                        "@//build/bazel/platforms/arch:" + arch,
-                        "@//build/bazel/platforms/arch:secondary_" + arch,
-                        "@//build/bazel/platforms/os:android",
+                        "@//build/bazel_common_rules/platforms/arch:" + arch,
+                        "@//build/bazel_common_rules/platforms/arch:secondary_" + arch,
+                        "@//build/bazel_common_rules/platforms/os:android",
                     ] + ["@" + v for v in variant_constraints(
                         variant,
                         _arch_constants.AndroidArchToVariantToFeatures[arch],
