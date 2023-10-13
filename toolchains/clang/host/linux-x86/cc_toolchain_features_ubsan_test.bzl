@@ -148,7 +148,7 @@ def ubsan_disablement_linux_test(
         target_under_test = target_under_test,
         expected_disabled_sanitizer = expected_disabled_sanitizer,
         disabled = disabled,
-        target_compatible_with = ["@//build/bazel/platforms/os:linux"],
+        target_compatible_with = ["@//build/bazel_common_rules/platforms/os:linux"],
     )
 
 def ubsan_disablement_linux_bionic_test(
@@ -161,7 +161,7 @@ def ubsan_disablement_linux_bionic_test(
         target_under_test = target_under_test,
         expected_disabled_sanitizer = expected_disabled_sanitizer,
         disabled = disabled,
-        target_compatible_with = ["@//build/bazel/platforms/os:linux_bionic"],
+        target_compatible_with = ["@//build/bazel_common_rules/platforms/os:linux_bionic"],
     )
 
 def ubsan_disablement_android_test(
@@ -174,7 +174,7 @@ def ubsan_disablement_android_test(
         target_under_test = target_under_test,
         expected_disabled_sanitizer = expected_disabled_sanitizer,
         disabled = disabled,
-        target_compatible_with = ["@//build/bazel/platforms/os:android"],
+        target_compatible_with = ["@//build/bazel_common_rules/platforms/os:android"],
     )
 
 def _test_ubsan_implicit_integer_sign_change_disabled_when_linux_with_integer():
@@ -418,53 +418,53 @@ def _test_ubsan_no_link_runtime():
 
 def action_flags_present_linux_test(**kwargs):
     action_flags_present_only_for_mnemonic_test(
-        target_compatible_with = ["@//build/bazel/platforms/os:linux"],
+        target_compatible_with = ["@//build/bazel_common_rules/platforms/os:linux"],
         **kwargs
     )
 
 def action_flags_present_android_test(**kwargs):
     action_flags_present_only_for_mnemonic_test(
-        target_compatible_with = ["@//build/bazel/platforms/os:android"],
+        target_compatible_with = ["@//build/bazel_common_rules/platforms/os:android"],
         **kwargs
     )
 
 # TODO(b/263787980): Uncomment when bionic toolchain is implemented
 #def action_flags_present_linux_bionic_test(**kwargs):
 #    action_flags_present_only_for_mnemonic_test(
-#        target_compatible_with = ["@//build/bazel/platforms/os:linux_bionic"],
+#        target_compatible_with = ["@//build/bazel_common_rules/platforms/os:linux_bionic"],
 #        **kwargs
 #    )
 
 # TODO(b/263787526): Uncomment when musl toolchain is implemented
 #def action_flags_present_linux_musl_test(**kwargs):
 #    action_flags_present_only_for_mnemonic_test(
-#        target_compatible_with = ["@//build/bazel/platforms/os:linux_musl"],
+#        target_compatible_with = ["@//build/bazel_common_rules/platforms/os:linux_musl"],
 #        **kwargs
 #    )
 
 def action_flags_absent_linux_test(**kwargs):
     action_flags_absent_for_mnemonic_test(
-        target_compatible_with = ["@//build/bazel/platforms/os:linux"],
+        target_compatible_with = ["@//build/bazel_common_rules/platforms/os:linux"],
         **kwargs
     )
 
 def action_flags_absent_android_test(**kwargs):
     action_flags_absent_for_mnemonic_test(
-        target_compatible_with = ["@//build/bazel/platforms/os:android"],
+        target_compatible_with = ["@//build/bazel_common_rules/platforms/os:android"],
         **kwargs
     )
 
 # TODO(b/263787980): Uncomment when bionic toolchain is implemented
 #def action_flags_absent_linux_bionic_test(**kwargs):
 #    action_flags_absent_for_mnemonic_test(
-#        target_compatible_with = ["@//build/bazel/platforms/os:linux_bionic"],
+#        target_compatible_with = ["@//build/bazel_common_rules/platforms/os:linux_bionic"],
 #        **kwargs
 #    )
 
 # TODO(b/263787526): Uncomment when musl toolchain is implemented
 #def action_flags_absent_linux_musl_test(**kwargs):
 #    action_flags_absent_for_mnemonic_test(
-#        target_compatible_with = ["@//build/bazel/platforms/os:linux_musl"],
+#        target_compatible_with = ["@//build/bazel_common_rules/platforms/os:linux_musl"],
 #        **kwargs
 #    )
 
@@ -548,8 +548,8 @@ def _test_no_undefined_flag_present_when_bionic_or_musl():
 #        mnemonics = [compile_action_mnemonic],
 #        expected_absent_flags = [ubsan_prefix_format % "undefined"]
 #        target_compatible_with = [
-#            "//build/bazel/platforms/os:darwin",
-#            "//build/bazel/platforms/os:windows",
+#            "//build/bazel_common_rules/platforms/os:darwin",
+#            "//build/bazel_common_rules/platforms/os:windows",
 #        ]
 #    )
 #
@@ -705,8 +705,8 @@ def _exclude_rt_test_for_os_arch(target_name, os, arch, flag):
         mnemonics = [link_action_mnemonic],
         expected_flags = [flag],
         target_compatible_with = [
-            "//build/bazel/platforms/os:" + os,
-            "//build/bazel/platforms/arch:" + arch,
+            "//build/bazel_common_rules/platforms/os:" + os,
+            "//build/bazel_common_rules/platforms/arch:" + arch,
         ],
     )
 

@@ -2,7 +2,7 @@
 # b test //build/bazel/tests/deviceless
 test_suite(
     name = "deviceless",
-    target_compatible_with = ["//build/bazel/platforms/os:linux"],
+    target_compatible_with = ["//build/bazel_common_rules/platforms/os:linux"],
     tests = [
         label + "__tf_deviceless_test"
         for label in [

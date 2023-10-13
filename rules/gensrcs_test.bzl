@@ -188,7 +188,7 @@ __gensrcs_tool_builds_for_host_test = analysistest.make(
 
 def _gensrcs_tool_builds_for_host_test(**kwargs):
     __gensrcs_tool_builds_for_host_test(
-        target_compatible_with = ["//build/bazel/platforms/os:android"],  # ensure target != host so there is a transition
+        target_compatible_with = ["//build/bazel_common_rules/platforms/os:android"],  # ensure target != host so there is a transition
         **kwargs
     )
 
@@ -200,7 +200,7 @@ def _test_gensrcs_tool_builds_for_host():
         cmd = "touch $@",
         target_compatible_with = select({
             # only supported OS is that specified as host_platform
-            "//build/bazel/platforms/os:linux": [],
+            "//build/bazel_common_rules/platforms/os:linux": [],
             "//conditions:default": ["@platforms//:incompatible"],
         }),
         tags = ["manual"],

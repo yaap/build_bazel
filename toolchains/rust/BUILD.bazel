@@ -70,8 +70,8 @@ rust_toolchain(
 
 toolchain(
     name = "toolchain_x86_64_unknown-linux-gnu",
-    exec_compatible_with = ["//build/bazel/platforms/os:linux"],
-    target_compatible_with = ["//build/bazel/platforms/os:linux"],
+    exec_compatible_with = ["//build/bazel_common_rules/platforms/os:linux"],
+    target_compatible_with = ["//build/bazel_common_rules/platforms/os:linux"],
     toolchain = ":toolchain_x86_64_unknown-linux-gnu_impl",
     toolchain_type = "@rules_rust//rust:toolchain_type",
 )
@@ -111,8 +111,8 @@ rust_toolchain(
 
 toolchain(
     name = "rust_toolchain_aarch64-linux-android",
-    exec_compatible_with = ["//build/bazel/platforms/os:linux"],
-    target_compatible_with = ["//build/bazel/platforms/os:android"],
+    exec_compatible_with = ["//build/bazel_common_rules/platforms/os:linux"],
+    target_compatible_with = ["//build/bazel_common_rules/platforms/os:android"],
     toolchain = ":rust_toolchain_aarch64-linux-android_impl",
     toolchain_type = "@rules_rust//rust:toolchain_type",
 )
