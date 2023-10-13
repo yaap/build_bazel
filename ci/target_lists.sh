@@ -28,6 +28,9 @@ BUILD_TARGETS=(
   //tools/asuite/...
   //tools/platform-compat/...
 
+  # TODO: b/305044271 - Fix linking error caused by fdo transition
+  -//art/libartbase:all
+  -//art/libdexfile:all
   # TODO(b/266459895): remove these after re-enabling libunwindstack
   -//bionic/libc/malloc_debug:libc_malloc_debug
   -//bionic/libfdtrack:libfdtrack
