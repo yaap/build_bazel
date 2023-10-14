@@ -15,8 +15,7 @@
 load("@bazel_skylib//lib:paths.bzl", "paths")
 load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 load(":aconfig_value_set.bzl", "AconfigValueSetInfo")
-
-RELEASE_ACONFIG_VALUE_SETS_KEY = "@//build/bazel/product_config:release_aconfig_value_sets"
+load(":aconfig_value_sets.bzl", "AconfigValueSetsInfo")
 
 AconfigDeclarationsInfo = provider(fields = [
     "package",
@@ -26,10 +25,11 @@ AconfigDeclarationsInfo = provider(fields = [
 def _aconfig_declarations_rule_impl(ctx):
     value_files = []
     transitive = []
-    value_set = ctx.attr._value_set[AconfigValueSetInfo].available_packages.get(ctx.attr.package)
-    if value_set != None:
-        value_files = value_set.to_list()
-        transitive = [value_set]
+    for value_set in ctx.attr._value_sets[AconfigValueSetsInfo].value_sets:
+        value_set_info = value_set[AconfigValueSetInfo].available_packages.get(ctx.attr.package)
+        if value_set_info != None:
+            value_files.extend(value_set_info.to_list())
+            transitive.append(value_set_info)
 
     output = ctx.actions.declare_file(paths.join(ctx.label.name, "intermediate.pb"))
 
@@ -78,9 +78,9 @@ aconfig_declarations = rule(
             cfg = "exec",
             default = Label("//build/make/tools/aconfig:aconfig"),
         ),
-        "_value_set": attr.label(
+        "_value_sets": attr.label(
             default = "//build/bazel/product_config:release_aconfig_value_sets",
-            providers = [AconfigValueSetInfo],
+            providers = [AconfigValueSetsInfo],
         ),
         "_release_version": attr.label(
             default = "//build/bazel/product_config:release_version",
