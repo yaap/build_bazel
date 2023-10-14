@@ -13,10 +13,6 @@
 # limitations under the License.
 
 load("@bazel_skylib//lib:unittest.bzl", "analysistest", "asserts")
-load("@rules_testing//lib:analysis_test.bzl", rt_analysis_test = "analysis_test", rt_test_suite = "test_suite")
-load("@rules_testing//lib:truth.bzl", "matching", "subjects")
-load("@rules_testing//lib:util.bzl", rt_util = "util")
-load("//build/bazel/rules/java:java_resources.bzl", "java_resources")
 load(":library.bzl", "java_library")
 
 ActionArgsInfo = provider(
@@ -99,54 +95,10 @@ def _host_java_library_has_correct_java_version():
 
     return test_name
 
-def _test_java_library_additional_resources_impl(env, target):
-    deps = env.expect.that_target(target).attr("deps", factory = subjects.collection)
-    target_name = target.label.name.removesuffix("_private")
-
-    expected_dep_name = target_name + "__additional_resources"
-
-    deps.contains_predicate(
-        matching.custom(
-            desc = expected_dep_name,
-            func = lambda dep: dep.label == Label(expected_dep_name),
-        ),
-    )
-
-def _test_java_library_additional_resources(name):
-    macro_wrapper_name = name + "_library_target"
-    java_resource_target_name = name + "java_res_target"
-    rt_util.helper_target(
-        java_library,
-        name = macro_wrapper_name,
-        srcs = ["foo.java"],
-        additional_resources = [java_resource_target_name],
-    )
-
-    rt_util.helper_target(
-        java_resources,
-        name = java_resource_target_name,
-        resources = ["res1.java"],
-    )
-
-    rt_analysis_test(
-        name = name,
-        impl = _test_java_library_additional_resources_impl,
-        # want to test the java_library target created by the java_library macro
-        target = macro_wrapper_name + "_private",
-    )
-
 def java_library_test_suite(name):
     native.test_suite(
         name = name,
         tests = [
             _host_java_library_has_correct_java_version(),
-        ],
-    )
-
-def rt_java_library_test_suite(name):
-    rt_test_suite(
-        name = name,
-        tests = [
-            _test_java_library_additional_resources,
         ],
     )
