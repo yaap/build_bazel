@@ -31,16 +31,33 @@ def test_aconfig_declarations_action():
     package = "com.android.aconfig.test"
 
     aconfig_value_set(
-        name = "aconfig.test.value_set",
-        values = [":aconfig.test.values"],
+        name = "aconfig.test.value_set1",
+        values = [":aconfig.test.values1"],
+        visibility = ["//visibility:public"],
+        tags = ["manual"],
+    )
+
+    aconfig_value_set(
+        name = "aconfig.test.value_set2",
+        values = [":aconfig.test.values2"],
+        visibility = ["//visibility:public"],
         tags = ["manual"],
     )
 
     aconfig_values(
-        name = "aconfig.test.values",
+        name = "aconfig.test.values1",
         package = package,
         srcs = [
-            "test.textproto",
+            "test1.textproto",
+        ],
+        tags = ["manual"],
+    )
+
+    aconfig_values(
+        name = "aconfig.test.values2",
+        package = package,
+        srcs = [
+            "test2.textproto",
         ],
         tags = ["manual"],
     )
@@ -65,7 +82,8 @@ def test_aconfig_declarations_action():
             "--declarations",
             "build/bazel/rules/aconfig/test.aconfig",
             "--values",
-            "build/bazel/rules/aconfig/test.textproto",
+            "build/bazel/rules/aconfig/test1.textproto",
+            "build/bazel/rules/aconfig/test2.textproto",
             "--default-permission",
             "READ_WRITE",
             "--cache",
