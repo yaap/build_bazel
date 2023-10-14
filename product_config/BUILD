@@ -1,5 +1,5 @@
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag", "string_flag", "string_list_flag")
-load("//build/bazel/rules/aconfig:aconfig_value_set.bzl", "aconfig_value_set")
+load("//build/bazel/rules/aconfig:aconfig_value_sets.bzl", "aconfig_value_sets")
 load(":product_variables_for_attributes.bzl", "product_variables_for_attributes")
 
 package(default_visibility = ["//visibility:public"])
@@ -129,11 +129,11 @@ label_flag(
 
 label_flag(
     name = "release_aconfig_value_sets",
-    build_setting_default = ":default_aconfig_value_set",
+    build_setting_default = ":empty_aconfig_value_sets",
 )
 
-aconfig_value_set(
-    name = "default_aconfig_value_set",
-    values = [],
-    visibility = ["//visibility:private"],
+aconfig_value_sets(
+    name = "empty_aconfig_value_sets",
+    value_sets = [],
+    visibility = ["//visibility:public"],
 )
