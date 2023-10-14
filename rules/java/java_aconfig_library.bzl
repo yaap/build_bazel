@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Macro wrapping the java_aconfig_library for bp2build. """
+
 load("@bazel_skylib//lib:paths.bzl", "paths")
 load("//build/bazel/rules/aconfig:aconfig_declarations.bzl", "AconfigDeclarationsInfo")
 load("//build/bazel/rules/java:sdk_transition.bzl", "sdk_transition")
@@ -133,16 +135,17 @@ def java_aconfig_library(
         sdk_version = "system_current",
         java_version = None,
         visibility = None,
+        libs = [],
         tags = [],
         target_compatible_with = []):
-    libs = [
+    combined_libs = [
         "//frameworks/libs/modules-utils/java:aconfig-annotations-lib",
         "//tools/platform-compat/java/android/compat/annotation:unsupportedappusage",
-    ]
+    ] + libs
     _java_aconfig_library(
         name = name,
         aconfig_declarations = aconfig_declarations,
-        libs = libs,
+        libs = combined_libs,
         test = test,
         sdk_version = sdk_version,
         java_version = java_version,
