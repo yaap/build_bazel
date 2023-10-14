@@ -62,7 +62,7 @@ products = {
     "aosp_arm64_for_testing_aconfig_release": dicts.add(
         _soong_variables_arm64,
         {"ReleaseAconfigFlagDefaultPermission": "READ_WRITE"},
-        {"ReleaseAconfigValueSets": "//build/bazel/rules/aconfig:aconfig.test.value_set"},
+        {"ReleaseAconfigValueSets": ["//build/bazel/rules/aconfig:aconfig.test.value_set1", "//build/bazel/rules/aconfig:aconfig.test.value_set2"]},
         {"ReleaseVersion": "34"},
     ),
 }
