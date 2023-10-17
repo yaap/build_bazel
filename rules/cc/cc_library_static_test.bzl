@@ -303,7 +303,7 @@ def _cc_rules_do_not_allow_absolute_includes():
         )
         cc_library_headers(
             name = library_headers_name,
-            absolute_includes = [include_dir],
+            export_absolute_includes = [include_dir],
             tags = ["manual"],
         )
         cc_library_shared(
