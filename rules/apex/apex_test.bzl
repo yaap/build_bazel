@@ -1906,7 +1906,7 @@ def _test_apex_available():
     )
     cc_library_headers(
         name = lib_headers_name,
-        absolute_includes = ["include_dir"],
+        export_absolute_includes = ["include_dir"],
         tags = [
             "manual",
             "apex_available_checked_manual_for_testing",
@@ -1969,7 +1969,7 @@ def _test_apex_available_failure():
     )
     cc_library_headers(
         name = lib_headers_name,
-        absolute_includes = ["include_dir"],
+        export_absolute_includes = ["include_dir"],
         tags = [
             "manual",
             "apex_available_checked_manual_for_testing",
