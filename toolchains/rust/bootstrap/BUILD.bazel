@@ -32,7 +32,7 @@ rust_prebuilts_path = "//prebuilts/rust/linux-x86/" + rust_version
 
 [
     rust_toolchain(
-        name = os + "_" + arch + "_base_rust_toolchain_impl",
+        name = "rust_toolchain_" + os + "_" + arch + "_base_impl",
         binary_ext = "",
         clippy_driver = rust_prebuilts_path + ":bin/clippy-driver",
         default_edition = "2018",
@@ -52,14 +52,14 @@ rust_prebuilts_path = "//prebuilts/rust/linux-x86/" + rust_version
 
 [
     toolchain(
-        name = os + "_" + arch + "_base_rust_toolchain",
+        name = "rust_toolchain_" + os + "_" + arch + "_base",
         exec_compatible_with = ["//build/bazel_common_rules/platforms/os:linux"],
         target_compatible_with = [
             "//build/bazel_common_rules/platforms/arch:" + arch,
             "//build/bazel_common_rules/platforms/os:" + os,
         ],
         target_settings = [":base_toolchain_enabled"],
-        toolchain = ":" + os + "_" + arch + "_base_rust_toolchain_impl",
+        toolchain = ":rust_toolchain_" + os + "_" + arch + "_base_impl",
         toolchain_type = "@rules_rust//rust:toolchain_type",
     )
     for (_, os, arch, __) in platforms
