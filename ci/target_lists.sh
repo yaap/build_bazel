@@ -10,7 +10,16 @@ BUILD_TARGETS=(
   //build/...
   //cts/...
   //development/...
-  //frameworks/...
+  //frameworks/av/media/liberror:libexpectedutils_test
+  //frameworks/av/media/module/foundation:libstagefright_foundation
+  //frameworks/base:framework-javastream-protos
+  //frameworks/base/api:merge_annotation_zips_test
+  //frameworks/base/services/core:statslog-art-java-gen
+  //frameworks/base/tools/aapt2:aapt2_tests
+  //frameworks/base/tools/processors/immutability:ImmutabilityAnnotation
+  //frameworks/native/cmds/installd:run_dex2oat_test
+  //frameworks/native/libs/binder/tests:binderUtilsHostTest
+  //frameworks/native/libs/fakeservicemanager:fakeservicemanager_test
   //hardware/...
   //libnativehelper/...
   //packages/modules/adb/...
@@ -23,7 +32,9 @@ BUILD_TARGETS=(
   //prebuilts/runtime/...
   //prebuilts/tools/...
   //platform_testing/...
-  //system/...
+  //system/libbase:libbase
+  //system/core/libcutils:libcutils
+  //system/core/libutils:libutils
   //tools/apksig/...
   //tools/asuite/...
   //tools/platform-compat/...
@@ -44,8 +55,14 @@ BUILD_TARGETS=(
   -//frameworks/native/libs/gui:libgui_bufferqueue_static
   -//frameworks/native/opengl/libs:libEGL
   -//frameworks/native/opengl/libs:libGLESv2
-  -//system/core/libutils:all
-  -//system/unwinding/libunwindstack:all
+)
+
+DEVICE_ONLY_TARGETS=(
+  //frameworks/native/services/surfaceflinger:libSurfaceFlingerProp
+  //frameworks/base/cmds/idmap2:libidmap2_policies
+  //frameworks/base/core/res:framework-res
+  //frameworks/ex/common:android-common
+  //frameworks/native/opengl/tests/testViewport:TestViewport
 )
 
 TEST_TARGETS=(
@@ -55,6 +72,9 @@ TEST_TARGETS=(
 )
 
 HOST_ONLY_TEST_TARGETS=(
+  //frameworks/base/tools/lint/common:AndroidCommonLint
+  //frameworks/base/tools/processors/immutability:ImmutabilityAnnotationProcessorHostLibrary
+  //frameworks/base/tools/processors/view_inspector:libview-inspector-annotation-processor
   //tools/trebuchet:AnalyzerKt
   //tools/metalava/metalava:metalava
   # This is explicitly listed to prevent b/294514745
