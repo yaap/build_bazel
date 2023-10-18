@@ -55,7 +55,7 @@ toolchain(
 )
 
 rust_toolchain(
-    name = "toolchain_x86_64_unknown-linux-gnu_impl",
+    name = "rust_toolchain_x86_64_unknown-linux-gnu_impl",
     binary_ext = "",
     default_edition = "2018",
     dylib_ext = ".so",
@@ -70,16 +70,16 @@ rust_toolchain(
 )
 
 toolchain(
-    name = "toolchain_x86_64_unknown-linux-gnu",
+    name = "rust_toolchain_x86_64_unknown-linux-gnu",
     exec_compatible_with = ["//build/bazel_common_rules/platforms/os:linux"],
     target_compatible_with = ["//build/bazel_common_rules/platforms/os:linux"],
-    toolchain = ":toolchain_x86_64_unknown-linux-gnu_impl",
+    toolchain = ":rust_toolchain_x86_64_unknown-linux-gnu_impl",
     toolchain_type = "@rules_rust//rust:toolchain_type",
 )
 
 [
     rust_toolchain(
-        name = os + "_" + arch + "_rust_toolchain_impl",
+        name = "rust_toolchain_" + os + "_" + arch + "_impl",
         binary_ext = "",
         clippy_driver = rust_prebuilts_path + ":bin/clippy-driver",
         default_edition = "2018",
@@ -114,13 +114,13 @@ toolchain(
 
 [
     toolchain(
-        name = os + "_" + arch + "_rust_toolchain",
+        name = "rust_toolchain_" + os + "_" + arch,
         exec_compatible_with = ["//build/bazel_common_rules/platforms/os:linux"],
         target_compatible_with = [
             "//build/bazel_common_rules/platforms/arch:" + arch,
             "//build/bazel_common_rules/platforms/os:" + os,
         ],
-        toolchain = ":" + os + "_" + arch + "_rust_toolchain_impl",
+        toolchain = ":rust_toolchain_" + os + "_" + arch + "_impl",
         toolchain_type = "@rules_rust//rust:toolchain_type",
     )
     for (target_triple, os, arch, _) in platforms
