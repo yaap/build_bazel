@@ -20,6 +20,10 @@ load(
 )
 load("//build/bazel/rules/java:sdk_transition.bzl", "sdk_transition_attrs")
 
+_sharded_java_library = experimental_java_library_export_do_not_use.sharded_java_library(
+    default_shard_size = 0,
+)
+
 # TODO(b/277801336): document these attributes.
 def java_library(
         name = "",
@@ -32,6 +36,7 @@ def java_library(
         tags = [],
         target_compatible_with = [],
         visibility = None,
+        javac_shard_size = 0,
         **kwargs):
     """ java_library macro wrapper that handles custom attrs needed in AOSP
 
@@ -48,16 +53,21 @@ def java_library(
         # TODO (b/227504307) temporarily disable errorprone until environment variable is handled
         opts = opts + ["-XepDisableAllChecks"]
 
-    _java_library(
-        name = lib_name,
-        srcs = srcs,
-        deps = deps,
-        javacopts = opts,
-        tags = tags + ["manual"],
-        target_compatible_with = target_compatible_with,
-        visibility = ["//visibility:private"],
-        **kwargs
-    )
+    args = {
+        "name": lib_name,
+        "srcs": srcs,
+        "deps": deps,
+        "javacopts": opts,
+        "tags": tags + ["manual"],
+        "target_compatible_with": target_compatible_with,
+        "visibility": ["//visibility:private"],
+    }
+    args.update(kwargs)
+    if javac_shard_size > 0:
+        args["experimental_javac_shard_size"] = javac_shard_size
+        _sharded_java_library(**args)
+    else:
+        _java_library(**args)
 
     java_library_sdk_transition(
         name = name,
