@@ -562,6 +562,23 @@ def _cc_library_combiner_impl(ctx):
         ),
     ]
     providers.extend(_generate_tidy_actions(ctx))
+    if ctx.attr.shared_linking:
+        providers.append(
+            # cc_shared_library only needs to traverse some attrs of the root library
+            cc_common.CcSharedLibraryHintInfo(
+                attributes = [
+                    "roots",
+                    "deps",
+                    "static_deps",
+                    "_ubsan_library",
+                ],
+            ),
+        )
+    else:
+        providers.append(cc_common.CcSharedLibraryHintInfo(
+            # cc_shared_library only needs to traverse some attrs of a static library
+            attributes = [],
+        ))
 
     return providers
 
@@ -707,7 +724,11 @@ _cc_library_combiner = rule(
         ),
     },
     toolchains = ["@bazel_tools//tools/cpp:toolchain_type"],
-    provides = [CcInfo, CcAndroidMkInfo],
+    provides = [
+        CcInfo,
+        CcAndroidMkInfo,
+        cc_common.CcSharedLibraryHintInfo,
+    ],
     fragments = ["cpp"],
 )
 
@@ -717,13 +738,19 @@ def _cc_includes_impl(ctx):
         ctx.attr.absolute_includes,
     )
 
-    return [create_ccinfo_for_includes(
-        ctx,
-        includes = ctx.attr.includes,
-        absolute_includes = ctx.attr.absolute_includes,
-        system_includes = ctx.attr.system_includes,
-        deps = ctx.attr.deps,
-    )]
+    return [
+        create_ccinfo_for_includes(
+            ctx,
+            includes = ctx.attr.includes,
+            absolute_includes = ctx.attr.absolute_includes,
+            system_includes = ctx.attr.system_includes,
+            deps = ctx.attr.deps,
+        ),
+        cc_common.CcSharedLibraryHintInfo(
+            # cc_shared_library shouldn't ever traverse into deps of includes
+            attributes = [],
+        ),
+    ]
 
 # Bazel's native cc_library rule supports specifying include paths two ways:
 # 1. non-exported includes can be specified via copts attribute
@@ -744,5 +771,5 @@ _cc_includes = rule(
     },
     toolchains = ["@bazel_tools//tools/cpp:toolchain_type"],
     fragments = ["cpp"],
-    provides = [CcInfo],
+    provides = [CcInfo, cc_common.CcSharedLibraryHintInfo],
 )
