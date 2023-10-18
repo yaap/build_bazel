@@ -61,22 +61,22 @@ def modify_private_method(file: Path) -> CujGroup:
 
 
 def add_private_field(file: Path) -> CujGroup:
-    pattern = r"^\}$"
+    class_name = file.name.removesuffix('.java')
+    pattern = fr"(\bclass {class_name} {{)"
 
     def replacement():
-        return (
-            r"private static final int FOO = " + str(random.randint(0, 10000000)) + ";\n}"
-        )
+        return f"\\1\nprivate static final int FOO = {random.randint(0, 10_000_000)};\n"
 
     modify_type = "add_private_field"
     return RegexModify(file, pattern, replacement, modify_type)
 
 
 def add_public_api(file: Path) -> CujGroup:
-    pattern = r"\}$"
+    class_name = file.name.removesuffix('.java')
+    pattern = fr"(\bclass {class_name} {{)"
 
     def replacement():
-        return r"public static final int BAZ = " + str(random.randint(0, 10000000)) + ";\n}"
+        return f"\\1\npublic static final int BAZ = {random.randint(0, 10_000_000)};\n"
 
     modify_type = "add_public_api"
     return RegexModify(file, pattern, replacement, modify_type)
