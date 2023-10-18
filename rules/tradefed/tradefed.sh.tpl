@@ -26,13 +26,13 @@ if [[ ! -z "${TEST_FILTERS}" ]]; then
     done
 fi
 
-# Execute device launch script if set. This is for remote device test.
+# Set java home path
+JAVA_HOME="{java_home}"
+export PATH=$JAVA_HOME/bin:$PATH
 if [ ! -z LAUNCH_AVD_EXECUTABLE ];
 then
-    # Set java path for remote environment.
-    JAVA_HOME=/jdk/jdk17/linux-x86
-    export PATH=$JAVA_HOME/bin:$PATH
-    java -version
+    # Execute device launch script if set. This is for remote device test.
+    java -version # smoke test for jre
     $LAUNCH_AVD_EXECUTABLE
 fi
 

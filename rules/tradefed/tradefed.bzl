@@ -166,6 +166,11 @@ _TRADEFED_TEST_ATTRIBUTES = {
         values = ["", "32", "64"],
         doc = "the suffix of the test binary",
     ),
+    "_java_runtime": attr.label(
+        default = Label("@bazel_tools//tools/jdk:current_java_runtime"),
+        cfg = "exec",
+        providers = [java_common.JavaRuntimeInfo],
+    ),
 }
 
 # The normalized name of test under tradefed harness. This is without any of the
@@ -312,7 +317,7 @@ def _get_test_target(ctx):
 # Generate and run tradefed bash script entry point and associated runfiles.
 def _tradefed_test_impl(ctx, tradefed_options = []):
     device_script = ""
-    if _isRemoteDeviceTest(ctx):
+    if _is_remote_device_test(ctx):
         device_script = _abspath(ctx.attr._run_with[DeviceEnvironment].runner.to_list()[0].short_path)
 
     tf_test_dir = paths.join(ctx.label.name, "testcases")
@@ -446,8 +451,13 @@ def _tradefed_test_impl(ctx, tradefed_options = []):
     runfiles = runfiles.merge(test_target.default_runfiles)
 
     # Append remote device runfiles if using remote execution.
-    if _isRemoteDeviceTest(ctx):
+    if _is_remote_device_test(ctx):
         runfiles = runfiles.merge(ctx.runfiles().merge(ctx.attr._run_with[DeviceEnvironment].data))
+        java_home = "/jdk/jdk17/linux-x86"
+    else:
+        java_runtime = ctx.attr._java_runtime[java_common.JavaRuntimeInfo]
+        runfiles = runfiles.merge(ctx.runfiles(java_runtime.files.to_list()))
+        java_home = java_runtime.java_home_runfiles_path
 
     # Generate script to run tradefed.
     script = ctx.actions.declare_file("%s.sh" % ctx.label.name)
@@ -465,6 +475,7 @@ def _tradefed_test_impl(ctx, tradefed_options = []):
             "{additional_tradefed_options}": " ".join(tradefed_options),
             "{test_filter_output}": _abspath(test_filter_output.short_path) if test_filter_output else "",
             "{device_script}": device_script,
+            "{java_home}": java_home,
         },
     )
 
@@ -842,5 +853,7 @@ def _abspath(relative):
 def _classpath(jars):
     return ":".join([_abspath(f.short_path) for f in depset(jars).to_list()])
 
-def _isRemoteDeviceTest(ctx):
-    return hasattr(ctx.attr, "_exec_mode") and ctx.attr._exec_mode[BuildSettingInfo].value == "remote"
+def _is_remote_device_test(ctx):
+    return hasattr(ctx.attr, "_exec_mode") and \
+           ctx.attr._exec_mode[BuildSettingInfo].value == "remote" and \
+           "no-remote" not in ctx.attr.tags
