@@ -76,7 +76,7 @@ def add_public_api(file: Path) -> CujGroup:
     pattern = fr"(\bclass {class_name} {{)"
 
     def replacement():
-        return f"\\1\npublic static final int BAZ = {random.randint(0, 10_000_000)};\n"
+        return f"\\1\n@android.annotation.SuppressLint(\"UnflaggedApi\")\npublic static final int BAZ = {random.randint(0, 10_000_000)};\n"
 
     modify_type = "add_public_api"
     return RegexModify(file, pattern, replacement, modify_type)
