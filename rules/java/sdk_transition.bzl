@@ -24,19 +24,17 @@ load("//build/bazel/rules/java:versions.bzl", "java_versions")
 
 _DEFAULT_API_DOMAIN = "system"  # i.e. the platform variant
 
-def _validate_attrs(attr, sdk_version):
+def _validate_attrs(attr):
     if hasattr(attr, "sdk_version") and hasattr(attr, "_sdk_version"):
         fail("don't have both _sdk_version and sdk_version in attrs, it's confusing.")
     if not hasattr(attr, "sdk_version") and not hasattr(attr, "_sdk_version"):
         fail("must have one of _sdk_version or sdk_version attr.")
-    if not hasattr(attr, "_sdk_version_none") and sdk_version == "none":
-        fail("sdk_version = \"none\" only supported for \"java_core_library\"")
 
 def _sdk_transition_impl(settings, attr):
+    _validate_attrs(attr)
     sdk_version_attr = (
         attr.sdk_version if hasattr(attr, "sdk_version") else attr._sdk_version
     )
-    _validate_attrs(attr, sdk_version_attr)
     java_version = attr.java_version if hasattr(attr, "java_version") else None
     host_platform = settings["//command_line_option:host_platform"]
     default_java_version = str(java_versions.get_version())

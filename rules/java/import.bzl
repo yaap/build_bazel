@@ -60,12 +60,8 @@ def _java_import_sdk_transition_impl(ctx):
         ctx.attr.exports[0][DefaultInfo],
     ]
 
-_attrs = {
-    "_sdk_version_none": attr.bool(default = True),
-} | sdk_transition_attrs
-
 java_import_sdk_transition = rule(
     implementation = _java_import_sdk_transition_impl,
-    attrs = _attrs,
+    attrs = sdk_transition_attrs,
     provides = [JavaInfo],
 )
