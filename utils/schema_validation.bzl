@@ -124,7 +124,7 @@ def _validate_impl(obj, schema):
 
     # Because bazel doesn't allow infinite loops/recursion, just make a loop
     # with an arbitrarily large number of iterations.
-    for _ in range(1000):
+    for _ in range(100000):
         if not stack:
             break
         frame = stack[-1]
@@ -181,16 +181,16 @@ def _validate_impl(obj, schema):
             if schema.get("unique", False):
                 if ty != "list" and ty != "tuple":
                     fail("'unique' is only valid for lists or tuples, got: " + ty)
-                l = sorted(obj)
+                sorted_list = sorted(obj)
                 done = False
-                for i in range(len(l) - 1):
-                    if type(l[i]) not in ["string", "int", "float", "bool", "NoneType", "bytes"]:
-                        ret = "'unique' only works on lists/tuples of scalar types, got: " + type(l[i])
+                for i in range(len(sorted_list) - 1):
+                    if type(sorted_list[i]) not in ["string", "int", "float", "bool", "NoneType", "bytes"]:
+                        ret = "'unique' only works on lists/tuples of scalar types, got: " + type(sorted_list[i])
                         stack.pop()
                         done = True
                         break
-                    if l[i] == l[i + 1]:
-                        ret = "Expected all elements to be unique, but saw '%s' twice" % str(l[i])
+                    if sorted_list[i] == sorted_list[i + 1]:
+                        ret = "Expected all elements to be unique, but saw '%s' twice" % str(sorted_list[i])
                         stack.pop()
                         done = True
                         break
