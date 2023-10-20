@@ -29,10 +29,7 @@ def _aconfig_values_rule_impl(ctx):
 aconfig_values = rule(
     implementation = _aconfig_values_rule_impl,
     attrs = {
-        "srcs": attr.label_list(
-            mandatory = True,
-            allow_files = True,
-        ),
+        "srcs": attr.label_list(allow_files = True),
         "package": attr.string(mandatory = True),
     },
     provides = [AconfigValuesInfo],
