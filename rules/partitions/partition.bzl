@@ -161,6 +161,7 @@ def _partition_impl(ctx):
         toolchain.e2fsdroid[DefaultInfo].files_to_run,
         toolchain.fec[DefaultInfo].files_to_run,
         toolchain.mke2fs[DefaultInfo].files_to_run,
+        toolchain.mkfs_erofs[DefaultInfo].files_to_run,
         toolchain.mkuserimg_mke2fs[DefaultInfo].files_to_run,
         toolchain.simg2img[DefaultInfo].files_to_run,
         toolchain.tune2fs[DefaultInfo].files_to_run,
