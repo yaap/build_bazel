@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""This file defines the rule that builds android partitions."""
+
 load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 load("//build/bazel/rules:build_fingerprint.bzl", "BuildFingerprintInfo")
-load(":installable_info.bzl", "InstallableInfo", "installable_aspect")
 
 _IMAGE_TYPES = [
     "system",
@@ -67,17 +68,11 @@ def _partition_impl(ctx):
     # put all the outputs under a name-qualified folder.
     output_image = ctx.actions.declare_file(ctx.attr.name + "/" + ctx.attr.type + ".img")
 
+    # TODO(b/297269187) Fill this out with the contents of ctx.attr.deps
     files = {}
-    for dep in ctx.attr.deps:
-        files.update(dep[InstallableInfo].files)
-
-    for v in files.keys():
-        if not v.startswith("/system"):
-            fail("Files outside of /system are not currently supported: %s", v)
 
     staging_dir_builder_options = {
-        # It seems build_image will prepend /system to the paths when building_system_image=true
-        "file_mapping": {k.removeprefix("/system"): v.path for k, v in files.items()},
+        "file_mapping": {k: v.path for k, v in files.items()},
     }
 
     extra_inputs = []
@@ -166,6 +161,7 @@ def _partition_impl(ctx):
         toolchain.e2fsdroid[DefaultInfo].files_to_run,
         toolchain.fec[DefaultInfo].files_to_run,
         toolchain.mke2fs[DefaultInfo].files_to_run,
+        toolchain.mkfs_erofs[DefaultInfo].files_to_run,
         toolchain.mkuserimg_mke2fs[DefaultInfo].files_to_run,
         toolchain.simg2img[DefaultInfo].files_to_run,
         toolchain.tune2fs[DefaultInfo].files_to_run,
@@ -235,10 +231,7 @@ _partition = rule(
             allow_single_file = True,
             doc = "A file list that will be used to filter the base_staging_dir.",
         ),
-        "deps": attr.label_list(
-            providers = [[InstallableInfo]],
-            aspects = [installable_aspect],
-        ),
+        "deps": attr.label_list(),
         "root_dir": attr.label(
             allow_single_file = True,
             doc = "A folder to add as the root_dir property in the property file",

@@ -12,6 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+The toolchain used by the partition rule.
+"""
+
 PartitionToolchainInfo = provider(
     doc = "Partitions toolchain",
     fields = [
@@ -20,6 +24,7 @@ PartitionToolchainInfo = provider(
         "e2fsdroid",
         "fec",
         "mke2fs",
+        "mkfs_erofs",
         "mkuserimg_mke2fs",
         "openssl",
         "simg2img",
@@ -36,6 +41,7 @@ def _partition_toolchain_impl(ctx):
             e2fsdroid = ctx.attr.e2fsdroid,
             fec = ctx.attr.fec,
             mke2fs = ctx.attr.mke2fs,
+            mkfs_erofs = ctx.attr.mkfs_erofs,
             mkuserimg_mke2fs = ctx.attr.mkuserimg_mke2fs,
             openssl = ctx.file.openssl,
             simg2img = ctx.attr.simg2img,
@@ -53,6 +59,7 @@ partition_toolchain = rule(
         "e2fsdroid": attr.label(cfg = "exec", executable = True, mandatory = True),
         "fec": attr.label(cfg = "exec", executable = True, mandatory = True),
         "mke2fs": attr.label(cfg = "exec", executable = True, mandatory = True),
+        "mkfs_erofs": attr.label(cfg = "exec", executable = True, mandatory = True),
         "mkuserimg_mke2fs": attr.label(cfg = "exec", executable = True, mandatory = True),
         "openssl": attr.label(allow_single_file = True, cfg = "exec", mandatory = True),
         "simg2img": attr.label(cfg = "exec", executable = True, mandatory = True),
