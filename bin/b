@@ -36,7 +36,6 @@ done
 # TODO(b/262904551) - this is Darwin incompatible and should eventually be updated.
 BUILD_STARTED_TIME=`date +%s%3N`
 B_ARGS=$*
-BES_UUID="$(uuidgen)"
 set +e
 
 "$TOP/build/soong/soong_ui.bash" --build-mode --all-modules --dir="$(pwd)" $skip_tests bp2build USE_BAZEL_ANALYSIS= --build-command="b ${B_ARGS}" --skip-metrics-upload --build-started-time-unix-millis=$BUILD_STARTED_TIME
