@@ -31,13 +31,6 @@ for i in $@; do
     fi
 done
 
-function upload_metrics {
-   "$TOP/build/soong/soong_ui.bash" --finalize-bazel-metrics "$bazel_exit_code_string" --bes-id="$BES_UUID"
-}
-trap upload_metrics EXIT
-
-
-
 # Generate BUILD, bzl files into the synthetic Bazel workspace (out/soong/workspace).
 # RBE is disabled because it's not used with b builds and adds overhead: b/251441524
 # TODO(b/262904551) - this is Darwin incompatible and should eventually be updated.
