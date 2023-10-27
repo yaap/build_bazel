@@ -17,13 +17,14 @@ import time
 from typing import List, Tuple
 import xml.etree.ElementTree as ET
 
-_PRODUCT_REGEX = re.compile(r'([a-zA-Z_][a-zA-Z0-9_]*)(?:-(user|userdebug|eng))?')
+_PRODUCT_REGEX = re.compile(r'([a-zA-Z_][a-zA-Z0-9_]*)(?:(?:-(trunk|trunk_staging|next))?-(user|userdebug|eng))?')
 
 
 @dataclasses.dataclass(frozen=True)
 class Product:
   """Represents a TARGET_PRODUCT and TARGET_BUILD_VARIANT."""
   product: str
+  release: str
   variant: str
 
   def __post_init__(self):
@@ -31,7 +32,7 @@ class Product:
       raise ValueError(f'Invalid product name: {self}')
 
   def __str__(self):
-    return self.product + '-' + self.variant
+    return self.product + '-' + self.release + '-' + self.variant
 
 
 @dataclasses.dataclass(frozen=True)
@@ -69,13 +70,14 @@ def get_build_var(variable, product: Product) -> str:
   env = {
       **os.environ,
       'TARGET_PRODUCT': product.product,
+      'TARGET_RELEASE': product.release,
       'TARGET_BUILD_VARIANT': product.variant,
   }
-  return subprocess.run([
+  return subprocess.check_output([
       'build/soong/soong_ui.bash',
       '--dumpvar-mode',
       variable
-  ], check=True, capture_output=True, env=env, text=True).stdout.strip()
+  ], env=env, text=True).strip()
 
 
 async def run_jailed_command(args: List[str], out_dir: str, env=None) -> bool:
@@ -134,6 +136,7 @@ async def run_config(product: Product, rbc_product: bool, out_dir: str) -> bool:
       'CALLED_FROM_SETUP': 'true',
       'TARGET_PRODUCT': product.product,
       'TARGET_BUILD_VARIANT': product.variant,
+      'TARGET_RELEASE': product.release,
       'RBC_PRODUCT_CONFIG': 'true' if rbc_product else '',
       'RBC_DUMP_CONFIG_FILE': 'out/rbc_variable_dump.txt',
   }
@@ -223,10 +226,12 @@ async def test_one_product(product: Product, dirs: Directories) -> ProductResult
   baseline_success, product_success = await asyncio.gather(
       run_build([
           f'TARGET_PRODUCT={product.product}',
+          f'TARGET_RELEASE={product.release}',
           f'TARGET_BUILD_VARIANT={product.variant}',
       ], dirs.out_baseline),
       run_build([
           f'TARGET_PRODUCT={product.product}',
+          f'TARGET_RELEASE={product.release}',
           f'TARGET_BUILD_VARIANT={product.variant}',
           'RBC_PRODUCT_CONFIG=1',
       ], dirs.out_product),
@@ -339,14 +344,18 @@ async def main():
   def str_to_product(p: str) -> Product:
     match = _PRODUCT_REGEX.fullmatch(p)
     if not match:
-      sys.exit(f'Invalid product name: {p}. Example: aosp_arm64-userdebug')
-    return Product(match.group(1), match.group(2) if match.group(2) else 'userdebug')
+      sys.exit(f'Invalid product name: {p}. Example: aosp_arm64-trunk_staging-userdebug')
+    return Product(
+        match.group(1),
+        match.group(2) if match.group(2) else 'trunk_staging',
+        match.group(3) if match.group(3) else 'userdebug',
+    )
 
   products = [str_to_product(p) for p in args.products]
 
   if not products:
-    products = list(map(lambda x: Product(x, 'userdebug'), get_build_var(
-        'all_named_products', Product('aosp_arm64', 'userdebug')).split()))
+    products = list(map(lambda x: Product(x, 'trunk_staging', 'userdebug'), get_build_var(
+        'all_named_products', Product('aosp_arm64', 'trunk_staging', 'userdebug')).split()))
 
   excluded = [str_to_product(p) for p in args.exclude]
   products = [p for p in products if p not in excluded]
@@ -356,7 +365,7 @@ async def main():
       if i != j and product.product == product2.product:
         sys.exit(f'Product {product.product} cannot be repeated.')
 
-  out_dir = get_build_var('OUT_DIR', Product('aosp_arm64', 'userdebug'))
+  out_dir = get_build_var('OUT_DIR', Product('aosp_arm64', 'trunk_staging', 'userdebug'))
 
   dirs = Directories(
       out=out_dir,
@@ -382,8 +391,13 @@ async def main():
       commands.append(run_jailed_command([
           'build/soong/soong_ui.bash',
           '--dumpvar-mode',
-          'TARGET_PRODUCT'
-      ], folder))
+          'TARGET_PRODUCT',
+      ], folder, env = {
+          **os.environ,
+          'TARGET_PRODUCT': 'aosp_arm64',
+          'TARGET_RELEASE': 'trunk_staging',
+          'TARGET_BUILD_VARIANT': 'userdebug',
+      }))
     for i, success in enumerate(await asyncio.gather(*commands)):
       if not success:
         dump_files_to_stderr(os.path.join(folders[i], 'build.log'))
