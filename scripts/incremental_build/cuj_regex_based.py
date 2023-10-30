@@ -62,7 +62,7 @@ def modify_private_method(file: Path) -> CujGroup:
 
 def add_private_field(file: Path) -> CujGroup:
     class_name = file.name.removesuffix('.java')
-    pattern = fr"(\bclass {class_name} {{)"
+    pattern = fr"(\bclass {class_name} [^{{]*{{)"
 
     def replacement():
         return f"\\1\nprivate static final int FOO = {random.randint(0, 10_000_000)};\n"
@@ -73,7 +73,7 @@ def add_private_field(file: Path) -> CujGroup:
 
 def add_public_api(file: Path) -> CujGroup:
     class_name = file.name.removesuffix('.java')
-    pattern = fr"(\bclass {class_name} {{)"
+    pattern = fr"(\bclass {class_name} [^{{]*{{)"
 
     def replacement():
         return f"\\1\n@android.annotation.SuppressLint(\"UnflaggedApi\")\npublic static final int BAZ = {random.randint(0, 10_000_000)};\n"
