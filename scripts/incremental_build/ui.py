@@ -141,8 +141,6 @@ def get_user_input() -> UserInput:
     )
     def_build_types = [
         BuildType.SOONG_ONLY,
-        BuildType.MIXED_PROD,
-        BuildType.MIXED_STAGING,
     ]
     p.add_argument(
         "-b",
