@@ -349,45 +349,6 @@ class CreateUnkeptBuildFile(CujGroup):
         ]
 
 
-def _kept_build_cujs() -> tuple[CujGroup, ...]:
-    # Bp2BuildKeepExistingBuildFile(build/bazel) is True(recursive)
-    kept = src("build/bazel")
-    finder.confirm(
-        kept,
-        "compliance/Android.bp",
-        "!compliance/BUILD",
-        "!compliance/BUILD.bazel",
-        "rules/python/BUILD",
-    )
-
-    return (
-        *(
-            CreateKeptBuildFile(kept.joinpath("compliance").joinpath(b))
-            for b in ["BUILD", "BUILD.bazel"]
-        ),
-        Create(kept.joinpath("BUILD/kept-dir"), InWorkspace.SYMLINK),
-        ModifyKeptBuildFile(kept.joinpath("rules/python/BUILD")),
-    )
-
-
-def _unkept_build_cujs() -> tuple[CujGroup, ...]:
-    # Bp2BuildKeepExistingBuildFile(bionic) is False(recursive)
-    unkept = src("bionic/libm")
-    finder.confirm(unkept, "Android.bp", "!BUILD", "!BUILD.bazel")
-    return (
-        *(CreateUnkeptBuildFile(unkept.joinpath(b)) for b in ["BUILD", "BUILD.bazel"]),
-        *(
-            Create(build_file, InWorkspace.OMISSION)
-            for build_file in [
-                unkept.joinpath("bogus-unkept/BUILD"),
-                unkept.joinpath("bogus-unkept/BUILD.bazel"),
-            ]
-        ),
-        # TODO: b/258873199 - Support directories named BUILD.
-        Create(unkept.joinpath("BUILD/unkept-dir"), InWorkspace.SYMLINK),
-    )
-
-
 def _mixed_build_launch_cujs() -> tuple[CujGroup, ...]:
     core_settings = src("frameworks/base/core/java/android/provider/Settings.java")
     ams = src(
@@ -488,8 +449,6 @@ def get_cujgroups() -> tuple[CujGroup, ...]:
         *unreferenced_file_cujs,
         *_mixed_build_launch_cujs(),
         *android_bp_cujs,
-        *_unkept_build_cujs(),
-        *_kept_build_cujs(),
         ReplaceFileWithDir(src("bionic/README.txt")),
         # TODO(usta): add a dangling symlink
     )
