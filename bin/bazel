@@ -120,11 +120,6 @@ mod:bp2build --package_path=${ABSOLUTE_OUT_DIR}/soong/workspace
 query:bp2build --package_path=${ABSOLUTE_OUT_DIR}/soong/workspace
 sync:bp2build --package_path=${ABSOLUTE_OUT_DIR}/soong/workspace
 
-# This flag is intentionally duplicated with bp2build. This is because
-# --config=metrics_data must have a valid definition, even invocations
-# for which no metrics are collected. This is thus an intentional no-op.
-common:metrics_data --noannounce_rc
-
 EOF
 }
 
