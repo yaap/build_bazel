@@ -52,33 +52,16 @@ function formulate_b_args {
    # Represent the args as an array, not a string.
    bazel_args_with_config=()
    command_set=0
-   bes_disabled=0
-   bes_set=0
-   BES_UUID=${BES_UUID:-`uuidgen`}
    PROFILE_OUT=${PROFILE_OUT:-`get_profile_out_dir`}
-   index=1
-   metrics_index=1
 
    for arg in $@; do
-       if [[ $arg == "--disable_bes" ]]; then
-           bes_disabled=1
-           continue
-       fi
        bazel_args_with_config+=("$arg ")
        arg_is_command=$(is_command $arg)
        # Add the default configs after the first argument, which should be the command, e.g. build/test
        if [[ $arg_is_command && $command_set == 0 ]]; then
-           bazel_args_with_config+=("--profile=$PROFILE_OUT/bazel_metrics-profile --config=bp2build  --invocation_id=$BES_UUID ")
+           bazel_args_with_config+=("--profile=$PROFILE_OUT/bazel_metrics-profile --config=bp2build ")
            command_set=1
-           metrics_index=$index
        fi
-       ((index++))
    done
-
-   # Make sure metrics are set if not explicitly disabled
-   # The first array element is the command, the second is the set of default flags
-   if [[ $bes_disabled == 0 ]]; then
-       bazel_args_with_config[$metrics_index]+=" --config=metrics_data"
-   fi
    echo ${bazel_args_with_config[@]}
 }
