@@ -14,8 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# A script to test the end-to-end flow of atest --roboleaf-mode on the Android
-# CI.
+# A script to test the end-to-end flow of atest on the Android CI.
 
 set -euo pipefail
 set -x
@@ -35,8 +34,6 @@ if [ ! -n "${TARGET_PRODUCT}" ] || [ ! -n "${TARGET_BUILD_VARIANT}" ] ; then
     TARGET_BUILD_VARIANT=userdebug
 fi
 
-remote_cache="grpcs://${FLAG_service%:*}"
-
 out=$(get_build_var PRODUCT_OUT)
 
 # ANDROID_BUILD_TOP is deprecated, so don't use it throughout the script.
@@ -44,33 +41,15 @@ out=$(get_build_var PRODUCT_OUT)
 cd ${ANDROID_BUILD_TOP:-.}
 
 # Use the versioned Python binaries in prebuilts/ for a reproducible
-# build with minimal reliance on host tools. Add build/bazel/bin to PATH since
-# atest needs 'b'
-export PATH=${PWD}/prebuilts/build-tools/path/linux-x86:${PWD}/build/bazel/bin:${PATH}
+# build with minimal reliance on host tools.
+export PATH=${PWD}/prebuilts/build-tools/path/linux-x86:${PATH}
 
 export \
   ANDROID_PRODUCT_OUT=${out} \
   OUT=${out} \
   ANDROID_HOST_OUT=$(get_build_var HOST_OUT) \
-  ANDROID_TARGET_OUT_TESTCASES=$(get_build_var TARGET_OUT_TESTCASES) \
-  REMOTE_AVD=true \
-
-build/soong/soong_ui.bash --make-mode bp2build --skip-soong-tests
+  ANDROID_TARGET_OUT_TESTCASES=$(get_build_var TARGET_OUT_TESTCASES)
 
 build/soong/soong_ui.bash --make-mode atest --skip-soong-tests
 
-launched_targets+=("$(cat tools/asuite/atest/test_runners/roboleaf_launched.txt | grep -v "^#" | cut -d ':' -f2 | tr '\n' ' ')")
-
-${OUT_DIR}/host/linux-x86/bin/atest-dev \
-  --roboleaf-mode=dev \
-  --bazel-arg=--config=remote_avd \
-  --bazel-arg=--config=ci \
-  --bazel-arg=--bes_keywords="${ROBOLEAF_BES_KEYWORDS}" \
-  --bazel-arg=--bes_results_url="${ROBOLEAF_BES_RESULTS_URL}" \
-  --bazel-arg=--remote_cache="${remote_cache}" \
-  --bazel-arg=--project_id="${BES_PROJECT_ID}" \
-  --bazel-arg=--build_metadata=ab_branch="${BRANCH_NAME}" \
-  --bazel-arg=--build_metadata=ab_target="${BUILD_TARGET_NAME}" \
-  --bazel-arg=--build_metadata=ab_build_id="${BUILD_NUMBER}" \
-  "$@" \
-  ${launched_targets[@]}
+${OUT_DIR}/host/linux-x86/bin/atest-dev --host atest_unittests
