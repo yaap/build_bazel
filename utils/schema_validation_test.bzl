@@ -14,7 +14,7 @@
 """Tests for the validate() function."""
 
 load("@bazel_skylib//lib:unittest.bzl", "analysistest")
-load(":schema_validation.bzl", "validate")
+load(":schema_validation.scl", "validate")
 
 def _string_comparison_test_impl(ctx):
     env = analysistest.begin(ctx)
