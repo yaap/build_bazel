@@ -16,7 +16,8 @@ limitations under the License.
 load("@bazel_skylib//lib:unittest.bzl", "analysistest", "asserts")
 
 def _test_linker_alignment_flag_impl(ctx):
-    """
+    """ Checks that linker alignment flag is present.
+
     This test checks that the linker alignment flag is present for
     arm and arm 64 targets but it is not present for x86 and x86_64 targets.
     """
@@ -94,6 +95,14 @@ custom_linker_alignment_flag_arm64_test = analysistest.make(
     },
 )
 
+custom_linker_alignment_flag_x86_64_test = analysistest.make(
+    impl = _test_linker_alignment_flag_impl,
+    attrs = test_attrs,
+    config_settings = {
+        "//command_line_option:platforms": "@//build/bazel/tests/products:aosp_x86_64_for_testing_custom_linker_alignment",
+    },
+)
+
 linker_alignment_flag_x86_test = analysistest.make(
     impl = _test_linker_alignment_flag_impl,
     attrs = test_attrs,
@@ -110,7 +119,9 @@ linker_alignment_flag_x86_64_test = analysistest.make(
     },
 )
 
-def test_linker_alignment_flag_arm():
+def _test_linker_alignment_flag_arm():
+    """ Checks that max-page-size flag is not present for arm targets.
+    """
     name = "linker_alignment_flag_arm"
     test_name = name + "_test"
 
@@ -133,7 +144,9 @@ def test_linker_alignment_flag_arm():
     )
     return test_name
 
-def test_linker_alignment_flag_arm64():
+def _test_linker_alignment_flag_arm64():
+    """ Checks that max-page-size flag is present for arm64 targets.
+    """
     name = "linker_alignment_flag_arm64"
     test_name = name + "_test"
 
@@ -154,7 +167,9 @@ def test_linker_alignment_flag_arm64():
     )
     return test_name
 
-def test_custom_linker_alignment_flag_arm64():
+def _test_custom_linker_alignment_flag_arm64():
+    """ Checks that max-page-size flag has the custom alignment for arm64.
+    """
     name = "custom_linker_alignment_flag_arm64"
     test_name = name + "_test"
 
@@ -175,7 +190,9 @@ def test_custom_linker_alignment_flag_arm64():
     )
     return test_name
 
-def test_linker_alignment_flag_x86():
+def _test_linker_alignment_flag_x86():
+    """ Checks that max-page-size flag is not present for x86.
+    """
     name = "linker_alignment_flag_x86"
     test_name = name + "_test"
 
@@ -198,7 +215,9 @@ def test_linker_alignment_flag_x86():
     )
     return test_name
 
-def test_linker_alignment_flag_x86_64():
+def _test_linker_alignment_flag_x86_64():
+    """ Checks that max-page-size flag is present for x86_64.
+    """
     name = "linker_alignment_flag_x86_64"
     test_name = name + "_test"
 
@@ -211,13 +230,34 @@ def test_linker_alignment_flag_x86_64():
     linker_alignment_flag_x86_64_test(
         name = test_name,
         target_under_test = name,
-        expected_action_mnemonics = ["CppCompile", "CppLink"],
-        expected_flags = [],
-        no_expected_flags = [
+        expected_action_mnemonics = ["CppLink"],
+        expected_flags = [
             "-Wl,-z,max-page-size=4096",
-            "-Wl,-z,max-page-size=16384",
+        ],
+        no_expected_flags = [],
+    )
+    return test_name
+
+def _test_custom_linker_alignment_flag_x86_64():
+    """ Checks that max-page-size flag has the custom alignment for x86_64.
+    """
+    name = "custom_linker_alignment_flag_x86_64"
+    test_name = name + "_test"
+
+    native.cc_binary(
+        name = name,
+        srcs = ["foo.cpp"],
+        tags = ["manual"],
+    )
+
+    custom_linker_alignment_flag_x86_64_test(
+        name = test_name,
+        target_under_test = name,
+        expected_action_mnemonics = ["CppLink"],
+        expected_flags = [
             "-Wl,-z,max-page-size=65536",
         ],
+        no_expected_flags = [],
     )
     return test_name
 
@@ -225,10 +265,11 @@ def cc_toolchain_features_linker_alignment_test_suite(name):
     native.test_suite(
         name = name,
         tests = [
-            test_linker_alignment_flag_arm(),
-            test_linker_alignment_flag_arm64(),
-            test_custom_linker_alignment_flag_arm64(),
-            test_linker_alignment_flag_x86(),
-            test_linker_alignment_flag_x86_64(),
+            _test_linker_alignment_flag_arm(),
+            _test_linker_alignment_flag_arm64(),
+            _test_custom_linker_alignment_flag_arm64(),
+            _test_linker_alignment_flag_x86(),
+            _test_linker_alignment_flag_x86_64(),
+            _test_custom_linker_alignment_flag_x86_64(),
         ],
     )
