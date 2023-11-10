@@ -1,3 +1,19 @@
+# Copyright (C) 2023 The Android Open Source Project
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Product definitions for Android's C/C++ toolchain."""
+
 load("@//build/bazel/tests/products:aosp_arm.variables.bzl", _soong_variables_arm = "variables")
 load("@//build/bazel/tests/products:aosp_arm64.variables.bzl", _soong_variables_arm64 = "variables")
 load("@//build/bazel/tests/products:aosp_x86.variables.bzl", _soong_variables_x86 = "variables")
@@ -55,6 +71,10 @@ products = {
         {"CFIExcludePaths": ["build/bazel/rules/cc"]},
     ),
     "aosp_x86_64_for_testing": _soong_variables_x86_64,
+    "aosp_x86_64_for_testing_custom_linker_alignment": dicts.add(
+        _soong_variables_x86_64,
+        {"DeviceMaxPageSizeSupported": "65536"},
+    ),
     "aosp_arm64_for_testing_min_sdk_version_override_tiramisu": dicts.add(
         _soong_variables_arm64,
         {"ApexGlobalMinSdkVersionOverride": "Tiramisu"},

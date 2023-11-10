@@ -2172,6 +2172,7 @@ def _manual_binder_interface_feature():
     )
 
 # Create the full list of features.
+# buildifier: disable=function-docstring
 def get_features(
         ctx,
         builtin_include_dirs,
@@ -2181,10 +2182,10 @@ def get_features(
     target_flags = ctx.attr.target_flags
     compile_only_flags = ctx.attr.compiler_flags
     linker_only_flags = ctx.attr.linker_flags
-    deviceMaxPageSize = ctx.attr._device_max_page_size_supported[BuildSettingInfo].value
-    if deviceMaxPageSize and target_arch == "arm64":
+    device_max_page_size = ctx.attr._device_max_page_size_supported[BuildSettingInfo].value
+    if device_max_page_size and (target_arch == "arm64" or target_arch == "x86_64"):
         linker_only_flags = ctx.attr.linker_flags + \
-                            ["-Wl,-z,max-page-size=" + deviceMaxPageSize]
+                            ["-Wl,-z,max-page-size=" + device_max_page_size]
 
     libclang_rt_builtin = ctx.file.libclang_rt_builtin
     libclang_rt_ubsan_minimal = ctx.file.libclang_rt_ubsan_minimal
