@@ -18,7 +18,7 @@ errorprone_soong_bazel_diffs = [
     "-Xep:EmptyTopLevelDeclaration:ERROR",
     "-Xep:IgnoredPureGetter:ERROR",
     "-Xep:ProtoFieldNullComparison:ERROR",
-    "-Xep:RestrictedApiChecker:ERROR",
+    "-Xep:RestrictedApi:ERROR",
     # Errorprone ENABLED_WARNINGS
     "-Xep:CanIgnoreReturnValueSuggester:WARN",
     "-Xep:MathAbsoluteRandom:WARN",
