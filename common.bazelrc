@@ -24,6 +24,9 @@ common --experimental_enable_scl_dialect
 common --experimental_cc_shared_library
 build --experimental_starlark_cc_import
 
+# Do not enable BzlMod as the migration to bzlmod has not been done yet
+common --noenable_bzlmod
+
 # Do not tokenize copts, other than strings that consist of a single Make
 # variable.  This prevents the need to double-escape characters like backslashes
 # and quotes in copts.
