@@ -423,8 +423,8 @@ _cc_toolchain_config = rule(
         "_device_max_page_size_supported": attr.label(
             default = "//build/bazel/product_config:device_max_page_size_supported",
         ),
-        "_device_page_size_agnostic": attr.label(
-            default = "//build/bazel/product_config:device_page_size_agnostic",
+        "_device_no_bionic_page_size_macro": attr.label(
+            default = "//build/bazel/product_config:device_no_bionic_page_size_macro",
         ),
         "_clang_default_debug_level": attr.label(
             default = "//build/bazel/toolchains/clang/host/linux-x86:clang_default_debug_level",
