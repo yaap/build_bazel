@@ -77,7 +77,7 @@ _bool_variables = [
     "build_broken_incorrect_partition_images",
     "build_from_text_stub",
     "compressed_apex",
-    "device_page_size_agnostic",
+    "device_no_bionic_page_size_macro",
     "enforce_vintf_manifest",
     "malloc_not_svelte",
     "malloc_pattern_fill_contents",
