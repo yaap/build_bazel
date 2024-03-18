@@ -178,6 +178,7 @@ variables = json.decode('''{
         "ANDROID": {
             "BOARD_USES_ODMIMAGE": "",
             "BOARD_USES_RECOVERY_AS_BOOT": "",
+            "BOARD_BUILD_SYSTEM_ROOT_IMAGE": "",
             "IS_TARGET_MIXED_SEPOLICY": "",
             "PRODUCT_INSTALL_DEBUG_POLICY_TO_SYSTEM_EXT": "",
             "SYSTEMUI_OPTIMIZE_JAVA": "true",
